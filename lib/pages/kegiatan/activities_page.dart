@@ -1,14 +1,12 @@
 // lib/pages/kegiatan/activities_page.dart
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../landing.dart';
 
 class ActivitiesPage extends StatelessWidget {
   const ActivitiesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const primary = Color(0xFF005271);
+    final primary = Theme.of(context).colorScheme.primary;
 
     return DefaultTabController(
       length: 2,
@@ -20,7 +18,7 @@ class ActivitiesPage extends StatelessWidget {
           centerTitle: true,
           title: const Text(
             'Kegiatan',
-            style: TextStyle(fontWeight: FontWeight.w600),
+            style: TextStyle(fontWeight: FontWeight.w600, color: Color.fromARGB(242, 255, 255, 255)),
           ),
           bottom: const TabBar(
             indicatorColor: Colors.white,
@@ -34,41 +32,6 @@ class ActivitiesPage extends StatelessWidget {
         ),
 
         body: const TabBarView(children: [_UpcomingTab(), _HistoryTab()]),
-
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: 1,
-          selectedItemColor: primary,
-          unselectedItemColor: Colors.grey,
-          onTap: (index) {
-            if (index == 0) {
-              Navigator.of(context).pushReplacement(
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) => const LandingPage(),
-                  transitionDuration: Duration.zero,
-                  reverseTransitionDuration: Duration.zero,
-                ),
-              );
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled),
-              label: "Beranda",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(FontAwesomeIcons.calendar),
-              label: "Kegiatan",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(FontAwesomeIcons.users),
-              label: "Komunitas",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              label: "Profil",
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -182,11 +145,11 @@ class _ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const cardBg = Color(0xFFCCDEDC);
+    final secondary = Theme.of(context).colorScheme.secondary;
 
     return Container(
       decoration: BoxDecoration(
-        color: cardBg,
+        color: secondary,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(

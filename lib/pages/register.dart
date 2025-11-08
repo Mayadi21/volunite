@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'landing.dart';
+import 'navbar.dart';
 import 'login.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -23,7 +23,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final domisiliC = TextEditingController();
 
   int _currentStep = 1;
-  static const Color primary = Color(0xFF0C5E70);
 
   @override
   void dispose() {
@@ -38,27 +37,26 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      // di sini kita atur behavior tombol back HP
-      onWillPop: () async {
-        if (_currentStep == 2) {
-          // lagi di step 2 -> balik ke step 1 aja
-          setState(() {
-            _currentStep = 1;
-          });
-          return false; // JANGAN keluar app
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return PopScope(
+      canPop: _currentStep == 1,
+      onPopInvoked: (didPop) {
+        if (!didPop && _currentStep == 2) {
+          setState(() => _currentStep = 1);
         }
-        // kalau lagi di step 1 -> boleh keluar
-        return true;
       },
-      child: _currentStep == 1 ? _buildStep1(context) : _buildStep2(context),
+      child: _currentStep == 1
+          ? _buildStep1(context, primary)
+          : _buildStep2(context, primary),
     );
   }
 
+
   // ================== STEP 1 ==================
-  Widget _buildStep1(BuildContext context) {
+  Widget _buildStep1(BuildContext context, Color primary) {
     return Scaffold(
       backgroundColor: primary,
       resizeToAvoidBottomInset: true,
@@ -190,7 +188,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                             );
                           },
-                          child: const Text(
+                          child: Text(
                             "Login",
                             style: TextStyle(
                               color: primary,
@@ -211,7 +209,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   // ================== STEP 2 ==================
-  Widget _buildStep2(BuildContext context) {
+  Widget _buildStep2(BuildContext context, Color primary) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -231,7 +229,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                   const SizedBox(width: 4),
-                  const Text(
+                  Text(
                     "Kembali",
                     style: TextStyle(
                       color: primary,

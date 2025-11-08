@@ -57,7 +57,8 @@ class ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = const Color(0xFF0C5E70);
+    final primary = Theme.of(context).colorScheme.primary;
+
 
     return Container(
       decoration: BoxDecoration(
