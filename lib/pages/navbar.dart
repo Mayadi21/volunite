@@ -1,7 +1,9 @@
+// lib/pages/navbar.dart
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'profile.dart';
 import 'home.dart';
+import 'kegiatan/activities_page.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -15,27 +17,25 @@ class _LandingPageState extends State<LandingPage> {
 
   // Daftar halaman/tab
   final List<Widget> _pages = const [
-    HomeTab(), // Halaman utama (beranda)
-    Center(child: Text("Halaman Kegiatan")), // Index 1: Kegiatan
-    Center(child: Text("Halaman Komunitas")), // Index 2: Komunitas
+    HomeTab(),
+    ActivitiesPage(),
+    Center(child: Text("Halaman Komunitas")),
     ProfilePage(), // Profil
   ];
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      // Ganti body dengan IndexedStack agar tiap halaman tersimpan
       body: IndexedStack(index: _selectedIndex, children: _pages),
 
-      // 🧭 Bottom Navigation
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
+        selectedItemColor: primary,
         unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          setState(() => _selectedIndex = index);
-        },
+        onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(

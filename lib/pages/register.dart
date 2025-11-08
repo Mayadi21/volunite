@@ -10,10 +10,19 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  // step 1
   final nameC = TextEditingController();
   final emailC = TextEditingController();
   final passC = TextEditingController();
   final pass2C = TextEditingController();
+
+  // step 2
+  final tglC = TextEditingController();
+  final genderC = TextEditingController();
+  final telpC = TextEditingController();
+  final domisiliC = TextEditingController();
+
+  int _currentStep = 1;
 
   @override
   void dispose() {
@@ -21,22 +30,39 @@ class _RegisterPageState extends State<RegisterPage> {
     emailC.dispose();
     passC.dispose();
     pass2C.dispose();
+    tglC.dispose();
+    genderC.dispose();
+    telpC.dispose();
+    domisiliC.dispose();
     super.dispose();
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
-    const primary = Color(0xFF0C5E70); // biru hijau seperti desain
+    final primary = Theme.of(context).colorScheme.primary;
 
+    return PopScope(
+      canPop: _currentStep == 1,
+      onPopInvoked: (didPop) {
+        if (!didPop && _currentStep == 2) {
+          setState(() => _currentStep = 1);
+        }
+      },
+      child: _currentStep == 1
+          ? _buildStep1(context, primary)
+          : _buildStep2(context, primary),
+    );
+  }
+
+
+  // ================== STEP 1 ==================
+  Widget _buildStep1(BuildContext context, Color primary) {
     return Scaffold(
       backgroundColor: primary,
-      // Biar tampilan menyesuaikan saat keyboard muncul
       resizeToAvoidBottomInset: true,
       body: SafeArea(
-        // ❗ TANPA SCROLL: pakai Column + Expanded supaya pas 1 layar
         child: Column(
           children: [
-            // Header kecil (ringkas supaya muat 1 layar)
             const SizedBox(height: 12),
             const Text(
               "Registrasi Akun",
@@ -56,8 +82,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Kartu putih isi form — dibuat Expanded agar mengisi sisa layar TANPA scroll
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -69,10 +93,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Step indicator
                     const Center(
                       child: Text(
-                        "Langkah Ke 1 dari 3",
+                        "Langkah Ke 1 dari 2",
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -80,7 +103,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
-                        value: 1 / 3,
+                        value: 1 / 2,
                         minHeight: 4,
                         backgroundColor: Colors.grey.shade300,
                         color: primary,
@@ -100,8 +123,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       style: TextStyle(color: Colors.black54, fontSize: 12.5),
                     ),
                     const SizedBox(height: 14),
-
-                    // ====== FORM (bisa diketik) ======
                     _field(
                       icon: Icons.person,
                       hint: "Masukkan nama Anda",
@@ -128,9 +149,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       controller: pass2C,
                       obscure: true,
                     ),
-
-                    const Spacer(), // dorong tombol ke bawah
-                    // Tombol Selanjutnya
+                    const Spacer(),
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -142,13 +161,9 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ),
                         onPressed: () {
-                          // Tidak mengirim apa-apa; hanya pindah halaman
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const LandingPage(),
-                            ),
-                          );
+                          setState(() {
+                            _currentStep = 2;
+                          });
                         },
                         child: const Text(
                           "Selanjutnya",
@@ -160,8 +175,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-
-                    // Sudah punya akun? Login (non-aktif dulu)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -195,6 +208,153 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  // ================== STEP 2 ==================
+  Widget _buildStep2(BuildContext context, Color primary) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _currentStep = 1;
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    "Kembali",
+                    style: TextStyle(
+                      color: primary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              "Langkah Ke 2 dari 2",
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Container(height: 2, color: primary),
+            ),
+            const SizedBox(height: 14),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Isi Data Diri",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Data diri hanya digunakan untuk informasi semata",
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  _fieldStep2(
+                    icon: Icons.calendar_today,
+                    hint: "Tanggal Lahir",
+                    controller: tglC,
+                    readOnly: true,
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime(2005, 1, 1),
+                        firstDate: DateTime(1970),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        tglC.text =
+                            "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}";
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _fieldStep2(
+                    icon: Icons.female,
+                    hint: "Jenis Kelamin",
+                    controller: genderC,
+                  ),
+                  const SizedBox(height: 14),
+                  _fieldStep2(
+                    icon: Icons.phone,
+                    hint: "No Telepon",
+                    controller: telpC,
+                    keyboard: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 14),
+                  _fieldStep2(
+                    icon: Icons.location_on_outlined,
+                    hint: "Domisili",
+                    controller: domisiliC,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LandingPage()),
+                    );
+                  },
+                  child: const Text(
+                    "Daftar",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ================== WIDGET FIELD STEP 1 ==================
   Widget _field({
     required IconData icon,
     required String hint,
@@ -209,6 +369,37 @@ class _RegisterPageState extends State<RegisterPage> {
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon, color: Colors.grey[600]),
+        filled: true,
+        fillColor: const Color(0xFFF5F6F8),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 14,
+          horizontal: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  // ================== WIDGET FIELD STEP 2 ==================
+  Widget _fieldStep2({
+    required IconData icon,
+    required String hint,
+    required TextEditingController controller,
+    bool readOnly = false,
+    void Function()? onTap,
+    TextInputType keyboard = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      readOnly: readOnly,
+      onTap: onTap,
+      keyboardType: keyboard,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, color: Colors.grey),
         filled: true,
         fillColor: const Color(0xFFF5F6F8),
         contentPadding: const EdgeInsets.symmetric(

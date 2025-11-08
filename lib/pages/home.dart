@@ -4,6 +4,8 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
       child: Column(
@@ -39,7 +41,7 @@ class HomeTab extends StatelessWidget {
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.notifications_outlined),
+                icon: Icon(Icons.notifications_outlined, color: primary),
                 onPressed: () {},
               ),
             ],
@@ -54,8 +56,10 @@ class HomeTab extends StatelessWidget {
               prefixIcon: const Icon(Icons.search),
               filled: true,
               fillColor: Colors.white,
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 5,
+                horizontal: 15,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30),
                 borderSide: BorderSide.none,
@@ -68,25 +72,29 @@ class HomeTab extends StatelessWidget {
           // 🧭 Kategori
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
+            children: [
+              const Text(
                 "Berdasarkan Kategori ✨",
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              Text("Lihat semua", style: TextStyle(color: Colors.blue)),
+              Text(
+                "Lihat semua",
+                style: TextStyle(color: primary, fontWeight: FontWeight.w500),
+              ),
             ],
           ),
           const SizedBox(height: 15),
+
           SizedBox(
             height: 90,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                categoryItem(Icons.nature, "Lingkungan"),
-                categoryItem(Icons.school, "Pendidikan"),
-                categoryItem(Icons.health_and_safety, "Kesehatan"),
-                categoryItem(Icons.people, "Sosial"),
-                categoryItem(Icons.palette, "Seni"),
+                categoryItem(Icons.nature, "Lingkungan", primary),
+                categoryItem(Icons.school, "Pendidikan", primary),
+                categoryItem(Icons.health_and_safety, "Kesehatan", primary),
+                categoryItem(Icons.people, "Sosial", primary),
+                categoryItem(Icons.palette, "Seni", primary),
               ],
             ),
           ),
@@ -99,19 +107,21 @@ class HomeTab extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF006994), Color(0xFF00AEEF)],
+              gradient: LinearGradient(
+                colors: [primary, const Color(0xFF8CC8D2)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Your Voluntree Exp",
-                    style: TextStyle(color: Colors.white70)),
-                const SizedBox(height: 5),
-                const Text(
+              children: const [
+                Text(
+                  "Your Voluntree Exp",
+                  style: TextStyle(color: Colors.white70),
+                ),
+                SizedBox(height: 5),
+                Text(
                   "18,000",
                   style: TextStyle(
                     color: Colors.white,
@@ -119,18 +129,18 @@ class HomeTab extends StatelessWidget {
                     fontSize: 22,
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: const LinearProgressIndicator(
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                  child: LinearProgressIndicator(
                     value: 0.8,
                     minHeight: 8,
                     backgroundColor: Colors.white24,
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                SizedBox(height: 8),
+                Text(
                   "Your Coins: 10,000",
                   style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
@@ -140,12 +150,13 @@ class HomeTab extends StatelessWidget {
 
           const SizedBox(height: 30),
 
-          // 🔥 Daftar Sekarang
           const Text(
             "Daftar Sekarang 🔥",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
+
           const SizedBox(height: 15),
+
           SizedBox(
             height: 230,
             child: ListView(
@@ -156,12 +167,14 @@ class HomeTab extends StatelessWidget {
                   "Pintar Bersama - KMB USU",
                   "Sabtu, 19 Oktober 2024",
                   "12.00 WIB - 17.00 WIB",
+                  primary,
                 ),
                 eventCard(
                   "assets/event2.jpg",
                   "Aksi Bersih Pantai",
                   "Minggu, 20 Oktober 2024",
                   "09.00 WIB - 12.00 WIB",
+                  primary,
                 ),
               ],
             ),
@@ -171,7 +184,7 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  static Widget categoryItem(IconData icon, String title) {
+  static Widget categoryItem(IconData icon, String title, Color primary) {
     return Container(
       width: 80,
       margin: const EdgeInsets.only(right: 15),
@@ -191,19 +204,26 @@ class HomeTab extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, size: 28, color: Colors.blue),
+            child: Icon(icon, size: 28, color: primary),
           ),
           const SizedBox(height: 8),
-          Text(title,
-              style: const TextStyle(fontSize: 12),
-              textAlign: TextAlign.center),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
   }
 
   static Widget eventCard(
-      String image, String title, String date, String time) {
+    String image,
+    String title,
+    String date,
+    String time,
+    Color primary,
+  ) {
     return Container(
       width: 280,
       margin: const EdgeInsets.only(right: 15),
@@ -222,8 +242,7 @@ class HomeTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: Image.asset(
               image,
               height: 130,
@@ -232,39 +251,51 @@ class HomeTab extends StatelessWidget {
             ),
           ),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 15).copyWith(top: 10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 15,
+            ).copyWith(top: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("2 hari lagi",
-                    style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
+                Text(
+                  "2 hari lagi",
+                  style: TextStyle(
+                    color: primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 5),
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(height: 5),
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today,
-                        size: 14, color: Colors.grey),
+                    const Icon(
+                      Icons.calendar_today,
+                      size: 14,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(width: 5),
-                    Text(date,
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(
+                      date,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
                   ],
                 ),
                 Row(
                   children: [
-                    const Icon(Icons.access_time,
-                        size: 14, color: Colors.grey),
+                    const Icon(Icons.access_time, size: 14, color: Colors.grey),
                     const SizedBox(width: 5),
-                    Text(time,
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(
+                      time,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
                   ],
                 ),
               ],
