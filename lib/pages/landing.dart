@@ -1,11 +1,14 @@
+// lib/pages/landing.dart
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'kegiatan/activities_page.dart';
 
 class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    const primary = Color(0xFF005271);
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: SingleChildScrollView(
@@ -78,7 +81,7 @@ class LandingPage extends StatelessWidget {
                   "Berdasarkan Kategori ✨",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                Text("Lihat semua", style: TextStyle(color: Colors.blue)),
+                Text("Lihat semua", style: TextStyle(color: primary, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 15),
@@ -105,7 +108,7 @@ class LandingPage extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF006994), Color(0xFF00AEEF)],
+                  colors: [primary, Color(0xFF8CC8D2)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -177,8 +180,20 @@ class LandingPage extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: Colors.blue,
+        selectedItemColor: primary,
         unselectedItemColor: Colors.grey,
+        currentIndex: 0, // halaman ini = Beranda
+        onTap: (index) {
+          if (index == 1) {
+            Navigator.of(context).pushReplacement(
+              PageRouteBuilder(
+                pageBuilder: (_, __, ___) => const ActivitiesPage(),
+                transitionDuration: Duration.zero,
+                reverseTransitionDuration: Duration.zero,
+              ),
+            );
+          }
+        },
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_filled),
