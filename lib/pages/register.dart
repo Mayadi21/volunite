@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'landing.dart';
+import 'navbar.dart';
 import 'login.dart';
-
-
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -187,7 +185,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ],
                     ),
-
                   ],
                 ),
               ),
