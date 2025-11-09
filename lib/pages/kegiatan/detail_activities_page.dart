@@ -1,0 +1,571 @@
+import 'package:flutter/material.dart';
+
+class DetailActivitiesPage extends StatefulWidget {
+  final String title;
+  final String date;
+  final String time;
+  final String imagePath;
+
+  const DetailActivitiesPage({
+    super.key,
+    required this.title,
+    required this.date,
+    required this.time,
+    required this.imagePath,
+  });
+
+  @override
+  State<DetailActivitiesPage> createState() => _DetailActivitiesPageState();
+}
+
+class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
+  bool _isDescriptionExpanded = false;
+
+  final String fullDescription =
+      'Kegiatan volunteer yang mengajak Anda untuk berbagi ilmu dan inspirasi kepada anak-anak yang membutuhkan. Melalui acara ini, Anda dapat berkontribusi dalam memberikan pendidikan dan pengalaman belajar yang menyenangkan. Mari bersama-sama menciptakan perubahan positif dan memberikan dampak nyata bagi generasi muda. Gabung sekarang dan jadilah bagian dari gerakan kebaikan ini!';
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // --- PERBAIKAN OVERFLOW: Dapatkan tinggi safe area bawah ---
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              // 1. App Bar Gambar
+              SliverAppBar(
+                expandedHeight: screenHeight * 0.35,
+                pinned: true,
+                backgroundColor: Colors.blue,
+                elevation: 0,
+                leading: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: CircleAvatar(
+                    backgroundColor: Colors.black.withOpacity(0.3),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ),
+                actions: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: CircleAvatar(
+                      backgroundColor: Colors.black.withOpacity(0.3),
+                      child: IconButton(
+                        icon: const Icon(Icons.share, color: Colors.white),
+                        onPressed: () {},
+                      ),
+                    ),
+                  ),
+                ],
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Image.asset(widget.imagePath, fit: BoxFit.cover),
+                ),
+              ),
+
+              // 2. Header Konten yang Pinned
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _MyPinnedHeaderDelegate(
+                  title: widget.title,
+                  date: widget.date,
+                  time: widget.time,
+                ),
+              ),
+
+              // 3. Konten yang Bisa Scroll
+              SliverToBoxAdapter(
+                child: Container(
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                    ).copyWith(top: 0.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // --- Konten  ---
+                        _buildLocationCard(),
+                        const SizedBox(height: 24),
+                        _buildParticipantsInfo(),
+                        const SizedBox(height: 24),
+                        const Divider(
+                          color: Colors.black12,
+                          thickness: 1,
+                          height: 1,          
+                        ),
+                        const SizedBox(height: 24),
+
+                        // --- Deskripsi ---
+                        const Text(
+                          'Deskripsi Kegiatan',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          fullDescription,
+                          maxLines: _isDescriptionExpanded ? null : 4,
+                          overflow: _isDescriptionExpanded
+                              ? TextOverflow.visible
+                              : TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isDescriptionExpanded = !_isDescriptionExpanded;
+                            });
+                          },
+                          child: Text(
+                            _isDescriptionExpanded
+                                ? 'Lihat Lebih Sedikit'
+                                : 'Lihat Lebih Banyak',
+                            style: const TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        Theme(        
+                          data: Theme.of(context).copyWith(
+                            dividerColor:
+                                Colors.transparent,
+                          ),
+                          child: ExpansionTile(
+                            title: const Text(
+                              'Syarat dan Ketentuan',
+                              // ... style ...
+                            ),
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(
+                              top: 8,
+                              bottom: 16,
+                            ),
+                            children: [
+                              _buildRequirementItem(
+                                'Mahasiswa/i semester 3,5,7',
+                              ),
+                              _buildRequirementItem(
+                                'Memiliki pengalaman organisasi',
+                              ),
+                              _buildRequirementItem(
+                                'Mampu bekerja dalam sebuah tim',
+                              ),
+                              _buildRequirementItem(
+                                'Mampu bekerja dibawah tekanan',
+                              ),
+                              _buildRequirementItem('Kreatif'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // --- Dokumen Pendukung ---
+                        const Text(
+                          'Dokumen Pendukung',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDocumentCard(),
+                        const SizedBox(height: 24),
+
+                        // --- Pihak Penyelenggara ---
+                        const Text(
+                          'Pihak Penyelenggara',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildOrganizersList(),
+
+                        SizedBox(height: bottomPadding + 120),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          Positioned(bottom: 0, left: 0, right: 0, child: _buildBottomBar()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationCard() {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.grey[50],
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                'https://media.wired.com/photos/59269cd37034dc5f91bec0f1/master/w_2560%2Cc_limit/GoogleMapTA.jpg',
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Sekretariat KMB-USU',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Jalan Brigjend Katamso Dalam No.62. A U R, Kec. Medan Maimun, Kota Medan',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.location_on_outlined, size: 16),
+                    label: const Text('Dapatkan Lokasi'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[600],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildParticipantsInfo() {
+    Widget buildAvatar(String url) {
+      return CircleAvatar(radius: 15, backgroundImage: NetworkImage(url));
+    }
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 70,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: 30,
+                child: buildAvatar(
+                  'https://randomuser.me/api/portraits/women/1.jpg',
+                ),
+              ),
+              Positioned(
+                left: 15,
+                child: buildAvatar(
+                  'https://randomuser.me/api/portraits/men/1.jpg',
+                ),
+              ),
+              buildAvatar('https://randomuser.me/api/portraits/women/2.jpg'),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Text(
+          '43+ Bergabung',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 24,
+        vertical: 16,
+      ).copyWith(bottom: 32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {},
+                icon: const Icon(
+                  Icons.favorite_border,
+                  color: Colors.blue,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Text(
+                '0 suka',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue[600],
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+            ),
+            child: const Text(
+              'Daftar Kegiatan',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequirementItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle, color: Colors.blue, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[800],
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocumentCard() {
+    return InkWell(
+      onTap: () {},
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!, width: 1),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.picture_as_pdf, color: Colors.red[700], size: 40),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Dokumen Pedoman Volunteer.pdf',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Klik untuk melihat',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.download_for_offline_outlined, color: Colors.blue),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrganizersList() {
+    final List<String> logoPaths = [
+      'assets/event1.jpg',
+      'assets/event2.jpg',
+      'assets/event1.jpg',
+    ];
+
+    return SizedBox(
+      height: 60,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: logoPaths.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!, width: 1),
+                image: DecorationImage(
+                  // --- INI BAGIAN PENTING ---
+                  image: AssetImage(logoPaths[index]),
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final String title;
+  final String date;
+  final String time;
+
+  final double _height = 166;
+
+  _MyPinnedHeaderDelegate({
+    required this.title,
+    required this.date,
+    required this.time,
+  });
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildTag('Pendidikan', Icons.school_outlined),
+                const SizedBox(width: 8),
+                _buildTag('Sosial', Icons.people_outline),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildInfoRow(Icons.calendar_today_outlined, date),
+                const Spacer(),
+                _buildInfoRow(Icons.access_time_outlined, time),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTag(String label, IconData icon) {
+    return Chip(
+      avatar: Icon(icon, size: 16, color: Colors.blue[700]),
+      label: Text(label),
+      backgroundColor: Colors.blue[50],
+      labelStyle: TextStyle(color: Colors.blue[700], fontSize: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: Colors.blue[100]!),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.grey[600], size: 16),
+        const SizedBox(width: 4),
+        Text(text, style: TextStyle(fontSize: 14, color: Colors.grey[800])),
+      ],
+    );
+  }
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  bool shouldRebuild(covariant _MyPinnedHeaderDelegate oldDelegate) {
+    return title != oldDelegate.title ||
+        date != oldDelegate.date ||
+        time != oldDelegate.time;
+  }
+}
