@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'pages/register.dart';
+import 'pages/decision_page.dart';
+// import 'pages/register.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -34,7 +36,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0C5E70)),
         fontFamily: 'Poppins',
       ),
-      home: const RegisterPage(),
+      home: const DecisionPage(),
     );
   }
 }
