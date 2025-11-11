@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'login.dart'; // Mengarahkan ke halaman login Anda
+import 'package:volunite/pages/Authentication/login.dart';
+ // Mengarahkan ke halaman login Anda
 
 // Data model untuk konten onboarding
 class OnboardingItem {

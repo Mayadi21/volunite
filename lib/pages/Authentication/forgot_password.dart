@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'login.dart'; 
-import 'otp_verification.dart';
+import 'package:volunite/pages/Authentication/login.dart';
+import 'package:volunite/pages/Authentication/otp_verification.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
