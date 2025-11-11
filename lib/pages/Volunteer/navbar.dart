@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:volunite/pages/Volunteer/home.dart';
-import 'package:volunite/pages/Volunteer/kegiatan/activities_page.dart';
+import 'package:volunite/pages/Volunteer/Activity/activities_page.dart';
 import 'package:volunite/pages/Volunteer/profile.dart';
 
 
