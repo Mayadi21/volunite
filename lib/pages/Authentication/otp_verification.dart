@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'reset_password.dart';
+import 'package:volunite/pages/Authentication/reset_password.dart';
 
 class OTPVerificationPage extends StatefulWidget {
   final String email;

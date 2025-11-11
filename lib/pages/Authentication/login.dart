@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'navbar.dart';
-import 'register.dart';
-import 'forgot_password.dart';
+import 'package:volunite/pages/Authentication/forgot_password.dart';
+import 'package:volunite/pages/Authentication/register.dart';
+import 'package:volunite/pages/Volunteer/navbar.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

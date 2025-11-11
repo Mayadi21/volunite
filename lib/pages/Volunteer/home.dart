@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import './kegiatan/detail_activities_page.dart';
+import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 

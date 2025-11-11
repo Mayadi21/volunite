@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'login.dart'; // Halaman login Anda
-import 'onboarding_page.dart'; // Halaman onboarding Anda
+import 'package:volunite/pages/Authentication/login.dart';
+import 'package:volunite/pages/onboarding_page.dart';
 
 class DecisionPage extends StatefulWidget {
   const DecisionPage({super.key});
