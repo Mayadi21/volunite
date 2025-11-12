@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'pages/register.dart';
+import 'package:volunite/pages/decision_page.dart';
+// import 'pages/register.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -25,8 +27,7 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Poppins',
         useMaterial3: true,
       ),
-
-      home: const RegisterPage(),
+      home: const DecisionPage(),
     );
   }
 }

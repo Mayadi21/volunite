@@ -1,20 +1,99 @@
 import 'package:flutter/material.dart';
+import 'package:volunite/pages/Authentication/login.dart';
 
-// Menggunakan nama ProfilePage agar sesuai dengan LandingPage.dart Anda
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget { 
   const ProfilePage({super.key});
 
   @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final primaryDark = const Color(0xFF0C5E70); 
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        // Konten Dialog (AlertDialog)
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding: EdgeInsets.zero,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.only(top: 25, bottom: 15),
+                child: const Icon(
+                  Icons.error_outline,
+                  color: Colors.red,
+                  size: 60,
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Apakah kamu yakin ingin keluar dari akun?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: 25),
+              Padding(
+                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryDark, 
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Tidak', style: TextStyle(color: Colors.white, fontSize: 16)),
+                      ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); 
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(builder: (context) => const LoginPage()),
+                            (Route<dynamic> route) => false,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[700],
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Keluar', style: TextStyle(color: Colors.white, fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  @override
   Widget build(BuildContext context) {
-    // TIDAK ADA LAGI Scaffold di sini.
-    // Langsung kembalikan kontennya, diawali dengan SafeArea.
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              // --- Tombol Edit di Kanan Atas ---
               Align(
                 alignment: Alignment.topRight,
                 child: Container(
@@ -28,8 +107,6 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // --- Foto Profil & Nama ---
               const CircleAvatar(
                 radius: 50,
                 backgroundColor: Colors.grey,
@@ -37,20 +114,14 @@ class ProfilePage extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Go Youn Jung',
+                'MAS GIB RAN',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-
-              // --- Kartu Volunteer Exp ---
               _buildExperienceCard(),
               const SizedBox(height: 16),
-
-              // --- Kartu Statistik (Kegiatan & Peringkat) ---
               _buildStatsRow(),
               const SizedBox(height: 24),
-
-              // --- Bagian Pencapaian Sertifikat ---
               _buildAchievementSection(
                 title: 'Pencapaian Sertifikat',
                 items: [
@@ -60,8 +131,6 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-
-              // --- Bagian Pencapaian Relawan ---
               _buildAchievementSection(
                 title: 'Pencapaian Relawan',
                 items: [
@@ -74,12 +143,10 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-
-              // --- Tombol Keluar ---
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () => _showLogoutDialog(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red[700],
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -100,11 +167,9 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // Widget helper untuk kartu Volunteer Exp
   Widget _buildExperienceCard() {
-    const cardColor = Color(0xFF006064); // Dark Cyan
-
-    return Container(
+    const cardColor = Color(0xFF006064); 
+     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -154,10 +219,8 @@ class ProfilePage extends StatelessWidget {
       ),
     );
   }
-
-  // Widget helper untuk baris statistik
   Widget _buildStatsRow() {
-    const cardColor = Color(0xFF006064); // Dark Cyan
+    const cardColor = Color(0xFF006064); 
 
     return Row(
       children: [
@@ -213,8 +276,7 @@ class ProfilePage extends StatelessWidget {
       ],
     );
   }
-
-  // Widget helper untuk section list horizontal (Sertifikat & Relawan)
+  
   Widget _buildAchievementSection(
       {required String title, required List<Widget> items}) {
     return Column(
@@ -235,7 +297,7 @@ class ProfilePage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 150, // Tinggi tetap untuk list horizontal
+          height: 150, 
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: items.length,
@@ -246,10 +308,9 @@ class ProfilePage extends StatelessWidget {
       ],
     );
   }
-
-  // Widget helper untuk item sertifikat
+  
   Widget _buildCertificateItem(String date, String title) {
-    return Container(
+    return SizedBox(
       width: 120,
       child: Column(
         children: [
@@ -261,7 +322,6 @@ class ProfilePage extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.blue[200]!),
             ),
-            // Ikon dummy untuk sertifikat
             child: Icon(Icons.school, size: 50, color: Colors.blue[700]),
           ),
           const SizedBox(height: 8),
@@ -277,10 +337,9 @@ class ProfilePage extends StatelessWidget {
       ),
     );
   }
-
-  // Widget helper untuk item pencapaian relawan
+  
   Widget _buildVolunteerItem(String label, IconData icon, Color color) {
-    return Container(
+    return SizedBox(
       width: 100,
       child: Column(
         children: [

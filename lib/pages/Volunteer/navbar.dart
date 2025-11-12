@@ -1,9 +1,10 @@
 // lib/pages/navbar.dart
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'profile.dart';
-import 'home.dart';
-import 'kegiatan/activities_page.dart';
+import 'package:volunite/pages/Volunteer/home.dart';
+import 'package:volunite/pages/Volunteer/Activity/activities_page.dart';
+import 'package:volunite/pages/Volunteer/profile.dart';
+
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'navbar.dart';
-import 'register.dart';
+import 'package:volunite/pages/Authentication/forgot_password.dart';
+import 'package:volunite/pages/Authentication/register.dart';
+import 'package:volunite/pages/Volunteer/navbar.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,6 +13,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailC = TextEditingController();
   final passC = TextEditingController();
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -81,6 +83,58 @@ class _LoginPageState extends State<LoginPage> {
                       hint: "Masukkan password Anda",
                       controller: passC,
                       obscure: true,
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: Checkbox(
+                                  value: _rememberMe,
+                                  onChanged: (bool? newValue) {
+                                    setState(() {
+                                      _rememberMe = newValue ?? false;
+                                    });
+                                  },
+                                  activeColor: primary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                "Ingat Saya",
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+
+                          const Spacer(),
+
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordPage(),
+                                  ),
+                                );
+                            },
+                            child: const Text(
+                              "Lupa Kata Sandi?",
+                              style: TextStyle(
+                                color: primary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
                     ),
 
                     const Spacer(),

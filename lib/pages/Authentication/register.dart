@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'navbar.dart';
-import 'login.dart';
+import 'package:volunite/pages/Authentication/login.dart';
+import 'package:volunite/pages/Volunteer/navbar.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
