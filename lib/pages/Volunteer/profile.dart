@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:volunite/pages/Authentication/login.dart';
+import 'edit_profile.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -15,9 +16,9 @@ class _ProfilePageState extends State<ProfilePage> {
   final primaryDark = const Color(0xFF0C5E70);
   File? _imageFile;
 
-  // --- TIDAK ADA PERUBAHAN DI FUNGSI HELPER ---
-  // Fungsi _showImageSourceDialog, _pickImage, dan _showLogoutDialog
-  // sudah benar semua.
+  // --- FUNGSI HELPER (TIDAK BERUBAH) ---
+  // Semua fungsi _showImageSourceDialog, _pickImage, dan _showLogoutDialog
+  // sudah benar dan tidak perlu diubah.
   void _showImageSourceDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -55,7 +56,12 @@ class _ProfilePageState extends State<ProfilePage> {
     if (source == ImageSource.camera) {
       status = await Permission.camera.request();
     } else {
+      // Cek izin foto (tergantung versi Android)
+      // permission_handler v11+ menangani ini secara otomatis
       status = await Permission.photos.request();
+      if (status.isDenied && Platform.isAndroid) {
+         status = await Permission.storage.request();
+      }
     }
 
     if (status.isGranted) {
@@ -68,7 +74,6 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       }
     } else if (status.isPermanentlyDenied) {
-      // Jika izin ditolak permanen, buka pengaturan
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -176,6 +181,8 @@ class _ProfilePageState extends State<ProfilePage> {
       },
     );
   }
+  // --- AKHIR DARI FUNGSI HELPER ---
+
 
   @override
   Widget build(BuildContext context) {
@@ -194,31 +201,64 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-                    // --- PERUBAHAN DI SINI ---
-                    // Memanggil fungsi dialog dari tombol ini
-                    onPressed: () => _showImageSourceDialog(context),
-                    // --- SELESAI PERUBAHAN ---
+                    // --- PERUBAHAN 1 ---
+                    // Biarkan ini kosong, untuk edit info profil (nama, dll)
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfilePage(),
+                        ),
+                      );
+                    },
+                    // --- AKHIR PERUBAHAN 1 ---
                   ),
                 ),
               ),
 
-              // --- PERUBAHAN DI SINI ---
-              // Menghapus Stack, Positioned, dan CircleAvatar duplikat.
-              // Hanya sisakan satu CircleAvatar ini.
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey[300],
-                backgroundImage:
-                    _imageFile != null ? FileImage(_imageFile!) : null,
-                child: _imageFile == null
-                    ? const Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Colors.white,
-                      )
-                    : null,
+              // --- PERUBAHAN 2 ---
+              // Kita gunakan Stack lagi untuk menumpuk ikon kamera
+              Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey[300],
+                    backgroundImage:
+                        _imageFile != null ? FileImage(_imageFile!) : null,
+                    child: _imageFile == null
+                        ? const Icon(
+                            Icons.person,
+                            size: 60,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: primaryDark,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: InkWell(
+                        // Panggil dialog pilihan sumber dari sini
+                        onTap: () => _showImageSourceDialog(context),
+                        child: const Padding(
+                          padding: EdgeInsets.all(6.0),
+                          child: Icon(
+                            Icons.camera_alt, // Menggunakan ikon kamera
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              // --- SELESAI PERUBAHAN ---
+              // --- AKHIR PERUBAHAN 2 ---
 
               const SizedBox(height: 12),
               const Text(
@@ -284,8 +324,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // --- TIDAK ADA PERUBAHAN DI SINI ---
-  // (Semua widget _build... di bawah ini sudah benar)
+  // --- Sisa widget _build... (TIDAK BERUBAH) ---
   Widget _buildExperienceCard() {
     const cardColor = Color(0xFF006064);
     return Container(
