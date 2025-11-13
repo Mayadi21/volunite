@@ -37,7 +37,7 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
 
@@ -53,7 +53,6 @@ class _RegisterPageState extends State<RegisterPage> {
           : _buildStep2(context, primary),
     );
   }
-
 
   // ================== STEP 1 ==================
   Widget _buildStep1(BuildContext context, Color primary) {

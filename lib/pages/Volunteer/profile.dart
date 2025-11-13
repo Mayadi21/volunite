@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:volunite/pages/Authentication/login.dart';
+import 'edit_profile.dart';
 
-class ProfilePage extends StatefulWidget { 
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
@@ -9,7 +13,86 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final primaryDark = const Color(0xFF0C5E70); 
+  final primaryDark = const Color(0xFF0C5E70);
+  File? _imageFile;
+
+  // --- FUNGSI HELPER (TIDAK BERUBAH) ---
+  // Semua fungsi _showImageSourceDialog, _pickImage, dan _showLogoutDialog
+  // sudah benar dan tidak perlu diubah.
+  void _showImageSourceDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Kamera'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galeri'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    PermissionStatus status;
+
+    if (source == ImageSource.camera) {
+      status = await Permission.camera.request();
+    } else {
+      // Cek izin foto (tergantung versi Android)
+      // permission_handler v11+ menangani ini secara otomatis
+      status = await Permission.photos.request();
+      if (status.isDenied && Platform.isAndroid) {
+         status = await Permission.storage.request();
+      }
+    }
+
+    if (status.isGranted) {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: source);
+
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } else if (status.isPermanentlyDenied) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Izin diperlukan untuk mengakses fitur ini.'),
+            action: SnackBarAction(
+              label: 'Buka Pengaturan',
+              onPressed: openAppSettings,
+            ),
+          ),
+        );
+      }
+    } else if (status.isDenied) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Izin ditolak oleh pengguna.')),
+        );
+      }
+    }
+  }
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(
@@ -52,29 +135,41 @@ class _ProfilePageState extends State<ProfilePage> {
                           Navigator.of(context).pop();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryDark, 
+                          backgroundColor: primaryDark,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
-                        child: const Text('Tidak', style: TextStyle(color: Colors.white, fontSize: 16)),
+                        child: const Text(
+                          'Tidak',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 15),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.of(context).pop(); 
+                          Navigator.of(context).pop();
                           Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(builder: (context) => const LoginPage()),
+                            MaterialPageRoute(
+                              builder: (context) => const LoginPage(),
+                            ),
                             (Route<dynamic> route) => false,
                           );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red[700],
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
-                        child: const Text('Keluar', style: TextStyle(color: Colors.white, fontSize: 16)),
+                        child: const Text(
+                          'Keluar',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
                       ),
                     ),
                   ],
@@ -86,6 +181,9 @@ class _ProfilePageState extends State<ProfilePage> {
       },
     );
   }
+  // --- AKHIR DARI FUNGSI HELPER ---
+
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -103,15 +201,65 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-                    onPressed: () {},
+                    // --- PERUBAHAN 1 ---
+                    // Biarkan ini kosong, untuk edit info profil (nama, dll)
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfilePage(),
+                        ),
+                      );
+                    },
+                    // --- AKHIR PERUBAHAN 1 ---
                   ),
                 ),
               ),
-              const CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey,
-                child: Icon(Icons.person, size: 60, color: Colors.white),
+
+              // --- PERUBAHAN 2 ---
+              // Kita gunakan Stack lagi untuk menumpuk ikon kamera
+              Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey[300],
+                    backgroundImage:
+                        _imageFile != null ? FileImage(_imageFile!) : null,
+                    child: _imageFile == null
+                        ? const Icon(
+                            Icons.person,
+                            size: 60,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: primaryDark,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: InkWell(
+                        // Panggil dialog pilihan sumber dari sini
+                        onTap: () => _showImageSourceDialog(context),
+                        child: const Padding(
+                          padding: EdgeInsets.all(6.0),
+                          child: Icon(
+                            Icons.camera_alt, // Menggunakan ikon kamera
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              // --- AKHIR PERUBAHAN 2 ---
+
               const SizedBox(height: 12),
               const Text(
                 'MAS GIB RAN',
@@ -135,11 +283,20 @@ class _ProfilePageState extends State<ProfilePage> {
                 title: 'Pencapaian Relawan',
                 items: [
                   _buildVolunteerItem(
-                      'Penjaga\nHijau', Icons.eco, Colors.green),
+                    'Penjaga\nHijau',
+                    Icons.eco,
+                    Colors.green,
+                  ),
                   _buildVolunteerItem(
-                      'Juara\nKomunitas', Icons.emoji_events, Colors.blue),
+                    'Juara\nKomunitas',
+                    Icons.emoji_events,
+                    Colors.blue,
+                  ),
                   _buildVolunteerItem(
-                      'Perintis\nPerubahan', Icons.star, Colors.orange),
+                    'Perintis\nPerubahan',
+                    Icons.star,
+                    Colors.orange,
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -167,9 +324,10 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // --- Sisa widget _build... (TIDAK BERUBAH) ---
   Widget _buildExperienceCard() {
-    const cardColor = Color(0xFF006064); 
-     return Container(
+    const cardColor = Color(0xFF006064);
+    return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -219,8 +377,9 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+
   Widget _buildStatsRow() {
-    const cardColor = Color(0xFF006064); 
+    const cardColor = Color(0xFF006064);
 
     return Row(
       children: [
@@ -237,13 +396,16 @@ class _ProfilePageState extends State<ProfilePage> {
                 Text(
                   '72',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 SizedBox(height: 4),
-                Text('Kegiatan Sukarela',
-                    style: TextStyle(color: Colors.white70)),
+                Text(
+                  'Kegiatan Sukarela',
+                  style: TextStyle(color: Colors.white70),
+                ),
               ],
             ),
           ),
@@ -262,13 +424,16 @@ class _ProfilePageState extends State<ProfilePage> {
                 Text(
                   '3',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 SizedBox(height: 4),
-                Text('Peringkat Global',
-                    style: TextStyle(color: Colors.white70)),
+                Text(
+                  'Peringkat Global',
+                  style: TextStyle(color: Colors.white70),
+                ),
               ],
             ),
           ),
@@ -276,9 +441,11 @@ class _ProfilePageState extends State<ProfilePage> {
       ],
     );
   }
-  
-  Widget _buildAchievementSection(
-      {required String title, required List<Widget> items}) {
+
+  Widget _buildAchievementSection({
+    required String title,
+    required List<Widget> items,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -289,15 +456,12 @@ class _ProfilePageState extends State<ProfilePage> {
               title,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            TextButton(
-              onPressed: () {},
-              child: const Text('Lihat Semua'),
-            ),
+            TextButton(onPressed: () {}, child: const Text('Lihat Semua')),
           ],
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 150, 
+          height: 150,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: items.length,
@@ -308,7 +472,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ],
     );
   }
-  
+
   Widget _buildCertificateItem(String date, String title) {
     return SizedBox(
       width: 120,
@@ -337,7 +501,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-  
+
   Widget _buildVolunteerItem(String label, IconData icon, Color color) {
     return SizedBox(
       width: 100,
