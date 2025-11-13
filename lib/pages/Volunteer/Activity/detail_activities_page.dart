@@ -65,6 +65,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
+                  collapseMode: CollapseMode.pin,
                   background: Image.asset(widget.imagePath, fit: BoxFit.cover),
                 ),
               ),
@@ -475,7 +476,8 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String date;
   final String time;
 
-  final double _height = 166;
+  final double _minHeight = 170;
+  final double _maxHeight = 170;
 
   _MyPinnedHeaderDelegate({
     required this.title,
@@ -501,7 +503,7 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
         ],
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -515,7 +517,7 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
             Row(
               children: [
                 _buildTag('Pendidikan', Icons.school_outlined),
-                const SizedBox(width: 8),
+                const SizedBox(width: 8), 
                 _buildTag('Sosial', Icons.people_outline),
               ],
             ),
@@ -557,10 +559,10 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  double get maxExtent => _height;
+  double get maxExtent => _maxHeight;
 
   @override
-  double get minExtent => _height;
+  double get minExtent => _minHeight;
 
   @override
   bool shouldRebuild(covariant _MyPinnedHeaderDelegate oldDelegate) {
