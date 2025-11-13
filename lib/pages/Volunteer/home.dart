@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
+import 'package:volunite/pages/Volunteer/Notification/notification.dart';
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 
@@ -43,7 +44,12 @@ class HomeTab extends StatelessWidget {
               ),
               IconButton(
                 icon: Icon(Icons.notifications_outlined, color: primary),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const NotifikasiPage()),
+                  );
+                },
               ),
             ],
           ),
