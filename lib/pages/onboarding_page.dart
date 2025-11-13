@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:volunite/pages/Authentication/login.dart';
- // Mengarahkan ke halaman login Anda
 
-// Data model untuk konten onboarding
 class OnboardingItem {
   String image;
   String title;
@@ -13,24 +11,22 @@ class OnboardingItem {
       {required this.image, required this.title, required this.description});
 }
 
-// Daftar konten untuk 3 halaman
-// GANTI URL INI dengan path aset gambar Anda (misal: 'assets/onboarding1.png')
 List<OnboardingItem> contents = [
   OnboardingItem(
     title: 'Temukan Peluang',
-    image: 'https://placehold.co/300x300/a2d2ff/ffffff?text=Temukan',
+    image: 'assets/onboard1.png',
     description:
         'Jelajahi ratusan kegiatan relawan dari berbagai organisasi di sekitar Anda.',
   ),
   OnboardingItem(
     title: 'Terhubung dengan Komunitas',
-    image: 'https://placehold.co/300x300/bde0fe/ffffff?text=Terhubung',
+    image: 'assets/onboard2.png',
     description:
         'Bertemu dengan relawan lain, bangun jaringan, dan jadi bagian dari komunitas peduli.',
   ),
   OnboardingItem(
     title: 'Buat Perubahan Nyata',
-    image: 'https://placehold.co/300x300/ffafcc/ffffff?text=Berdampak',
+    image: 'assets/onboard3.png',
     description:
         'Setiap jam yang Anda berikan membawa dampak positif bagi yang membutuhkan.',
   ),
