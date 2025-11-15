@@ -14,19 +14,19 @@ class OnboardingItem {
 List<OnboardingItem> contents = [
   OnboardingItem(
     title: 'Temukan Peluang',
-    image: 'assets/onboard1.png',
+    image: 'assets/images/onboard/onboard1.png',
     description:
         'Jelajahi ratusan kegiatan relawan dari berbagai organisasi di sekitar Anda.',
   ),
   OnboardingItem(
     title: 'Terhubung dengan Komunitas',
-    image: 'assets/onboard2.png',
+    image: 'assets/images/onboard/onboard2.png',
     description:
         'Bertemu dengan relawan lain, bangun jaringan, dan jadi bagian dari komunitas peduli.',
   ),
   OnboardingItem(
     title: 'Buat Perubahan Nyata',
-    image: 'assets/onboard3.png',
+    image: 'assets/images/onboard/onboard3.png',
     description:
         'Setiap jam yang Anda berikan membawa dampak positif bagi yang membutuhkan.',
   ),

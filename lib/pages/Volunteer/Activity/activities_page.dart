@@ -18,7 +18,10 @@ class ActivitiesPage extends StatelessWidget {
           centerTitle: true,
           title: const Text(
             'Kegiatan',
-            style: TextStyle(fontWeight: FontWeight.w600, color: Color.fromARGB(242, 255, 255, 255)),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Color.fromARGB(242, 255, 255, 255),
+            ),
           ),
           bottom: const TabBar(
             indicatorColor: Colors.white,
@@ -51,14 +54,14 @@ class _UpcomingTab extends StatelessWidget {
         _SearchField(),
         SizedBox(height: 16),
         _ActivityCard(
-          imagePath: 'assets/event1.jpg',
+          imagePath: 'assets/images/event1.jpg',
           title: 'Pintar Bersama - KMB USU',
           date: 'Sabtu, 19 Oktober 2024',
           time: '12.00 WIB - 17.00 WIB',
         ),
         SizedBox(height: 14),
         _ActivityCard(
-          imagePath: 'assets/event2.jpg',
+          imagePath: 'assets/images/event2.jpg',
           title: 'Aksi Bersih Pantai',
           date: 'Minggu, 20 Oktober 2024',
           time: '09.00 WIB - 12.00 WIB',
@@ -82,7 +85,7 @@ class _HistoryTab extends StatelessWidget {
         _SearchField(),
         SizedBox(height: 16),
         _ActivityCard(
-          imagePath: 'assets/event1.jpg',
+          imagePath: 'assets/images/event1.jpg',
           title: 'Pintar Bersama - KMB USU',
           date: 'Sabtu, 19 Oktober 2024',
           time: '12.00 WIB - 17.00 WIB',
@@ -90,7 +93,7 @@ class _HistoryTab extends StatelessWidget {
         ),
         SizedBox(height: 14),
         _ActivityCard(
-          imagePath: 'assets/event2.jpg',
+          imagePath: 'assets/images/event2.jpg',
           title: 'Aksi Bersih Pantai',
           date: 'Minggu, 20 Oktober 2024',
           time: '09.00 WIB - 12.00 WIB',

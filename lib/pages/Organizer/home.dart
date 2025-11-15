@@ -23,7 +23,9 @@ class OrganizerHomeTab extends StatelessWidget {
                 children: [
                   const CircleAvatar(
                     radius: 24,
-                    backgroundImage: AssetImage('assets/profile.jpg'),
+                    backgroundImage: AssetImage(
+                      'assets/images/profile_placeholder.jpeg',
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Column(
@@ -118,7 +120,7 @@ class OrganizerHomeTab extends StatelessWidget {
               children: [
                 _EventManageCard(
                   primary: primary,
-                  image: 'assets/event1.jpg',
+                  image: 'assets/images/event1.jpg',
                   title: 'Pintar Bersama - KMB USU',
                   date: 'Sabtu, 19 Okt 2024',
                   time: '12.00 - 17.00 WIB',
@@ -128,7 +130,7 @@ class OrganizerHomeTab extends StatelessWidget {
                 ),
                 _EventManageCard(
                   primary: primary,
-                  image: 'assets/event2.jpg',
+                  image: 'assets/images/event2.jpg',
                   title: 'Aksi Bersih Pantai',
                   date: 'Minggu, 20 Okt 2024',
                   time: '09.00 - 12.00 WIB',
@@ -491,7 +493,6 @@ class _ApplicantTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -508,7 +509,7 @@ class _ApplicantTile extends StatelessWidget {
       ),
       child: ListTile(
         leading: const CircleAvatar(
-          backgroundImage: AssetImage('assets/profile.jpg'),
+          backgroundImage: AssetImage('assets/images/profile_placeholder.jpeg'),
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text("$event • $submittedAt"),

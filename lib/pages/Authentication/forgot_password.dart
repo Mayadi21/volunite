@@ -31,7 +31,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             const SizedBox(height: 20),
             
             Image.asset(
-              'assets/volunite_logo.png', 
+              'assets/images/logo/volunite_logo.png', 
               height: 200, 
               color: Colors.white, 
             ),

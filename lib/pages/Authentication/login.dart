@@ -121,8 +121,8 @@ class _LoginPageState extends State<LoginPage> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => const ForgotPasswordPage(),
-                                  ),
-                                );
+                                ),
+                              );
                             },
                             child: const Text(
                               "Lupa Kata Sandi?",
@@ -132,13 +132,14 @@ class _LoginPageState extends State<LoginPage> {
                                 fontSize: 13,
                               ),
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
 
                     const Spacer(),
 
+                    // 1. Masuk sebagai Volunteer (Original Button - Primary Style)
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -158,7 +159,7 @@ class _LoginPageState extends State<LoginPage> {
                           );
                         },
                         child: const Text(
-                          "Masuk",
+                          "Masuk sebagai Volunteer", // Teks diubah untuk kejelasan
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -166,6 +167,63 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 10),
+
+                    // 2. Masuk sebagai Organizer (New Button - Outlined Style)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          side: const BorderSide(color: primary, width: 2),
+                        ),
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LandingPage(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Masuk sebagai Organizer",
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // 3. Masuk sebagai Admin (New Button - Outlined Style)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          side: const BorderSide(color: primary, width: 2),
+                        ),
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LandingPage(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Masuk sebagai Admin",
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 10),
 
                     Row(

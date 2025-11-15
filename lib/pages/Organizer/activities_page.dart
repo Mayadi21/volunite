@@ -14,7 +14,7 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> {
   final List<_ActivityItem> _items = [
     _ActivityItem(
       title: 'Pintar Bersama - KMB USU',
-      banner: 'assets/event1.jpg',
+      banner: 'assets/images/event1.jpg',
       start: DateTime(2025, 11, 15, 12, 0),
       end: DateTime(2025, 11, 15, 17, 0),
       location: 'USU - Ruang B.204',
@@ -23,7 +23,7 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> {
     ),
     _ActivityItem(
       title: 'Aksi Bersih Pantai',
-      banner: 'assets/event2.jpg',
+      banner: 'assets/images/event2.jpg',
       start: DateTime(2025, 11, 16, 9, 0),
       end: DateTime(2025, 11, 16, 12, 0),
       location: 'Pantai Cermin',
@@ -32,7 +32,7 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> {
     ),
     _ActivityItem(
       title: 'Donor Darah',
-      banner: 'assets/event3.jpg',
+      banner: 'assets/images/event2.jpg',
       start: DateTime(2025, 10, 5, 9, 0),
       end: DateTime(2025, 10, 5, 13, 0),
       location: 'Aula Fakultas',
