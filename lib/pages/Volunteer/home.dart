@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
 import 'package:volunite/pages/Volunteer/Notification/notification.dart';
+
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 
@@ -21,7 +22,9 @@ class HomeTab extends StatelessWidget {
                 children: [
                   const CircleAvatar(
                     radius: 24,
-                    backgroundImage: AssetImage('assets/profile.jpg'),
+                    backgroundImage: AssetImage(
+                      'assets/images/profile_placeholder.jpeg',
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Column(
@@ -47,7 +50,9 @@ class HomeTab extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const NotifikasiPage()),
+                    MaterialPageRoute(
+                      builder: (context) => const NotifikasiPage(),
+                    ),
                   );
                 },
               ),
@@ -171,7 +176,7 @@ class HomeTab extends StatelessWidget {
               children: [
                 eventCard(
                   context,
-                  "assets/event1.jpg",
+                  "assets/images/event1.jpg",
                   "Pintar Bersama - KMB USU",
                   "Sabtu, 19 Oktober 2024",
                   "12.00 WIB - 17.00 WIB",
@@ -179,7 +184,7 @@ class HomeTab extends StatelessWidget {
                 ),
                 eventCard(
                   context,
-                  "assets/event2.jpg",
+                  "assets/images/event2.jpg",
                   "Aksi Bersih Pantai",
                   "Minggu, 20 Oktober 2024",
                   "09.00 WIB - 12.00 WIB",
@@ -266,7 +271,9 @@ class HomeTab extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
               child: Image.asset(
                 image,
                 height: 130,
@@ -308,17 +315,27 @@ class HomeTab extends StatelessWidget {
                       const SizedBox(width: 5),
                       Text(
                         date,
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                      const Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 5),
                       Text(
                         time,
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),

@@ -99,7 +99,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         const Divider(
                           color: Colors.black12,
                           thickness: 1,
-                          height: 1,          
+                          height: 1,
                         ),
                         const SizedBox(height: 24),
 
@@ -144,11 +144,10 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         ),
                         const SizedBox(height: 24),
 
-                        Theme(        
-                          data: Theme.of(context).copyWith(
-                            dividerColor:
-                                Colors.transparent,
-                          ),
+                        Theme(
+                          data: Theme.of(
+                            context,
+                          ).copyWith(dividerColor: Colors.transparent),
                           child: ExpansionTile(
                             title: const Text(
                               'Syarat dan Ketentuan',
@@ -437,9 +436,9 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
 
   Widget _buildOrganizersList() {
     final List<String> logoPaths = [
-      'assets/event1.jpg',
-      'assets/event2.jpg',
-      'assets/event1.jpg',
+      'assets/images/event1.jpg',
+      'assets/images/event2.jpg',
+      'assets/images/event1.jpg',
     ];
 
     return SizedBox(
@@ -517,7 +516,7 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
             Row(
               children: [
                 _buildTag('Pendidikan', Icons.school_outlined),
-                const SizedBox(width: 8), 
+                const SizedBox(width: 8),
                 _buildTag('Sosial', Icons.people_outline),
               ],
             ),
