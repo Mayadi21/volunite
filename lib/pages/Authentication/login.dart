@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:volunite/pages/Authentication/forgot_password.dart';
 import 'package:volunite/pages/Authentication/register.dart';
 import 'package:volunite/pages/Volunteer/navbar.dart';
+import 'package:volunite/pages/Organizer/navbar.dart';
+import 'package:volunite/pages/Admin/admin_main_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -213,7 +215,7 @@ class _LoginPageState extends State<LoginPage> {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const LandingPage(),
+                              builder: (_) => const AdminMainPage(),
                             ),
                           );
                         },
