@@ -10,7 +10,6 @@ class OrganizerActivitiesPage extends StatefulWidget {
 }
 
 class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> {
-  // Dummy data contoh; nanti ganti dengan data dari backend Laravel
   final List<_ActivityItem> _items = [
     _ActivityItem(
       title: 'Pintar Bersama - KMB USU',
@@ -56,7 +55,7 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> {
       child: Scaffold(
         backgroundColor: Colors.grey[100],
         appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(110),
+          preferredSize: const Size.fromHeight(130),
           child: SafeArea(
             bottom: false,
             child: Padding(
@@ -86,13 +85,25 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> {
                   ),
                   const SizedBox(height: 12),
                   // Tab pill
+                  // ...
                   _TabPill(
-                    tabs: const [
-                      Tab(text: "Mendatang"),
-                      Tab(text: "Riwayat"),
+                    tabs: [ 
+                      Tab(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20), 
+                          child: Text("Mendatang"),
+                        ),
+                      ),
+                      Tab(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20), 
+                          child: Text("Riwayat"),
+                        ),
+                      ),
                     ],
                     primary: primary,
                   ),
+// ...
                 ],
               ),
             ),
@@ -180,7 +191,7 @@ class _TabPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 44,
+      height: 50,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -198,6 +209,7 @@ class _TabPill extends StatelessWidget {
           color: primary,
           borderRadius: BorderRadius.circular(10),
         ),
+        indicatorSize: TabBarIndicatorSize.label,
         labelColor: Colors.white,
         unselectedLabelColor: Colors.grey[600],
         dividerColor: Colors.transparent,
