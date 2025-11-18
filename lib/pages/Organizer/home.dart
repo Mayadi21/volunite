@@ -1,5 +1,6 @@
 // lib/pages/Organizer/home.dart
 import 'package:flutter/material.dart';
+import 'package:volunite/pages/Organizer/notification.dart';
 
 class OrganizerHomeTab extends StatelessWidget {
   const OrganizerHomeTab({super.key});
@@ -48,7 +49,14 @@ class OrganizerHomeTab extends StatelessWidget {
               ),
               IconButton(
                 icon: Icon(Icons.notifications_outlined, color: primary),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotifikasiPage(),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -114,7 +122,7 @@ class OrganizerHomeTab extends StatelessWidget {
           const SizedBox(height: 12),
 
           SizedBox(
-            height: 240,
+            height: 340,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
@@ -493,7 +501,6 @@ class _ApplicantTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(

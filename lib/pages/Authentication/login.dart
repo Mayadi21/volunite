@@ -187,7 +187,7 @@ class _LoginPageState extends State<LoginPage> {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const LandingPage(),
+                              builder: (_) => const OrganizerLandingPage(),
                             ),
                           );
                         },
