@@ -10,6 +10,10 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  // --- STATE BARU: Variable untuk menyimpan role yang dipilih ---
+  String _selectedRole = 'Volunteer'; 
+  // -------------------------------------------------------------
+
   // step 1
   final nameC = TextEditingController();
   final emailC = TextEditingController();
@@ -148,6 +152,41 @@ class _RegisterPageState extends State<RegisterPage> {
                       controller: pass2C,
                       obscure: true,
                     ),
+
+                    // --- MODIFIKASI: PENAMBAHAN TOMBOL ROLE ---
+                    const SizedBox(height: 20),
+                    const Text(
+                      "Daftar Sebagai:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildRoleButton(
+                            role: 'Volunteer',
+                            icon: Icons.person_outline,
+                            isSelected: _selectedRole == 'Volunteer',
+                            primaryColor: primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildRoleButton(
+                            role: 'Organisasi',
+                            icon: Icons.apartment,
+                            isSelected: _selectedRole == 'Organisasi',
+                            primaryColor: primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // ------------------------------------------
+
                     const Spacer(),
                     SizedBox(
                       width: double.infinity,
@@ -199,6 +238,62 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET TOMBOL ROLE ---
+  Widget _buildRoleButton({
+    required String role,
+    required IconData icon,
+    required bool isSelected,
+    required Color primaryColor,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedRole = role;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          // Jika dipilih: Warna Primary, Jika tidak: Abu-abu gelap/dimmed
+          color: isSelected ? primaryColor : const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? primaryColor : Colors.grey.shade300,
+            width: 2,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey.shade500, // Icon gelapkan jika tidak aktif
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              role,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey.shade500, // Text gelapkan jika tidak aktif
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -264,13 +359,16 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  "Data diri hanya digunakan untuk informasi semata",
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                  // Update text agar sesuai role
+                  _selectedRole == 'Organisasi' 
+                      ? "Lengkapi data organisasi Anda" 
+                      : "Data diri hanya digunakan untuk informasi semata",
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
               ),
             ),
@@ -281,7 +379,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 children: [
                   _fieldStep2(
                     icon: Icons.calendar_today,
-                    hint: "Tanggal Lahir",
+                    hint: _selectedRole == 'Organisasi' ? "Tanggal Berdiri" : "Tanggal Lahir",
                     controller: tglC,
                     readOnly: true,
                     onTap: () async {
