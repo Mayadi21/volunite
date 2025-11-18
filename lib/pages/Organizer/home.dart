@@ -1,6 +1,8 @@
 // lib/pages/Organizer/home.dart
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Organizer/notification.dart';
+// Pastikan import halaman detail yang baru Anda buat (OrganizerDetailActivityPage)
+import 'package:volunite/pages/Organizer/detail_activities_page.dart'; 
 
 class OrganizerHomeTab extends StatelessWidget {
   const OrganizerHomeTab({super.key});
@@ -126,6 +128,7 @@ class OrganizerHomeTab extends StatelessWidget {
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
+                // --- KEGIATAN 1 ---
                 _EventManageCard(
                   primary: primary,
                   image: 'assets/images/event1.jpg',
@@ -135,7 +138,23 @@ class OrganizerHomeTab extends StatelessWidget {
                   dDayLabel: '2 hari lagi',
                   registered: 46,
                   quota: 60,
+                  // --- NAVIGASI KE DETAIL ---
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const OrganizerDetailActivityPage(
+                          title: 'Pintar Bersama - KMB USU',
+                          date: 'Sabtu, 19 Okt 2024',
+                          time: '12.00 - 17.00 WIB',
+                          imagePath: 'assets/images/event1.jpg',
+                        ),
+                      ),
+                    );
+                  },
                 ),
+
+                // --- KEGIATAN 2 ---
                 _EventManageCard(
                   primary: primary,
                   image: 'assets/images/event2.jpg',
@@ -145,6 +164,20 @@ class OrganizerHomeTab extends StatelessWidget {
                   dDayLabel: '3 hari lagi',
                   registered: 82,
                   quota: 120,
+                  // --- NAVIGASI KE DETAIL ---
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const OrganizerDetailActivityPage(
+                          title: 'Aksi Bersih Pantai',
+                          date: 'Minggu, 20 Okt 2024',
+                          time: '09.00 - 12.00 WIB',
+                          imagePath: 'assets/images/event2.jpg',
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -191,9 +224,7 @@ class OrganizerHomeTab extends StatelessWidget {
   }
 }
 
-// ===================================================================
-// Widgets Kecil (yang dipakai saja)
-// ===================================================================
+// ... (Widget _MetricsGrid, _MetricItem, _MetricTile tetap sama) ...
 
 class _MetricsGrid extends StatelessWidget {
   const _MetricsGrid({required this.primary});
@@ -314,6 +345,9 @@ class _MetricTile extends StatelessWidget {
   }
 }
 
+// ===================================================================
+// MODIFIED: EventManageCard
+// ===================================================================
 class _EventManageCard extends StatelessWidget {
   const _EventManageCard({
     required this.primary,
@@ -324,6 +358,7 @@ class _EventManageCard extends StatelessWidget {
     required this.dDayLabel,
     required this.registered,
     required this.quota,
+    this.onTap, // Tambahkan parameter onTap
   });
 
   final Color primary;
@@ -334,160 +369,167 @@ class _EventManageCard extends StatelessWidget {
   final String dDayLabel;
   final int registered;
   final int quota;
+  final VoidCallback? onTap; // Tipe data callback
 
   @override
   Widget build(BuildContext context) {
     final progress = (registered / quota).clamp(0, 1).toDouble();
 
-    return Container(
-      width: 300,
-      margin: const EdgeInsets.only(right: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade300,
-            blurRadius: 5,
-            offset: const Offset(2, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // image banner
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: Image.asset(
-              image,
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.cover,
+    // Bungkus Container dengan GestureDetector
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 300,
+        margin: const EdgeInsets.only(right: 15),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade300,
+              blurRadius: 5,
+              offset: const Offset(2, 2),
             ),
-          ),
-          // content
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-            ).copyWith(top: 10, bottom: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  dDayLabel,
-                  style: TextStyle(
-                    color: primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // image banner
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              child: Image.asset(
+                image,
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+            // content
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+              ).copyWith(top: 10, bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    dDayLabel,
+                    style: TextStyle(
+                      color: primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                  const SizedBox(height: 4),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.calendar_today,
-                      size: 14,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      date,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    const Icon(Icons.access_time, size: 14, color: Colors.grey),
-                    const SizedBox(width: 5),
-                    Text(
-                      time,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                // capacity progress
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "$registered / $quota",
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    Text(
-                      "${(progress * 100).round()}%",
-                      style: TextStyle(fontSize: 12, color: primary),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 8,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(primary),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        date,
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 10),
-                // actions
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => _ManageEventPage(title: title),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                      const SizedBox(width: 5),
+                      Text(
+                        time,
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // capacity progress
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "$registered / $quota",
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        "${(progress * 100).round()}%",
+                        style: TextStyle(fontSize: 12, color: primary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 8,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(primary),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => _ManageEventPage(title: title),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.dashboard_customize, size: 18),
+                          label: const Text("Kelola"),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.dashboard_customize, size: 18),
-                        label: const Text("Kelola"),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.person_search, size: 18),
-                        label: const Text("Pelamar"),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.person_search, size: 18),
+                          label: const Text("Pelamar"),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+
+// ... (Widget _ApplicantTile, _CreateEventPlaceholder, _ManageEventPage tetap sama) ...
 
 class _ApplicantTile extends StatelessWidget {
   const _ApplicantTile({
@@ -558,9 +600,6 @@ class _ApplicantTile extends StatelessWidget {
   }
 }
 
-// ===================================================================
-// Placeholder (agar navigasi tombol tidak error)
-// ===================================================================
 class _CreateEventPlaceholder extends StatelessWidget {
   const _CreateEventPlaceholder({super.key});
 

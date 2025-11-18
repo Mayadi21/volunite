@@ -24,11 +24,181 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   final String fullDescription =
       'Kegiatan volunteer yang mengajak Anda untuk berbagi ilmu dan inspirasi kepada anak-anak yang membutuhkan. Melalui acara ini, Anda dapat berkontribusi dalam memberikan pendidikan dan pengalaman belajar yang menyenangkan. Mari bersama-sama menciptakan perubahan positif dan memberikan dampak nyata bagi generasi muda. Gabung sekarang dan jadilah bagian dari gerakan kebaikan ini!';
 
+  // --- FITUR BARU: Form Report dengan Dropdown ---
+  void _showReportForm(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
+    // Kita tidak butuh controller text untuk dropdown, tapi butuh variabel state
+    final descriptionController = TextEditingController();
+    String? selectedComplaintType;
+
+    // Daftar Opsi Keluhan
+    final List<String> complaintOptions = [
+      'Informasi Palsu (Hoax)',
+      'Penipuan',
+      'Ujaran Kebencian',
+      'Konten Tidak Pantas',
+      'Spam',
+      'Lainnya',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Agar form bisa naik penuh saat keyboard muncul
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        // PENTING: Gunakan StatefulBuilder agar dropdown bisa berubah state-nya di dalam modal
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 24,
+                right: 24,
+                // Memberi padding bawah dinamis sesuai tinggi keyboard
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Modal
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Laporkan Kegiatan',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // --- INPUT 1: DROPDOWN JENIS KELUHAN ---
+                    const Text(
+                      "Jenis Keluhan",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedComplaintType,
+                      icon: const Icon(Icons.arrow_drop_down),
+                      decoration: InputDecoration(
+                        hintText: 'Pilih jenis masalah',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      items: complaintOptions.map((String item) {
+                        return DropdownMenuItem<String>(
+                          value: item,
+                          child: Text(item),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        // Gunakan setModalState untuk update UI di dalam modal
+                        setModalState(() {
+                          selectedComplaintType = newValue;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Harap pilih jenis keluhan';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // --- INPUT 2: DESKRIPSI ---
+                    const Text(
+                      "Deskripsi Keluhan",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: descriptionController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: 'Jelaskan detail masalah yang Anda temukan...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Deskripsi harus diisi';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // --- TOMBOL KIRIM ---
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (formKey.currentState!.validate()) {
+                            // Logika kirim data ke backend bisa ditaruh di sini
+                            // print(selectedComplaintType);
+                            // print(descriptionController.text);
+
+                            Navigator.pop(context); // Tutup modal
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Laporan berhasil dikirim'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[600], // Warna warning
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Kirim Laporan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-
-    // --- PERBAIKAN OVERFLOW: Dapatkan tinggi safe area bawah ---
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
@@ -53,6 +223,22 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   ),
                 ),
                 actions: [
+                  // Tombol Report (Bendera)
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: CircleAvatar(
+                      backgroundColor: Colors.black.withOpacity(0.3),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.flag_outlined,
+                          color: Colors.white,
+                        ),
+                        tooltip: 'Laporkan',
+                        onPressed: () => _showReportForm(context),
+                      ),
+                    ),
+                  ),
+                  // Tombol Share
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CircleAvatar(
@@ -91,7 +277,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- Konten  ---
                         _buildLocationCard(),
                         const SizedBox(height: 24),
                         _buildParticipantsInfo(),
@@ -103,7 +288,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         ),
                         const SizedBox(height: 24),
 
-                        // --- Deskripsi ---
+                        // Deskripsi
                         const Text(
                           'Deskripsi Kegiatan',
                           style: TextStyle(
@@ -144,6 +329,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         ),
                         const SizedBox(height: 24),
 
+                        // Syarat & Ketentuan
                         Theme(
                           data: Theme.of(
                             context,
@@ -151,7 +337,10 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                           child: ExpansionTile(
                             title: const Text(
                               'Syarat dan Ketentuan',
-                              // ... style ...
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             tilePadding: EdgeInsets.zero,
                             childrenPadding: const EdgeInsets.only(
@@ -177,7 +366,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         ),
                         const SizedBox(height: 24),
 
-                        // --- Dokumen Pendukung ---
+                        // Dokumen Pendukung
                         const Text(
                           'Dokumen Pendukung',
                           style: TextStyle(
@@ -189,7 +378,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         _buildDocumentCard(),
                         const SizedBox(height: 24),
 
-                        // --- Pihak Penyelenggara ---
+                        // Pihak Penyelenggara
                         const Text(
                           'Pihak Penyelenggara',
                           style: TextStyle(
@@ -209,6 +398,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
             ],
           ),
 
+          // Bottom Bar Melayang
           Positioned(bottom: 0, left: 0, right: 0, child: _buildBottomBar()),
         ],
       ),
@@ -417,7 +607,10 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 children: [
                   const Text(
                     'Dokumen Pedoman Volunteer.pdf',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -457,7 +650,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey[300]!, width: 1),
                 image: DecorationImage(
-                  // --- INI BAGIAN PENTING ---
                   image: AssetImage(logoPaths[index]),
                   fit: BoxFit.contain,
                 ),
@@ -470,6 +662,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 }
 
+// --- DELEGATE UNTUK HEADER YANG PINNED ---
 class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
   final String date;
