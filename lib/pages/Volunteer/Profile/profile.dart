@@ -1,9 +1,12 @@
+// lib/pages/profile/profile_page.dart
+
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:volunite/pages/Authentication/login.dart';
 import 'edit_profile.dart';
+import 'package:volunite/color_pallete.dart'; // Impor color palette
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -13,12 +16,9 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final primaryDark = const Color(0xFF0C5E70);
+  final primaryDark = kDarkBlueGray;
   File? _imageFile;
 
-  // --- FUNGSI HELPER (TIDAK BERUBAH) ---
-  // Semua fungsi _showImageSourceDialog, _pickImage, dan _showLogoutDialog
-  // sudah benar dan tidak perlu diubah.
   void _showImageSourceDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -56,11 +56,9 @@ class _ProfilePageState extends State<ProfilePage> {
     if (source == ImageSource.camera) {
       status = await Permission.camera.request();
     } else {
-      // Cek izin foto (tergantung versi Android)
-      // permission_handler v11+ menangani ini secara otomatis
       status = await Permission.photos.request();
       if (status.isDenied && Platform.isAndroid) {
-         status = await Permission.storage.request();
+        status = await Permission.storage.request();
       }
     }
 
@@ -98,7 +96,6 @@ class _ProfilePageState extends State<ProfilePage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        // Konten Dialog (AlertDialog)
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -129,24 +126,36 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
+                    // --- TOMBOL TIDAK (Diedit) ---
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryDark,
+                          backgroundColor: Colors.white, // Background Putih
+                          foregroundColor:
+                              kBlueGray, // Warna efek sentuhan & text otomatis menyesuaikan
                           padding: const EdgeInsets.symmetric(vertical: 12),
+                          // Menambahkan Border (Garis Tepi)
+                          side: const BorderSide(color: kBlueGray, width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
+                          elevation: 0,
                         ),
                         child: const Text(
                           'Tidak',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
+                          // Hapus properti color di sini atau ubah jadi kBlueGray
+                          // agar tidak tertimpa warna putih (jika sebelumnya putih)
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
+                    // -----------------------------
                     const SizedBox(width: 15),
                     Expanded(
                       child: ElevatedButton(
@@ -183,52 +192,59 @@ class _ProfilePageState extends State<ProfilePage> {
   }
   // --- AKHIR DARI FUNGSI HELPER ---
 
-
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
+    return Scaffold(
+      backgroundColor: kBackground,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [kBlueGray, kSkyBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: const Text(
+          'Profil Saya',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+        centerTitle: true,
+        actions: [
+          // Tombol Edit Profile
+          _buildActionButton(
+            icon: Icons.edit,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const EditProfilePage(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.blue[800],
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-                    // --- PERUBAHAN 1 ---
-                    // Biarkan ini kosong, untuk edit info profil (nama, dll)
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const EditProfilePage(),
-                        ),
-                      );
-                    },
-                    // --- AKHIR PERUBAHAN 1 ---
-                  ),
-                ),
-              ),
-
-              // --- PERUBAHAN 2 ---
-              // Kita gunakan Stack lagi untuk menumpuk ikon kamera
+              // Area Profil Gambar & Nama
               Stack(
                 children: [
                   CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.grey[300],
-                    backgroundImage:
-                        _imageFile != null ? FileImage(_imageFile!) : null,
+                    radius: 60,
+                    backgroundColor: kLightGray,
+                    backgroundImage: _imageFile != null
+                        ? FileImage(_imageFile!)
+                        : null,
                     child: _imageFile == null
                         ? const Icon(
                             Icons.person,
-                            size: 60,
+                            size: 70,
                             color: Colors.white,
                           )
                         : null,
@@ -239,18 +255,23 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: primaryDark,
-                        border: Border.all(color: Colors.white, width: 2),
+                        color: kSkyBlue,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 4,
+                          ),
+                        ],
                       ),
                       child: InkWell(
-                        // Panggil dialog pilihan sumber dari sini
                         onTap: () => _showImageSourceDialog(context),
                         child: const Padding(
                           padding: EdgeInsets.all(6.0),
                           child: Icon(
-                            Icons.camera_alt, // Menggunakan ikon kamera
+                            Icons.camera_alt,
                             color: Colors.white,
-                            size: 18,
+                            size: 20,
                           ),
                         ),
                       ),
@@ -258,48 +279,64 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ],
               ),
-              // --- AKHIR PERUBAHAN 2 ---
-
               const SizedBox(height: 12),
               const Text(
                 'MAS GIB RAN',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: kDarkBlueGray,
+                ),
               ),
               const SizedBox(height: 20),
-              _buildExperienceCard(),
+
+              // Kartu Pengalaman (DIUBAH)
+              _buildExperienceCardModern(),
+
               const SizedBox(height: 16),
-              _buildStatsRow(),
+
+              // Row Statistik (DIUBAH)
+              _buildStatsRowModern(),
+
               const SizedBox(height: 24),
-              _buildAchievementSection(
+
+              // Bagian Pencapaian Sertifikat (DIUBAH)
+              _buildAchievementSectionModern(
                 title: 'Pencapaian Sertifikat',
                 items: [
-                  _buildCertificateItem('28 Okt 24', 'Pandawara'),
-                  _buildCertificateItem('30 Okt 24', 'KMB-USU'),
-                  _buildCertificateItem('1 Nov 24', 'Cisco'),
+                  _buildCertificateItem('28 Okt 24', 'Pandawara', kBlueGray),
+                  _buildCertificateItem('30 Okt 24', 'KMB-USU', kSkyBlue),
+                  _buildCertificateItem('1 Nov 24', 'Cisco', kDarkBlueGray),
                 ],
               ),
+
               const SizedBox(height: 24),
-              _buildAchievementSection(
+
+              // Bagian Pencapaian Relawan
+              _buildAchievementSectionModern(
                 title: 'Pencapaian Relawan',
                 items: [
                   _buildVolunteerItem(
                     'Penjaga\nHijau',
                     Icons.eco,
-                    Colors.green,
+                    Colors.green[700]!,
                   ),
                   _buildVolunteerItem(
                     'Juara\nKomunitas',
                     Icons.emoji_events,
-                    Colors.blue,
+                    kSkyBlue,
                   ),
                   _buildVolunteerItem(
                     'Perintis\nPerubahan',
                     Icons.star,
-                    Colors.orange,
+                    Colors.orange[700]!,
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+
+              const SizedBox(height: 30),
+
+              // Tombol Keluar
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -308,15 +345,23 @@ class _ProfilePageState extends State<ProfilePage> {
                     backgroundColor: Colors.red[700],
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(
+                        12,
+                      ), // Sedikit lebih bulat
                     ),
+                    elevation: 0, // Mengurangi elevasi agar tidak kaku
                   ),
                   child: const Text(
                     'Keluar',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -324,14 +369,77 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // --- Sisa widget _build... (TIDAK BERUBAH) ---
-  Widget _buildExperienceCard() {
-    const cardColor = Color(0xFF006064);
+  // ---------------------------------------------------------------------------
+  // WIDGET BARU (Gaya Modern)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: cardColor,
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: kBlueGray.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: kDarkBlueGray, size: 20),
+        onPressed: onPressed,
+      ),
+    );
+  }
+
+  Widget _buildCardBase({required Widget child, required double widthFactor}) {
+    return Container(
+      width: widthFactor > 0 ? widthFactor : null, // Hanya jika widthFactor > 0
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: kLightGray,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          // Efek Shadow/Neumorphic yang lebih lembut
+          BoxShadow(
+            color: kBlueGray.withOpacity(0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: kBlueGray.withOpacity(0.5),
+            blurRadius: 5,
+            offset: const Offset(-2, -2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildExperienceCardModern() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [kSkyBlue, kBlueGray], // Gradient sesuai referensi
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kBlueGray.withOpacity(0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,37 +448,50 @@ class _ProfilePageState extends State<ProfilePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
               Text(
-                'Your Volunteer Exp',
-                style: TextStyle(color: Colors.white, fontSize: 16),
+                'Total Volunteer XP',
+                style: TextStyle(
+                  color: Colors.white, // Diubah jadi putih agar terbaca
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+              Icon(
+                Icons.trending_up,
+                color: Colors.white, // Icon diubah jadi putih
+                size: 18,
+              ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           const Text(
-            '18,000',
+            '18,000 XP',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+              color: Colors.white, // Diubah jadi putih tebal
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: 18000 / 54000,
-              backgroundColor: Colors.white.withOpacity(0.3),
+              // Background bar jadi putih transparan
+              backgroundColor: Colors.white24,
+              // Isi bar jadi putih solid
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-              minHeight: 6,
+              minHeight: 8,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           const Align(
             alignment: Alignment.centerRight,
             child: Text(
-              '18,000/54,000',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              '18,000/54,000 to Level Up',
+              style: TextStyle(
+                color: Colors.white, // Diubah jadi putih transparan
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -378,33 +499,27 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildStatsRow() {
-    const cardColor = Color(0xFF006064);
-
+  Widget _buildStatsRowModern() {
     return Row(
       children: [
         Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
+          child: _buildCardBase(
+            widthFactor: 0,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
                   '72',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
+                    color: kDarkBlueGray,
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
                 SizedBox(height: 4),
                 Text(
                   'Kegiatan Sukarela',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: kBlueGray, fontSize: 13),
                 ),
               ],
             ),
@@ -412,27 +527,23 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
+          child: _buildCardBase(
+            widthFactor: 0,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
-                  '3',
+                  '#3',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
+                    color: kDarkBlueGray,
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
                 SizedBox(height: 4),
                 Text(
                   'Peringkat Global',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: kBlueGray, fontSize: 13),
                 ),
               ],
             ),
@@ -442,22 +553,38 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildAchievementSection({
+  Widget _buildAchievementSectionModern({
     required String title,
     required List<Widget> items,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            TextButton(onPressed: () {}, child: const Text('Lihat Semua')),
-          ],
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: kDarkBlueGray,
+                ),
+              ),
+              TextButton(
+                onPressed: () {},
+                child: const Text(
+                  'Lihat Semua',
+                  style: TextStyle(
+                    color: kSkyBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         SizedBox(
@@ -466,33 +593,36 @@ class _ProfilePageState extends State<ProfilePage> {
             scrollDirection: Axis.horizontal,
             itemCount: items.length,
             itemBuilder: (context, index) => items[index],
-            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            separatorBuilder: (context, index) => const SizedBox(width: 16),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCertificateItem(String date, String title) {
-    return SizedBox(
-      width: 120,
+  Widget _buildCertificateItem(String date, String title, Color color) {
+    return _buildCardBase(
+      widthFactor: 120,
       child: Column(
         children: [
           Container(
-            height: 90,
+            height: 80,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.blue[50],
+              color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue[200]!),
             ),
-            child: Icon(Icons.school, size: 50, color: Colors.blue[700]),
+            child: Icon(Icons.file_copy, size: 40, color: color),
           ),
           const SizedBox(height: 8),
-          Text(date, style: const TextStyle(fontSize: 12)),
+          Text(date, style: const TextStyle(fontSize: 11, color: kBlueGray)),
           Text(
             title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: kDarkBlueGray,
+            ),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -507,16 +637,20 @@ class _ProfilePageState extends State<ProfilePage> {
       width: 100,
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: color.withOpacity(0.2),
+          // Diubah menjadi base card untuk efek neumorphic soft
+          _buildCardBase(
+            widthFactor: 80,
             child: Icon(icon, size: 40, color: color),
           ),
           const SizedBox(height: 8),
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: kDarkBlueGray,
+            ),
           ),
         ],
       ),

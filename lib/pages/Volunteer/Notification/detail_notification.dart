@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:volunite/color_pallete.dart';
 
 class DetailNotifikasiPage extends StatelessWidget {
   const DetailNotifikasiPage({super.key});
 
-  // Warna utama yang sama dengan halaman notifikasi
-  static const Color primaryColor = Color(0xFF005271);
+  // Ganti hardcoded primaryColor (0xFF005271) dengan warna dari palet.
+  // Menggunakan kSkyBlue untuk AppBar dan tombol utama (action color).
+  static const Color primaryColor = kSkyBlue;
+  // Menggunakan kDarkBlueGray untuk teks yang sangat penting/judul.
+  static const Color headingColor = kDarkBlueGray;
+  // Menggunakan kBlueGray untuk teks sekunder/informasi.
+  static const Color secondaryTextColor = kBlueGray;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Menggunakan warna background aplikasi yang sudah didefinisikan (walaupun di sini putih)
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: primaryColor,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [kBlueGray, kSkyBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
@@ -20,10 +36,7 @@ class DetailNotifikasiPage extends StatelessWidget {
         ),
         title: const Text(
           'Detail',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         elevation: 0,
@@ -67,11 +80,10 @@ class DetailNotifikasiPage extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Ikon
+        // Ikon (Menggunakan warna yang serasi dengan primaryColor)
         CircleAvatar(
           radius: 24,
-          // Gunakan ikon yang sama dari list notifikasi
-          backgroundColor: Colors.blue.shade700,
+          backgroundColor: primaryColor.withOpacity(0.8), // Biru dari palet
           child: const Icon(Icons.group_work, color: Colors.white, size: 24),
         ),
         const SizedBox(width: 16),
@@ -85,7 +97,7 @@ class DetailNotifikasiPage extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
-                  color: Colors.grey[900],
+                  color: headingColor, // Menggunakan kDarkBlueGray
                 ),
               ),
               const SizedBox(height: 4),
@@ -93,7 +105,7 @@ class DetailNotifikasiPage extends StatelessWidget {
                 '4 Desember 2024 13.25.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[600],
+                  color: secondaryTextColor, // Menggunakan kBlueGray
                 ),
               ),
             ],
@@ -134,7 +146,6 @@ class DetailNotifikasiPage extends StatelessWidget {
     required String line1,
     required String line2,
   }) {
-    // Ukuran gambar dan font
     const double imageSize = 90;
     const double fontHeight = 1.3;
 
@@ -152,10 +163,13 @@ class DetailNotifikasiPage extends StatelessWidget {
                 height: imageSize,
                 width: imageSize,
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
+                  color: kLightGray, // Menggunakan kLightGray
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                child: Icon(
+                  Icons.image_not_supported,
+                  color: secondaryTextColor,
+                ), // Menggunakan kBlueGray
               );
             },
           ),
@@ -168,6 +182,7 @@ class DetailNotifikasiPage extends StatelessWidget {
               fontWeight: FontWeight.w600,
               fontSize: 15,
               height: fontHeight,
+              color: headingColor, // Menggunakan kDarkBlueGray
             ),
           ),
           Text(
@@ -177,6 +192,7 @@ class DetailNotifikasiPage extends StatelessWidget {
               fontWeight: FontWeight.w600,
               fontSize: 15,
               height: fontHeight,
+              color: headingColor, // Menggunakan kDarkBlueGray
             ),
           ),
         ],
@@ -189,12 +205,13 @@ class DetailNotifikasiPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Selamat!! kamu baru saja mendapatkan sertifikat. Ikut kegiatan lainnya dan dapatkan lebih banyak sertifikat.',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
             height: 1.5,
+            color: headingColor, // Menggunakan kDarkBlueGray
           ),
         ),
         const SizedBox(height: 12),
@@ -202,7 +219,7 @@ class DetailNotifikasiPage extends StatelessWidget {
           'Sertifikatmu akan ditambahkan ke bagian achievement, yuk lihat pencapaianmu kali ini. Sertifikat Pandawara ini bersifat resmi langsung dari CEO perusahaan Pandawara.',
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey[700],
+            color: secondaryTextColor, // Menggunakan kBlueGray
             height: 1.5,
           ),
         ),
@@ -211,7 +228,7 @@ class DetailNotifikasiPage extends StatelessWidget {
           'Klik button di bawah ini untuk pergi ke laman yang dibeli.',
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey[700],
+            color: secondaryTextColor, // Menggunakan kBlueGray
             height: 1.5,
           ),
         ),
@@ -228,7 +245,9 @@ class DetailNotifikasiPage extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: kBlueGray.withOpacity(
+              0.20,
+            ), // Menggunakan kBlueGray untuk shadow
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -236,14 +255,13 @@ class DetailNotifikasiPage extends StatelessWidget {
       ),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
+          backgroundColor: primaryColor, // Menggunakan kSkyBlue
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16), // Sesuai gambar
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
         onPressed: () {
-          // Aksi tombol klaim, panggil bottom sheet
           _showClaimSuccessSheet(context);
         },
         child: const Text(
@@ -260,8 +278,7 @@ class DetailNotifikasiPage extends StatelessWidget {
 
   // METHOD BARU UNTUK MENAMPILKAN POP-UP
   void _showClaimSuccessSheet(BuildContext context) {
-    // Warna tombol dari gambar (sama dengan primaryColor)
-    const Color buttonColor = Color(0xFF005271);
+    const Color buttonColor = primaryColor; // Menggunakan kSkyBlue
 
     showModalBottomSheet(
       context: context,
@@ -274,29 +291,28 @@ class DetailNotifikasiPage extends StatelessWidget {
       ),
       builder: (sheetContext) {
         return Padding(
-          // Padding untuk seluruh konten sheet
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
           child: Column(
-            mainAxisSize: MainAxisSize.min, // Agar tinggi sheet pas konten
+            mainAxisSize: MainAxisSize.min,
             children: [
               // 1. "Drag Handle"
               Container(
                 width: 48,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: kLightGray, // Menggunakan kLightGray
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
               const SizedBox(height: 24),
 
               // 2. Teks Judul
-              const Text(
+              Text(
                 'Berhasil di klaim!!',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 22,
-                  color: Colors.black,
+                  color: headingColor, // Menggunakan kDarkBlueGray
                 ),
               ),
               const SizedBox(height: 8),
@@ -306,7 +322,7 @@ class DetailNotifikasiPage extends StatelessWidget {
                 '(Hadiah telah ditambahkan ke akunmu)',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[600],
+                  color: secondaryTextColor, // Menggunakan kBlueGray
                 ),
               ),
               const SizedBox(height: 24),
@@ -317,7 +333,7 @@ class DetailNotifikasiPage extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey[800],
+                  color: headingColor, // Menggunakan kDarkBlueGray
                   height: 1.4,
                 ),
               ),
@@ -328,20 +344,15 @@ class DetailNotifikasiPage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: buttonColor, // Warna dari gambar
+                    backgroundColor: buttonColor, // Menggunakan kSkyBlue
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30), // Sangat bulat
                     ),
                   ),
                   onPressed: () {
-                    // 1. Tutup bottom sheet
                     Navigator.of(sheetContext).pop();
-                    // 2. Tutup halaman Detail Notifikasi
                     Navigator.of(context).pop();
-
-                    // TODO: Tambahkan navigasi ke Halaman Poin di sini jika perlu
-                    // cth: Navigator.pushNamed(context, '/halamanPoin');
                   },
                   child: const Text(
                     'Lihat Halaman Poin',

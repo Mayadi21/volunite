@@ -1,6 +1,10 @@
+// lib/pages/Organizer/Notification/notification.dart
 import 'package:flutter/material.dart';
-import 'package:volunite/pages/Organizer/navbar.dart';
+import 'package:volunite/color_pallete.dart';
+import 'detail_notification.dart';
 
+
+// --- KELAS MODEL DATA ---
 class NotifikasiItem {
   final String id;
   final String title;
@@ -8,7 +12,7 @@ class NotifikasiItem {
   final String time;
   final IconData icon;
   final Color iconBgColor;
-  final bool isUnread;
+  bool isUnread; // ✅ DIUBAH: Dibuat mutable (non-final)
   final String category; // 'rewards', 'pemberitahuan', 'kegiatan'
 
   NotifikasiItem({
@@ -23,6 +27,7 @@ class NotifikasiItem {
   });
 }
 
+// --- HALAMAN UTAMA NOTIFIKASI ---
 class NotifikasiPage extends StatefulWidget {
   const NotifikasiPage({super.key});
 
@@ -33,7 +38,8 @@ class NotifikasiPage extends StatefulWidget {
 class _NotifikasiPageState extends State<NotifikasiPage> {
   int _selectedTabIndex = 0; // 0: Semua, 1: Rewards, 2: Pemberitahuan
 
-  final List<NotifikasiItem> _allNotifications = [
+  // ✅ DIUBAH: Dibuat non-final agar isUnread dapat dimodifikasi
+  List<NotifikasiItem> _allNotifications = [
     NotifikasiItem(
       id: '1',
       title: 'Pendaftaran Volunteer Baru',
@@ -71,7 +77,9 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       return _allNotifications.where((i) => i.category == 'rewards').toList();
     } else if (_selectedTabIndex == 2) {
       return _allNotifications
-          .where((i) => i.category == 'pemberitahuan')
+          .where(
+            (i) => i.category == 'pemberitahuan' || i.category == 'kegiatan',
+          )
           .toList();
     }
     return _allNotifications;
@@ -83,21 +91,38 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF005271);
+    // const Color primaryColor = Color(0xFF005271); // Warna Organizer lama
+    const Color primaryColor = kSkyBlue; // Gunakan warna dari palet
 
     return Scaffold(
+      backgroundColor: kBackground,
       appBar: AppBar(
-        backgroundColor: primaryColor,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                kBlueGray,
+                kSkyBlue,
+              ], // Gradient dari BlueGray ke SkyBlue
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () async {
-            final popped = await Navigator.maybePop(context);
-            if (!popped) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const OrganizerLandingPage()),
-              );
-            }
+          onPressed: () {
+            // Logika kembali ke OrganizerLandingPage
+            Navigator.pop(context);
+            // Anda mungkin perlu menyesuaikan navigasi ini berdasarkan struktur project Anda
+            // final popped = await Navigator.maybePop(context);
+            // if (!popped) {
+            //   Navigator.pushReplacement(
+            //     context,
+            //     MaterialPageRoute(builder: (_) => const OrganizerLandingPage()),
+            //   );
+            // }
           },
         ),
         title: const Text(
@@ -107,51 +132,58 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
         centerTitle: true,
         elevation: 0,
       ),
-      backgroundColor: Colors.white,
       body: Column(
         children: [_buildTabBar(primaryColor), _buildNotificationList()],
       ),
     );
   }
 
+  // WIDGET UNTUK TAB BAR
   Widget _buildTabBar(Color primaryColor) {
     return Container(
-      color: Colors.white,
+      // ✅ DIUBAH: Background kBackground
+      color: kBackground,
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Row(
         children: [
           _buildTabItem(
             label: 'Semua',
             index: 0,
-            primaryColor: primaryColor,
             hasNotification: _hasUnreadAll,
           ),
           const SizedBox(width: 10),
           _buildTabItem(
             label: 'Rewards',
             index: 1,
-            primaryColor: primaryColor,
             hasNotification: _hasUnreadRewards,
           ),
           const SizedBox(width: 10),
           _buildTabItem(
             label: 'Pemberitahuan',
             index: 2,
-            primaryColor: primaryColor,
-            hasNotification: false,
+            hasNotification: _allNotifications.any(
+              (i) =>
+                  (i.category == 'pemberitahuan' || i.category == 'kegiatan') &&
+                  i.isUnread,
+            ), // Tambahkan pengecekan unread untuk kategori lain
           ),
         ],
       ),
     );
   }
 
+  // WIDGET UNTUK SATU BUAH TAB
   Widget _buildTabItem({
     required String label,
     required int index,
-    required Color primaryColor,
     bool hasNotification = false,
   }) {
     final bool isSelected = _selectedTabIndex == index;
+    // Ganti primaryColor dengan kDarkBlueGray untuk tab non-aktif
+    final Color selectedColor = kSkyBlue;
+    final Color unselectedBgColor = kLightGray;
+    final Color unselectedTextColor = kDarkBlueGray;
+
     return GestureDetector(
       onTap: () => setState(() => _selectedTabIndex = index),
       child: Stack(
@@ -160,13 +192,15 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? primaryColor : Colors.grey[200],
+              // ✅ DIUBAH: Warna mengikuti Volunteer
+              color: isSelected ? selectedColor : unselectedBgColor,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black87,
+                // ✅ DIUBAH: Warna teks mengikuti Volunteer
+                color: isSelected ? Colors.white : unselectedTextColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -190,6 +224,7 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
     );
   }
 
+  // WIDGET UNTUK DAFTAR NOTIFIKASI
   Widget _buildNotificationList() {
     final notifications = _filteredNotifications;
     if (notifications.isEmpty) {
@@ -199,23 +234,36 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
     }
 
     return Expanded(
-      child: ListView.separated(
-        itemCount: notifications.length,
-        itemBuilder: (context, index) =>
-            _buildNotificationItem(notifications[index]),
-        separatorBuilder: (context, index) => Divider(
-          height: 1,
-          thickness: 1,
-          color: Colors.grey[200],
-          indent: 80,
-          endIndent: 16,
+      // ✅ DIUBAH: Background Colors.white untuk ListView
+      child: Container(
+        color: Colors.white,
+        child: ListView.separated(
+          itemCount: notifications.length,
+          itemBuilder: (context, index) =>
+              _buildNotificationItem(notifications[index]),
+          separatorBuilder: (context, index) => const Divider(
+            height: 1,
+            thickness: 1,
+            // ✅ DIUBAH: Warna Divider kLightGray
+            color: kLightGray,
+            indent: 80,
+            endIndent: 16,
+          ),
         ),
       ),
     );
   }
 
+  // WIDGET UNTUK SATU ITEM NOTIFIKASI
   Widget _buildNotificationItem(NotifikasiItem item) {
+    // Penyesuaian warna ikon agar sesuai dengan warna di item
+    Color iconColor = (item.iconBgColor == Colors.orange.shade200)
+        ? Colors.orange.shade800
+        : Colors.white;
+
     return ListTile(
+      // ✅ DIUBAH: Tambahkan tileColor untuk item unread
+      tileColor: item.isUnread ? kLightGray : Colors.white,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 16.0,
         vertical: 8.0,
@@ -226,13 +274,7 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
           CircleAvatar(
             radius: 24,
             backgroundColor: item.iconBgColor,
-            child: Icon(
-              item.icon,
-              color: item.iconBgColor == Colors.orange.shade200
-                  ? Colors.orange.shade800
-                  : Colors.white,
-              size: 24,
-            ),
+            child: Icon(item.icon, color: iconColor, size: 24),
           ),
           if (item.isUnread)
             Positioned(
@@ -252,20 +294,34 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       ),
       title: Text(
         item.title,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          // ✅ DIUBAH: Warna teks title
+          color: kDarkBlueGray,
+        ),
       ),
       subtitle: Text(
         item.subtitle,
-        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+        // ✅ DIUBAH: Warna teks subtitle
+        style: const TextStyle(color: kBlueGray, fontSize: 13),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
       trailing: Text(
         item.time,
-        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+        // ✅ DIUBAH: Warna teks trailing
+        style: const TextStyle(color: kBlueGray, fontSize: 12),
       ),
       onTap: () {
-        // Contoh aksi: buka detail notifikasi
+        // ✅ DIUBAH: Set isUnread menjadi false saat diklik
+        if (item.isUnread) {
+          setState(() {
+            item.isUnread = false;
+          });
+        }
+
+        // Navigasi ke detail notifikasi
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -277,75 +333,4 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
   }
 }
 
-class DetailNotifikasiPage extends StatelessWidget {
-  final NotifikasiItem item;
-  const DetailNotifikasiPage({super.key, required this.item});
 
-  @override
-  Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF005271);
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        title: const Text(
-          'Detail Notifikasi',
-          style: TextStyle(color: Colors.white),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () async {
-            final popped = await Navigator.maybePop(context);
-            if (!popped) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const OrganizerLandingPage()),
-              );
-            }
-          },
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: item.iconBgColor,
-                  child: Icon(item.icon, color: Colors.white),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              item.time,
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            Text(item.subtitle, style: const TextStyle(fontSize: 15)),
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Kembali'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

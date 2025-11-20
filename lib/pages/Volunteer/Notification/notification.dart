@@ -1,24 +1,9 @@
+// lib/pages/Volunteer/Notification/notification.dart
 import 'package:flutter/material.dart';
-import 'detail_notification.dart';
+import 'detail_notification.dart'; 
+import 'package:volunite/color_pallete.dart'; // Impor color palette
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Notifikasi Demo',
-      theme: ThemeData(primarySwatch: Colors.blue, fontFamily: 'Inter'),
-      home: NotifikasiPage(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
-}
-
+// KELAS YANG DAPAT DIMUTASI (Mutable)
 class NotifikasiItem {
   final String id;
   final String title;
@@ -26,7 +11,7 @@ class NotifikasiItem {
   final String time;
   final IconData icon;
   final Color iconBgColor;
-  final bool isUnread;
+  bool isUnread; // ✅ DIUBAH: Hapus 'final' agar nilainya dapat dimodifikasi
   final String category; // 'rewards', 'pemberitahuan', 'kegiatan'
 
   NotifikasiItem({
@@ -41,6 +26,29 @@ class NotifikasiItem {
   });
 }
 
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Notifikasi Demo',
+      theme: ThemeData(
+        // Tema utama tidak terlalu memengaruhi karena AppBar menggunakan flexibleSpace
+        primaryColor: kDarkBlueGray,
+        appBarTheme: const AppBarTheme(backgroundColor: kDarkBlueGray),
+        fontFamily: 'Inter',
+      ),
+      home: const NotifikasiPage(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
 // HALAMAN UTAMA NOTIFIKASI
 class NotifikasiPage extends StatefulWidget {
   const NotifikasiPage({super.key});
@@ -50,18 +58,19 @@ class NotifikasiPage extends StatefulWidget {
 }
 
 class _NotifikasiPageState extends State<NotifikasiPage> {
-  // Mengelola tab yang sedang aktif
-  int _selectedTabIndex = 0; // 0: Semua, 1: Rewards, 2: Pemberitahuan
+  int _selectedTabIndex = 0;
 
-  final List<NotifikasiItem> _allNotifications = [
+  // --- DATA NOTIFIKASI (DIUBAH MENJADI NON-FINAL) ---
+  List<NotifikasiItem> _allNotifications = [
+    // ✅ DIUBAH: Hapus 'final'
     NotifikasiItem(
       id: '1',
       title: 'Kegiatan "Baksos" Selesai!',
       subtitle: 'Sertifikatmu telah ditambahkan ke achievement, yuk li...',
       time: '13:25',
-      icon: Icons.group_work, // Ikon yang mirip
-      iconBgColor: Colors.blue.shade700,
-      isUnread: true, // Ada titik merah di ikon
+      icon: Icons.group_work,
+      iconBgColor: kDarkBlueGray,
+      isUnread: true,
       category: 'kegiatan',
     ),
     NotifikasiItem(
@@ -70,7 +79,7 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       subtitle: 'Beberapa penyesuaian dapat Anda lihat di sini, sepert...',
       time: '11 Nov 2024',
       icon: Icons.info_outline,
-      iconBgColor: Colors.blue.shade100,
+      iconBgColor: kSoftBlue,
       isUnread: false,
       category: 'pemberitahuan',
     ),
@@ -80,41 +89,35 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       subtitle: 'Untuk pengguna baru, kamu mendapatkan promo 10...',
       time: '07 Nov 2024',
       icon: Icons.percent,
-      iconBgColor: Colors.yellow.shade700,
+      iconBgColor: kBlueGray,
       isUnread: false,
       category: 'rewards',
     ),
-    // Tambahan data untuk demo filter
     NotifikasiItem(
       id: '4',
       title: 'Rewards Spesial Untukmu',
       subtitle: 'Klaim voucher diskon 50% khusus untukmu!',
       time: '06 Nov 2024',
       icon: Icons.star_outline,
-      iconBgColor: Colors.red.shade400,
-      isUnread: true, // Ada titik merah di tab Rewards
+      iconBgColor: kSkyBlue,
+      isUnread: true,
       category: 'rewards',
     ),
   ];
 
-  // Helper untuk memfilter daftar berdasarkan tab
   List<NotifikasiItem> get _filteredNotifications {
     if (_selectedTabIndex == 1) {
-      // Tab 'Rewards'
       return _allNotifications
           .where((item) => item.category == 'rewards')
           .toList();
     } else if (_selectedTabIndex == 2) {
-      // Tab 'Pemberitahuan'
       return _allNotifications
           .where((item) => item.category == 'pemberitahuan')
           .toList();
     }
-    // Tab 'Semua' (index 0)
     return _allNotifications;
   }
 
-  // Helper untuk cek apakah ada notifikasi belum dibaca di kategori
   bool get _hasUnreadRewards => _allNotifications.any(
     (item) => item.category == 'rewards' && item.isUnread,
   );
@@ -122,17 +125,30 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Warna utama dari AppBar di screenshot
-    const Color primaryColor = Color(0xFF005271);
+    // const Color primaryColor = kDarkBlueGray; // Tidak terlalu terpakai karena AppBar pakai gradient
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: kBackground,
       appBar: AppBar(
-        backgroundColor: primaryColor,
+        // ✅ Perubahan AppBar untuk Gradient
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                kBlueGray,
+                kSkyBlue,
+              ], // Gradient dari BlueGray ke SkyBlue
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            // Aksi tombol kembali, contoh:
-            // Navigator.of(context).pop();
+            // ✅ Perubahan: Kembali ke halaman sebelumnya
+            Navigator.pop(context);
           },
         ),
         title: const Text(
@@ -144,10 +160,9 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       ),
       body: Column(
         children: [
-          // 1. Bagian Tab Filter
-          _buildTabBar(primaryColor),
-
-          // 2. Bagian Daftar Notifikasi
+          _buildTabBar(
+            kDarkBlueGray,
+          ), // Menggunakan kDarkBlueGray untuk warna teks tab tidak aktif
           _buildNotificationList(),
         ],
       ),
@@ -157,29 +172,26 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
   // WIDGET UNTUK TAB BAR
   Widget _buildTabBar(Color primaryColor) {
     return Container(
-      color: Colors.white, // Latar belakang putih di belakang tab
+      color: kBackground,
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Row(
         children: [
           _buildTabItem(
             label: 'Semua',
             index: 0,
-            primaryColor: primaryColor,
             hasNotification: _hasUnreadAll,
           ),
           const SizedBox(width: 10),
           _buildTabItem(
             label: 'Rewards',
             index: 1,
-            primaryColor: primaryColor,
             hasNotification: _hasUnreadRewards,
           ),
           const SizedBox(width: 10),
           _buildTabItem(
             label: 'Pemberitahuan',
             index: 2,
-            primaryColor: primaryColor,
-            hasNotification: false, // Asumsi tidak ada notif di sini
+            hasNotification: false,
           ),
         ],
       ),
@@ -190,7 +202,6 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
   Widget _buildTabItem({
     required String label,
     required int index,
-    required Color primaryColor,
     bool hasNotification = false,
   }) {
     final bool isSelected = _selectedTabIndex == index;
@@ -204,22 +215,21 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Badan Tombol Tab
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? primaryColor : Colors.grey[200],
+              // ✅ Perubahan: Menggunakan kSkyBlue untuk tab terpilih
+              color: isSelected ? kSkyBlue : kLightGray,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black87,
+                color: isSelected ? Colors.white : kDarkBlueGray,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ),
-          // Titik Notifikasi Merah
           if (hasNotification)
             Positioned(
               top: -4,
@@ -241,7 +251,6 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
 
   // WIDGET UNTUK DAFTAR NOTIFIKASI
   Widget _buildNotificationList() {
-    // Menggunakan data yang sudah difilter
     final notifications = _filteredNotifications;
 
     if (notifications.isEmpty) {
@@ -251,29 +260,37 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
     }
 
     return Expanded(
-      child: ListView.separated(
-        itemCount: notifications.length,
-        itemBuilder: (context, index) {
-          final item = notifications[index];
-          return _buildNotificationItem(item);
-        },
-        // Garis pemisah antar item
-        separatorBuilder: (context, index) {
-          return Divider(
-            height: 1,
-            thickness: 1,
-            color: Colors.grey[200],
-            indent: 80, // Pemisah mulai dari setelah ikon
-            endIndent: 16,
-          );
-        },
+      child: Container(
+        color: Colors.white,
+        child: ListView.separated(
+          itemCount: notifications.length,
+          itemBuilder: (context, index) {
+            final item = notifications[index];
+            return _buildNotificationItem(item);
+          },
+          separatorBuilder: (context, index) {
+            return const Divider(
+              height: 1,
+              thickness: 1,
+              color: kLightGray,
+              indent: 80,
+              endIndent: 16,
+            );
+          },
+        ),
       ),
     );
   }
 
   // WIDGET UNTUK SATU ITEM NOTIFIKASI
   Widget _buildNotificationItem(NotifikasiItem item) {
+    Color iconColor = (item.iconBgColor == kSoftBlue)
+        ? kDarkBlueGray
+        : Colors.white;
+
     return ListTile(
+      // ✅ Perubahan: Latar belakang item unread
+      tileColor: item.isUnread ? kLightGray : Colors.white,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 16.0,
         vertical: 8.0,
@@ -281,21 +298,11 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       leading: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Ikon Latar Belakang
           CircleAvatar(
             radius: 24,
             backgroundColor: item.iconBgColor,
-            child: Icon(
-              item.icon,
-              color: item.iconBgColor == Colors.blue.shade100
-                  ? Colors
-                        .blue
-                        .shade800 // Warna ikon khusus untuk info
-                  : Colors.white,
-              size: 24,
-            ),
+            child: Icon(item.icon, color: iconColor, size: 24),
           ),
-          // Titik "Unread" (Belum Dibaca)
           if (item.isUnread)
             Positioned(
               top: 0,
@@ -304,7 +311,7 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: Colors.red, // Warna titik merah di "Baksos"
+                  color: Colors.red,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
@@ -314,30 +321,42 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       ),
       title: Text(
         item.title,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          color: kDarkBlueGray,
+        ),
       ),
       subtitle: Text(
         item.subtitle,
-        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+        style: const TextStyle(color: kBlueGray, fontSize: 13),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
       trailing: Text(
         item.time,
-        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+        style: const TextStyle(color: kBlueGray, fontSize: 12),
       ),
       onTap: () {
-        // Aksi ketika item notifikasi diklik
         print('Notifikasi diklik: ${item.title}');
-        // Di sini Anda bisa mengubah status isUnread menjadi false
+
+        // ✅ Perubahan: Set isUnread menjadi false saat diklik
+        if (item.isUnread) {
+          setState(() {
+            item.isUnread = false; // Mengubah status notifikasi
+          });
+        }
+
+        // Logika navigasi ke detail page (hanya untuk ID '1')
         if (item.id == '1') {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const DetailNotifikasiPage(),
-          ),
-        );
-      }
+          // Asumsi DetailNotifikasiPage ada dan berfungsi
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const DetailNotifikasiPage(),
+            ),
+          );
+        }
       },
     );
   }
