@@ -1,10 +1,11 @@
-// lib/pages/kegiatan/activity_card.dart
+// lib/pages/Volunteer/Category/category_activities_page.dart
 import 'package:flutter/material.dart';
-import 'package:volunite/color_pallete.dart'; // Impor color palette
+import 'package:volunite/color_pallete.dart';
+import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
 
-// Anda perlu mendefinisikan kBadgeBgFinished di color_pallete.dart, contoh:
-// const Color kBadgeBgFinished = Color(0xFFE3F1FF); // soft blue
-
+// -----------------------------------------------------------------------------
+// 1. MODEL DATA
+// -----------------------------------------------------------------------------
 enum ActivityStatus { upcoming, finished }
 
 class Activity {
@@ -12,7 +13,6 @@ class Activity {
   final DateTime date;
   final TimeOfDay start;
   final TimeOfDay end;
-  // Ubah tipe data untuk mencocokkan penggunaan Image.asset
   final String bannerUrl;
   final ActivityStatus status;
 
@@ -26,11 +26,114 @@ class Activity {
   });
 }
 
+// -----------------------------------------------------------------------------
+// 2. HALAMAN UTAMA (CATEGORY PAGE)
+// -----------------------------------------------------------------------------
+class CategoryActivitiesPage extends StatelessWidget {
+  final String categoryName;
+
+  CategoryActivitiesPage({super.key, required this.categoryName});
+
+  final List<Activity> _dummyActivities = [
+    Activity(
+      title: "Pintar Bersama - KMB USU",
+      date: DateTime.now().add(const Duration(days: 2)),
+      start: const TimeOfDay(hour: 12, minute: 0),
+      end: const TimeOfDay(hour: 17, minute: 0),
+      bannerUrl: "assets/images/event1.jpg",
+      status: ActivityStatus.upcoming,
+    ),
+    Activity(
+      title: "Aksi Bersih Pantai Cermin",
+      date: DateTime.now().add(const Duration(days: 5)),
+      start: const TimeOfDay(hour: 9, minute: 0),
+      end: const TimeOfDay(hour: 12, minute: 0),
+      bannerUrl: "assets/images/event2.jpg",
+      status: ActivityStatus.upcoming,
+    ),
+    Activity(
+      title: "Workshop Digital Marketing",
+      date: DateTime.now().subtract(const Duration(days: 5)),
+      start: const TimeOfDay(hour: 10, minute: 0),
+      end: const TimeOfDay(hour: 15, minute: 0),
+      bannerUrl: "assets/images/event1.jpg",
+      status: ActivityStatus.finished,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBackground,
+      appBar: AppBar(
+        // 1. Background color dibuat transparan agar gradient terlihat
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+
+        // 2. Menggunakan flexibleSpace untuk Gradient
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [kBlueGray, kSkyBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+
+        // 3. Icon Back diubah jadi Putih agar terlihat jelas
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+
+        // 4. Judul diubah jadi Putih
+        title: Text(
+          categoryName,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(20),
+        itemCount: _dummyActivities.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 20),
+        itemBuilder: (context, index) {
+          final activity = _dummyActivities[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DetailActivitiesPage(
+                    title: activity.title,
+                    date:
+                        "${activity.date.day}/${activity.date.month}/${activity.date.year}",
+                    time:
+                        "${activity.start.hour}:${activity.start.minute.toString().padLeft(2, '0')}",
+                    imagePath: activity.bannerUrl,
+                  ),
+                ),
+              );
+            },
+            child: ActivityCard(activity: activity),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// 3. WIDGET CARD
+// -----------------------------------------------------------------------------
 class ActivityCard extends StatelessWidget {
   final Activity activity;
   const ActivityCard({super.key, required this.activity});
 
-  // Helper untuk memformat tanggal
   String _formatDate(DateTime d) {
     const hari = [
       'Minggu',
@@ -55,12 +158,9 @@ class ActivityCard extends StatelessWidget {
       'November',
       'Desember',
     ];
-    // Perbaikan indexing hari: d.weekday mengembalikan 1 (Senin) hingga 7 (Minggu).
-    // Untuk list hari di atas (diawali Minggu di index 0), gunakan [d.weekday % 7].
     return '${hari[d.weekday % 7]}, ${d.day} ${bulan[d.month - 1]} ${d.year}';
   }
 
-  // Helper untuk memformat waktu
   String _formatTime(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}.${t.minute.toString().padLeft(2, '0')}';
 
@@ -85,7 +185,6 @@ class ActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Banner
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
             child: Image.asset(
@@ -93,15 +192,18 @@ class ActivityCard extends StatelessWidget {
               height: 160,
               width: double.infinity,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                height: 160,
+                color: Colors.grey[300],
+                child: const Center(child: Icon(Icons.image_not_supported)),
+              ),
             ),
           ),
-          // Konten Detail
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title & Chip
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -109,7 +211,7 @@ class ActivityCard extends StatelessWidget {
                       child: Text(
                         activity.title,
                         style: const TextStyle(
-                          fontSize: 15, // Disesuaikan sedikit lebih besar
+                          fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: kDarkBlueGray,
                         ),
@@ -122,15 +224,11 @@ class ActivityCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-
-                // Info Tanggal
                 _InfoRow(
                   icon: Icons.calendar_today,
                   text: _formatDate(activity.date),
                 ),
                 const SizedBox(height: 4),
-
-                // Info Waktu
                 _InfoRow(icon: Icons.access_time, text: timeRange),
               ],
             ),
@@ -144,12 +242,9 @@ class ActivityCard extends StatelessWidget {
 // -----------------------------------------------------------------------------
 // KOMPONEN PEMBANTU
 // -----------------------------------------------------------------------------
-
-// Row icon + text
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;
-
   const _InfoRow({required this.icon, required this.text});
 
   @override
@@ -164,7 +259,6 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-// Chip status selesai
 class _FinishedChip extends StatelessWidget {
   const _FinishedChip();
 
@@ -173,7 +267,7 @@ class _FinishedChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFE3F1FF), // soft blue (as kBadgeBgFinished)
+        color: const Color(0xFFE3F1FF),
         borderRadius: BorderRadius.circular(12),
       ),
       child: const Row(

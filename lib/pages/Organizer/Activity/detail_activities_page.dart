@@ -1,4 +1,9 @@
+// lib/pages/Organizer/Activity/detail_activities_page.dart
 import 'package:flutter/material.dart';
+import 'package:volunite/color_pallete.dart'; // Asumsikan impor ini ada di file utama Anda
+
+
+const kPrimaryColor = kSkyBlue; // Ditetapkan sebagai warna utama
 
 class OrganizerDetailActivityPage extends StatefulWidget {
   final String title;
@@ -30,9 +35,11 @@ class _OrganizerDetailActivityPageState
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final primary = Theme.of(context).colorScheme.primary;
+    // final primary = Theme.of(context).colorScheme.primary; // Diganti
+    final primary = kPrimaryColor; // Gunakan warna utama dari palet
 
     return Scaffold(
+      backgroundColor: kBackground, // Menggunakan warna latar belakang dari palet
       body: Stack(
         children: [
           CustomScrollView(
@@ -41,12 +48,12 @@ class _OrganizerDetailActivityPageState
               SliverAppBar(
                 expandedHeight: screenHeight * 0.35,
                 pinned: true,
-                backgroundColor: primary, // Sesuaikan dengan warna primary
+                backgroundColor: primary, // Menggunakan kPrimaryColor
                 elevation: 0,
                 leading: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: CircleAvatar(
-                    backgroundColor: Colors.black.withOpacity(0.3),
+                    backgroundColor: kDarkBlueGray.withOpacity(0.3), // Warna yang lebih gelap
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.of(context).pop(),
@@ -54,11 +61,11 @@ class _OrganizerDetailActivityPageState
                   ),
                 ),
                 actions: [
-                  // --- PERUBAHAN: Tombol Edit (Bukan Report) ---
+                  // --- Tombol Edit ---
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CircleAvatar(
-                      backgroundColor: Colors.black.withOpacity(0.3),
+                      backgroundColor: kDarkBlueGray.withOpacity(0.3),
                       child: IconButton(
                         icon: const Icon(Icons.edit, color: Colors.white),
                         tooltip: 'Edit Kegiatan',
@@ -71,7 +78,7 @@ class _OrganizerDetailActivityPageState
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CircleAvatar(
-                      backgroundColor: Colors.black.withOpacity(0.3),
+                      backgroundColor: kDarkBlueGray.withOpacity(0.3),
                       child: IconButton(
                         icon: const Icon(Icons.share, color: Colors.white),
                         onPressed: () {},
@@ -98,7 +105,7 @@ class _OrganizerDetailActivityPageState
               // 3. Konten yang Bisa Scroll
               SliverToBoxAdapter(
                 child: Container(
-                  color: Colors.white,
+                  color: Colors.white, // Konten tetap putih untuk kontras
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16.0,
@@ -106,7 +113,7 @@ class _OrganizerDetailActivityPageState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- PERUBAHAN: Statistik Pendaftar (Khusus Organizer) ---
+                        // --- Statistik Pendaftar (Khusus Organizer) ---
                         _buildOrganizerStatsCard(primary),
                         const SizedBox(height: 24),
 
@@ -114,7 +121,7 @@ class _OrganizerDetailActivityPageState
                         const SizedBox(height: 24),
 
                         const Divider(
-                          color: Colors.black12,
+                          color: kLightGray, // Menggunakan kLightGray
                           thickness: 1,
                           height: 1,
                         ),
@@ -126,6 +133,7 @@ class _OrganizerDetailActivityPageState
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray, // Warna teks gelap
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -137,7 +145,7 @@ class _OrganizerDetailActivityPageState
                               : TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[700],
+                            color: kDarkBlueGray.withOpacity(0.8), // Warna teks abu-abu
                             height: 1.5,
                           ),
                         ),
@@ -153,7 +161,7 @@ class _OrganizerDetailActivityPageState
                                 ? 'Lihat Lebih Sedikit'
                                 : 'Lihat Lebih Banyak',
                             style: TextStyle(
-                              color: primary,
+                              color: primary, // Warna Primary
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
@@ -172,6 +180,7 @@ class _OrganizerDetailActivityPageState
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
+                                color: kDarkBlueGray,
                               ),
                             ),
                             tilePadding: EdgeInsets.zero,
@@ -201,6 +210,7 @@ class _OrganizerDetailActivityPageState
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -237,9 +247,9 @@ class _OrganizerDetailActivityPageState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50, // Background lembut
+        color: kSoftBlue.withOpacity(0.3), // Menggunakan kSoftBlue
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blue.shade100),
+        border: Border.all(color: kSoftBlue), // Menggunakan kSoftBlue
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,12 +259,15 @@ class _OrganizerDetailActivityPageState
             children: [
               const Text(
                 "Status Pendaftaran",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: kDarkBlueGray), // Warna teks gelap
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.green,
+                  color: Colors.green, // Tetap hijau untuk "Aktif"
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
@@ -275,14 +288,14 @@ class _OrganizerDetailActivityPageState
               Text(
                 "$current Pendaftar",
                 style: TextStyle(
-                  color: primary,
+                  color: primary, // Warna Primary
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
               ),
               Text(
                 "Kuota: $quota",
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                style: TextStyle(color: kDarkBlueGray.withOpacity(0.7), fontSize: 14),
               ),
             ],
           ),
@@ -292,8 +305,8 @@ class _OrganizerDetailActivityPageState
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 10,
-              backgroundColor: Colors.white,
-              color: primary,
+              backgroundColor: kSoftBlue, // Latar belakang progress bar
+              color: primary, // Warna Primary
             ),
           ),
           const SizedBox(height: 8),
@@ -301,7 +314,7 @@ class _OrganizerDetailActivityPageState
             "12 pelamar belum diverifikasi",
             style: TextStyle(
               fontSize: 12,
-              color: Colors.orange,
+              color: Colors.orange, // Tetap orange untuk peringatan
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -314,7 +327,7 @@ class _OrganizerDetailActivityPageState
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.grey[50],
+      color: kLightGray.withOpacity(0.5), // Menggunakan kLightGray
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
@@ -335,12 +348,16 @@ class _OrganizerDetailActivityPageState
                 children: [
                   const Text(
                     'Sekretariat KMB-USU',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: kDarkBlueGray),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Jalan Brigjend Katamso Dalam No.62. A U R, Kec. Medan Maimun, Kota Medan',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(
+                        fontSize: 12, color: kDarkBlueGray.withOpacity(0.7)),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
@@ -349,9 +366,9 @@ class _OrganizerDetailActivityPageState
                     label: const Text('Lihat Peta'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: Colors.black87,
+                      foregroundColor: kDarkBlueGray,
                       elevation: 0,
-                      side: BorderSide(color: Colors.grey.shade300),
+                      side: BorderSide(color: kLightGray),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -423,7 +440,7 @@ class _OrganizerDetailActivityPageState
                 // Navigasi ke List Pelamar
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: primary,
+                backgroundColor: primary, // Warna Primary
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -454,7 +471,7 @@ class _OrganizerDetailActivityPageState
               text,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[800],
+                color: kDarkBlueGray,
                 height: 1.4,
               ),
             ),
@@ -470,13 +487,13 @@ class _OrganizerDetailActivityPageState
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.grey[50],
+          color: kLightGray.withOpacity(0.5), // Menggunakan kLightGray
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!, width: 1),
+          border: Border.all(color: kLightGray, width: 1),
         ),
         child: Row(
           children: [
-            Icon(Icons.picture_as_pdf, color: Colors.red[700], size: 40),
+            Icon(Icons.picture_as_pdf, color: kDarkBlueGray.withOpacity(0.8), size: 40),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -484,17 +501,21 @@ class _OrganizerDetailActivityPageState
                 children: [
                   const Text(
                     'Dokumen Pedoman Volunteer.pdf',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: kDarkBlueGray),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Klik untuk preview',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(
+                        fontSize: 12, color: kDarkBlueGray.withOpacity(0.7)),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.visibility_outlined, color: Colors.grey),
+            const Icon(Icons.visibility_outlined, color: kDarkBlueGray),
           ],
         ),
       ),
@@ -502,7 +523,7 @@ class _OrganizerDetailActivityPageState
   }
 }
 
-// --- DELEGATE HEADER (Sama persis dengan volunteer agar konsisten) ---
+// --- DELEGATE HEADER (Menggunakan kBlueGray dan kDarkBlueGray) ---
 class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
   final String date;
@@ -523,6 +544,9 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
+    // final primary = Theme.of(context).colorScheme.primary; // Diganti
+    final primary = kPrimaryColor;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -541,7 +565,10 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
           children: [
             Text(
               title,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: kDarkBlueGray),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -568,7 +595,8 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   Widget _buildTag(BuildContext context, String label, IconData icon) {
-    final primary = Theme.of(context).colorScheme.primary;
+    // final primary = Theme.of(context).colorScheme.primary; // Diganti
+    final primary = kPrimaryColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -596,9 +624,9 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, color: Colors.grey[600], size: 16),
+        Icon(icon, color: kDarkBlueGray.withOpacity(0.7), size: 16),
         const SizedBox(width: 6),
-        Text(text, style: TextStyle(fontSize: 14, color: Colors.grey[800])),
+        Text(text, style: TextStyle(fontSize: 14, color: kDarkBlueGray)),
       ],
     );
   }

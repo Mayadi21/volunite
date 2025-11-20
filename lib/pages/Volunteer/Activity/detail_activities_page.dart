@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:volunite/color_pallete.dart'; // Impor color palette
 
 class DetailActivitiesPage extends StatefulWidget {
   final String title;
@@ -24,14 +25,12 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   final String fullDescription =
       'Kegiatan volunteer yang mengajak Anda untuk berbagi ilmu dan inspirasi kepada anak-anak yang membutuhkan. Melalui acara ini, Anda dapat berkontribusi dalam memberikan pendidikan dan pengalaman belajar yang menyenangkan. Mari bersama-sama menciptakan perubahan positif dan memberikan dampak nyata bagi generasi muda. Gabung sekarang dan jadilah bagian dari gerakan kebaikan ini!';
 
-  // --- FITUR BARU: Form Report dengan Dropdown ---
+  // --- Form Report ---
   void _showReportForm(BuildContext context) {
     final formKey = GlobalKey<FormState>();
-    // Kita tidak butuh controller text untuk dropdown, tapi butuh variabel state
     final descriptionController = TextEditingController();
     String? selectedComplaintType;
 
-    // Daftar Opsi Keluhan
     final List<String> complaintOptions = [
       'Informasi Palsu (Hoax)',
       'Penipuan',
@@ -43,12 +42,12 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Agar form bisa naik penuh saat keyboard muncul
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      backgroundColor: kBackground,
       builder: (context) {
-        // PENTING: Gunakan StatefulBuilder agar dropdown bisa berubah state-nya di dalam modal
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Padding(
@@ -56,7 +55,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 top: 24,
                 left: 24,
                 right: 24,
-                // Memberi padding bawah dinamis sesuai tinggi keyboard
                 bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
               child: Form(
@@ -65,7 +63,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Modal
+                    // Header
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -74,29 +72,47 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray,
                           ),
                         ),
                         IconButton(
                           onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
+                          icon: const Icon(Icons.close, color: kBlueGray),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
 
-                    // --- INPUT 1: DROPDOWN JENIS KELUHAN ---
                     const Text(
                       "Jenis Keluhan",
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: kDarkBlueGray,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       value: selectedComplaintType,
-                      icon: const Icon(Icons.arrow_drop_down),
+                      icon: const Icon(Icons.arrow_drop_down, color: kBlueGray),
                       decoration: InputDecoration(
                         hintText: 'Pilih jenis masalah',
+                        hintStyle: const TextStyle(color: kBlueGray),
+                        filled: true,
+                        fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: kSoftBlue),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: kSoftBlue),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: kSkyBlue,
+                            width: 1.3,
+                          ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -106,11 +122,13 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                       items: complaintOptions.map((String item) {
                         return DropdownMenuItem<String>(
                           value: item,
-                          child: Text(item),
+                          child: Text(
+                            item,
+                            style: const TextStyle(color: kDarkBlueGray),
+                          ),
                         );
                       }).toList(),
                       onChanged: (String? newValue) {
-                        // Gunakan setModalState untuk update UI di dalam modal
                         setModalState(() {
                           selectedComplaintType = newValue;
                         });
@@ -125,19 +143,37 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
 
                     const SizedBox(height: 16),
 
-                    // --- INPUT 2: DESKRIPSI ---
                     const Text(
                       "Deskripsi Keluhan",
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: kDarkBlueGray,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: descriptionController,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        hintText: 'Jelaskan detail masalah yang Anda temukan...',
+                        hintText:
+                            'Jelaskan detail masalah yang Anda temukan...',
+                        hintStyle: const TextStyle(color: kBlueGray),
+                        filled: true,
+                        fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: kSoftBlue),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: kSoftBlue),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: kSkyBlue,
+                            width: 1.3,
+                          ),
                         ),
                         contentPadding: const EdgeInsets.all(16),
                       ),
@@ -150,27 +186,21 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // --- TOMBOL KIRIM ---
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
                           if (formKey.currentState!.validate()) {
-                            // Logika kirim data ke backend bisa ditaruh di sini
-                            // print(selectedComplaintType);
-                            // print(descriptionController.text);
-
-                            Navigator.pop(context); // Tutup modal
+                            Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Laporan berhasil dikirim'),
-                                backgroundColor: Colors.green,
                               ),
                             );
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[600], // Warna warning
+                          backgroundColor: kDarkBlueGray,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -202,6 +232,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
+      backgroundColor: kBackground,
       body: Stack(
         children: [
           CustomScrollView(
@@ -210,12 +241,12 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
               SliverAppBar(
                 expandedHeight: screenHeight * 0.35,
                 pinned: true,
-                backgroundColor: Colors.blue,
                 elevation: 0,
+                backgroundColor: kBlueGray,
                 leading: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: CircleAvatar(
-                    backgroundColor: Colors.black.withOpacity(0.3),
+                    backgroundColor: Colors.black.withOpacity(0.35),
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.of(context).pop(),
@@ -223,11 +254,11 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   ),
                 ),
                 actions: [
-                  // Tombol Report (Bendera)
+                  // Tombol Report
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CircleAvatar(
-                      backgroundColor: Colors.black.withOpacity(0.3),
+                      backgroundColor: Colors.black.withOpacity(0.35),
                       child: IconButton(
                         icon: const Icon(
                           Icons.flag_outlined,
@@ -242,7 +273,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CircleAvatar(
-                      backgroundColor: Colors.black.withOpacity(0.3),
+                      backgroundColor: Colors.black.withOpacity(0.35),
                       child: IconButton(
                         icon: const Icon(Icons.share, color: Colors.white),
                         onPressed: () {},
@@ -252,11 +283,28 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   collapseMode: CollapseMode.pin,
-                  background: Image.asset(widget.imagePath, fit: BoxFit.cover),
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(widget.imagePath, fit: BoxFit.cover),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withOpacity(0.35),
+                              Colors.black.withOpacity(0.15),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
-              // 2. Header Konten yang Pinned
+              // 2. Header Konten
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _MyPinnedHeaderDelegate(
@@ -266,23 +314,22 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 ),
               ),
 
-              // 3. Konten yang Bisa Scroll
+              // 3. Konten Scroll
               SliverToBoxAdapter(
                 child: Container(
-                  color: Colors.white,
+                  color: kBackground,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                    ).copyWith(top: 0.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const SizedBox(height: 16),
                         _buildLocationCard(),
                         const SizedBox(height: 24),
                         _buildParticipantsInfo(),
                         const SizedBox(height: 24),
                         const Divider(
-                          color: Colors.black12,
+                          color: Color(0x11000000),
                           thickness: 1,
                           height: 1,
                         ),
@@ -294,6 +341,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -303,9 +351,9 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                           overflow: _isDescriptionExpanded
                               ? TextOverflow.visible
                               : TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[700],
+                            color: kBlueGray,
                             height: 1.5,
                           ),
                         ),
@@ -321,7 +369,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                                 ? 'Lihat Lebih Sedikit'
                                 : 'Lihat Lebih Banyak',
                             style: const TextStyle(
-                              color: Colors.blue,
+                              color: kSkyBlue,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
@@ -340,6 +388,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
+                                color: kDarkBlueGray,
                               ),
                             ),
                             tilePadding: EdgeInsets.zero,
@@ -372,6 +421,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -384,6 +434,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -398,7 +449,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
             ],
           ),
 
-          // Bottom Bar Melayang
+          // Bottom Bar
           Positioned(bottom: 0, left: 0, right: 0, child: _buildBottomBar()),
         ],
       ),
@@ -408,14 +459,15 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   Widget _buildLocationCard() {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.grey[50],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      color: Colors.white,
+      shadowColor: kBlueGray.withOpacity(0.18),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
               child: Image.network(
                 'https://media.wired.com/photos/59269cd37034dc5f91bec0f1/master/w_2560%2Cc_limit/GoogleMapTA.jpg',
                 width: 80,
@@ -430,12 +482,20 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 children: [
                   const Text(
                     'Sekretariat KMB-USU',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: kDarkBlueGray,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  const Text(
                     'Jalan Brigjend Katamso Dalam No.62. A U R, Kec. Medan Maimun, Kota Medan',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: kBlueGray,
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
@@ -443,7 +503,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                     icon: const Icon(Icons.location_on_outlined, size: 16),
                     label: const Text('Dapatkan Lokasi'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[600],
+                      backgroundColor: kSkyBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
@@ -494,7 +554,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
         const SizedBox(width: 8),
         const Text(
           '43+ Bergabung',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+          style: TextStyle(fontWeight: FontWeight.bold, color: kDarkBlueGray),
         ),
       ],
     );
@@ -529,7 +589,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 onPressed: () {},
                 icon: const Icon(
                   Icons.favorite_border,
-                  color: Colors.blue,
+                  color: kSkyBlue,
                   size: 28,
                 ),
               ),
@@ -539,7 +599,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+                  color: kBlueGray,
                 ),
               ),
             ],
@@ -547,7 +607,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
           ElevatedButton(
             onPressed: () {},
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue[600],
+              backgroundColor: kSkyBlue,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
@@ -570,14 +630,14 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle, color: Colors.blue, size: 20),
+          const Icon(Icons.check_circle, color: kSkyBlue, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
-                color: Colors.grey[800],
+                color: kDarkBlueGray,
                 height: 1.4,
               ),
             ),
@@ -593,34 +653,35 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.grey[50],
+          color: kBackground,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!, width: 1),
+          border: Border.all(color: kSoftBlue.withOpacity(0.9), width: 1),
         ),
         child: Row(
           children: [
-            Icon(Icons.picture_as_pdf, color: Colors.red[700], size: 40),
+            const Icon(Icons.picture_as_pdf, size: 40, color: kDarkBlueGray),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
+                children: const [
+                  Text(
                     'Dokumen Pedoman Volunteer.pdf',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
+                      color: kDarkBlueGray,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     'Klik untuk melihat',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 12, color: kBlueGray),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.download_for_offline_outlined, color: Colors.blue),
+            const Icon(Icons.download_for_offline_outlined, color: kSkyBlue),
           ],
         ),
       ),
@@ -648,7 +709,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[300]!, width: 1),
+                border: Border.all(color: kSoftBlue.withOpacity(0.9), width: 1),
                 image: DecorationImage(
                   image: AssetImage(logoPaths[index]),
                   fit: BoxFit.contain,
@@ -688,9 +749,9 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+            color: kBlueGray.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -701,7 +762,11 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
           children: [
             Text(
               title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: kDarkBlueGray,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -729,23 +794,28 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   Widget _buildTag(String label, IconData icon) {
     return Chip(
-      avatar: Icon(icon, size: 16, color: Colors.blue[700]),
+      avatar:  Icon(icon, size: 16, color: kDarkBlueGray),
       label: Text(label),
-      backgroundColor: Colors.blue[50],
-      labelStyle: TextStyle(color: Colors.blue[700], fontSize: 12),
+      backgroundColor: kSoftBlue,
+      labelStyle: const TextStyle(
+        color: kDarkBlueGray,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.blue[100]!),
+        side: const BorderSide(color: kSkyBlue),
       ),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, color: Colors.grey[600], size: 16),
+         Icon(icon, color: kBlueGray, size: 16),
         const SizedBox(width: 4),
-        Text(text, style: TextStyle(fontSize: 14, color: Colors.grey[800])),
+        Text(text, style: const TextStyle(fontSize: 14, color: kDarkBlueGray)),
       ],
     );
   }
