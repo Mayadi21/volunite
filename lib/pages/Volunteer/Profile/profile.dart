@@ -1,12 +1,11 @@
-// lib/pages/profile/profile_page.dart
-
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:volunite/pages/Authentication/login.dart';
 import 'edit_profile.dart';
-import 'package:volunite/color_pallete.dart'; // Impor color palette
+import 'package:volunite/color_pallete.dart'; 
+import 'certificate_detail_page.dart'; 
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -126,18 +125,16 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // --- TOMBOL TIDAK (Diedit) ---
+                    // --- TOMBOL TIDAK ---
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white, // Background Putih
-                          foregroundColor:
-                              kBlueGray, // Warna efek sentuhan & text otomatis menyesuaikan
+                          backgroundColor: Colors.white,
+                          foregroundColor: kBlueGray,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          // Menambahkan Border (Garis Tepi)
                           side: const BorderSide(color: kBlueGray, width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -146,8 +143,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         child: const Text(
                           'Tidak',
-                          // Hapus properti color di sini atau ubah jadi kBlueGray
-                          // agar tidak tertimpa warna putih (jika sebelumnya putih)
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -243,10 +238,10 @@ class _ProfilePageState extends State<ProfilePage> {
                         : null,
                     child: _imageFile == null
                         ? const Icon(
-                            Icons.person,
-                            size: 70,
-                            color: Colors.white,
-                          )
+                              Icons.person,
+                              size: 70,
+                              color: Colors.white,
+                            )
                         : null,
                   ),
                   Positioned(
@@ -290,23 +285,41 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(height: 20),
 
-              // Kartu Pengalaman (DIUBAH)
+              // Kartu Pengalaman
               _buildExperienceCardModern(),
 
               const SizedBox(height: 16),
 
-              // Row Statistik (DIUBAH)
+              // Row Statistik
               _buildStatsRowModern(),
 
               const SizedBox(height: 24),
 
-              // Bagian Pencapaian Sertifikat (DIUBAH)
+              // Bagian Pencapaian Sertifikat (DENGAN DATA LENGKAP)
               _buildAchievementSectionModern(
                 title: 'Pencapaian Sertifikat',
                 items: [
-                  _buildCertificateItem('28 Okt 24', 'Pandawara', kBlueGray),
-                  _buildCertificateItem('30 Okt 24', 'KMB-USU', kSkyBlue),
-                  _buildCertificateItem('1 Nov 24', 'Cisco', kDarkBlueGray),
+                  _buildCertificateItem(
+                    '28 Okt 24',
+                    'Pandawara',
+                    kBlueGray,
+                    // Deskripsi untuk Pandawara (Sesuai gambar)
+                    'Kegiatan Relawan Lingkungan yang melibatkan 150 relawan untuk berpartisipasi dalam membersihkan sampah-sampah yang ada di titik-titik kritis di kota medan untuk mengatasi masalah banjir. Kegiatan ini meliputi pembersihan lingkungan serta sosialisasi kepada masyarakat sekitar akan pentingnya menjaga kebersihan dan kesadaran diri dalam membuang sampah pada tempatnya.',
+                  ),
+                  _buildCertificateItem(
+                    '30 Okt 24',
+                    'KMB-USU',
+                    kSkyBlue,
+                    // Deskripsi placeholder
+                    'Aksi donor darah dan penggalangan dana kemanusiaan untuk korban bencana alam di Sumatera Utara. Melibatkan 50 relawan dan berhasil mengumpulkan 100 kantong darah. Bertujuan menumbuhkan kepedulian sosial di kalangan mahasiswa.',
+                  ),
+                  _buildCertificateItem(
+                    '1 Nov 24',
+                    'Cisco',
+                    kDarkBlueGray,
+                    // Deskripsi placeholder
+                    'Pelatihan dasar Jaringan Komputer dengan fokus pada konfigurasi router dan switch. Diikuti 20 peserta dan merupakan bagian dari program pengembangan keahlian teknologi informasi bagi relawan. Diharapkan relawan mampu membantu infrastruktur teknologi di daerah terpencil.',
+                  ),
                 ],
               ),
 
@@ -347,9 +360,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
                         12,
-                      ), // Sedikit lebih bulat
+                      ),
                     ),
-                    elevation: 0, // Mengurangi elevasi agar tidak kaku
+                    elevation: 0,
                   ),
                   child: const Text(
                     'Keluar',
@@ -399,22 +412,23 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildCardBase({required Widget child, required double widthFactor}) {
     return Container(
-      width: widthFactor > 0 ? widthFactor : null, // Hanya jika widthFactor > 0
+      width: widthFactor > 0 ? widthFactor : null,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: kLightGray,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          // Efek Shadow/Neumorphic yang lebih lembut
+          // Efek Neumorphic soft
           BoxShadow(
             color: kBlueGray.withOpacity(0.15),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
+          // Bayangan yang lebih lembut (Neumorphic)
           BoxShadow(
-            color: kBlueGray.withOpacity(0.5),
-            blurRadius: 5,
-            offset: const Offset(-2, -2),
+             color: Colors.white.withOpacity(0.7),
+             blurRadius: 5,
+             offset: const Offset(-2, -2),
           ),
         ],
       ),
@@ -429,7 +443,7 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: const LinearGradient(
-          colors: [kSkyBlue, kBlueGray], // Gradient sesuai referensi
+          colors: [kSkyBlue, kBlueGray],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -450,14 +464,14 @@ class _ProfilePageState extends State<ProfilePage> {
               Text(
                 'Total Volunteer XP',
                 style: TextStyle(
-                  color: Colors.white, // Diubah jadi putih agar terbaca
+                  color: Colors.white,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               Icon(
                 Icons.trending_up,
-                color: Colors.white, // Icon diubah jadi putih
+                color: Colors.white,
                 size: 18,
               ),
             ],
@@ -466,7 +480,7 @@ class _ProfilePageState extends State<ProfilePage> {
           const Text(
             '18,000 XP',
             style: TextStyle(
-              color: Colors.white, // Diubah jadi putih tebal
+              color: Colors.white,
               fontSize: 32,
               fontWeight: FontWeight.w900,
             ),
@@ -476,9 +490,7 @@ class _ProfilePageState extends State<ProfilePage> {
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: 18000 / 54000,
-              // Background bar jadi putih transparan
               backgroundColor: Colors.white24,
-              // Isi bar jadi putih solid
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               minHeight: 8,
             ),
@@ -489,7 +501,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Text(
               '18,000/54,000 to Level Up',
               style: TextStyle(
-                color: Colors.white, // Diubah jadi putih transparan
+                color: Colors.white,
                 fontSize: 12,
               ),
             ),
@@ -574,7 +586,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  // Tambahkan navigasi ke halaman Lihat Semua
+                },
                 child: const Text(
                   'Lihat Semua',
                   style: TextStyle(
@@ -600,34 +614,55 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildCertificateItem(String date, String title, Color color) {
-    return _buildCardBase(
-      widthFactor: 120,
-      child: Column(
-        children: [
-          Container(
-            height: 80,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
+  // **[WIDGET INI DIREVISI]**
+  Widget _buildCertificateItem(
+      String date, 
+      String title, 
+      Color color,
+      String description, // Parameter baru
+      ) {
+    return InkWell(
+      onTap: () {
+        // Logika navigasi ke detail sertifikat
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CertificateDetailPage(
+              date: date,
+              title: title,
+              description: description,
             ),
-            child: Icon(Icons.file_copy, size: 40, color: color),
           ),
-          const SizedBox(height: 8),
-          Text(date, style: const TextStyle(fontSize: 11, color: kBlueGray)),
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: kDarkBlueGray,
+        );
+      },
+      child: _buildCardBase(
+        widthFactor: 120,
+        child: Column(
+          children: [
+            Container(
+              height: 80,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.file_copy, size: 40, color: color),
             ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(date, style: const TextStyle(fontSize: 11, color: kBlueGray)),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: kDarkBlueGray,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -637,7 +672,6 @@ class _ProfilePageState extends State<ProfilePage> {
       width: 100,
       child: Column(
         children: [
-          // Diubah menjadi base card untuk efek neumorphic soft
           _buildCardBase(
             widthFactor: 80,
             child: Icon(icon, size: 40, color: color),
