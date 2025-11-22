@@ -1,9 +1,9 @@
 // lib/pages/Organizer/Activity/detail_activities_page.dart
 import 'package:flutter/material.dart';
-import 'package:volunite/color_pallete.dart'; // Asumsikan impor ini ada di file utama Anda
+import 'package:volunite/color_pallete.dart'; // Menggunakan color_pallete.dart Anda
+import 'package:volunite/pages/Organizer/Activity/edit_activity.dart'; // Import halaman edit
 
-
-const kPrimaryColor = kSkyBlue; // Ditetapkan sebagai warna utama
+const kPrimaryColor = kSkyBlue; // Ditetapkan sebagai warna utama dari palet
 
 class OrganizerDetailActivityPage extends StatefulWidget {
   final String title;
@@ -35,11 +35,10 @@ class _OrganizerDetailActivityPageState
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    // final primary = Theme.of(context).colorScheme.primary; // Diganti
-    final primary = kPrimaryColor; // Gunakan warna utama dari palet
+    final primary = kPrimaryColor; // Menggunakan kSkyBlue dari palet
 
     return Scaffold(
-      backgroundColor: kBackground, // Menggunakan warna latar belakang dari palet
+      backgroundColor: kBackground, // Menggunakan kBackground dari palet
       body: Stack(
         children: [
           CustomScrollView(
@@ -48,12 +47,12 @@ class _OrganizerDetailActivityPageState
               SliverAppBar(
                 expandedHeight: screenHeight * 0.35,
                 pinned: true,
-                backgroundColor: primary, // Menggunakan kPrimaryColor
+                backgroundColor: primary, // Menggunakan kSkyBlue
                 elevation: 0,
                 leading: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: CircleAvatar(
-                    backgroundColor: kDarkBlueGray.withOpacity(0.3), // Warna yang lebih gelap
+                    backgroundColor: kDarkBlueGray.withOpacity(0.3), // Warna dari palet
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.of(context).pop(),
@@ -61,7 +60,7 @@ class _OrganizerDetailActivityPageState
                   ),
                 ),
                 actions: [
-                  // --- Tombol Edit ---
+                  // --- Tombol Edit (SUDAH DIREVISI UNTUK NAVIGASI) ---
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CircleAvatar(
@@ -70,7 +69,18 @@ class _OrganizerDetailActivityPageState
                         icon: const Icon(Icons.edit, color: Colors.white),
                         tooltip: 'Edit Kegiatan',
                         onPressed: () {
-                          // TODO: Navigasi ke halaman Edit Kegiatan
+                          // NAVIGASI KE HALAMAN EDIT
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditActivityPage(
+                                title: widget.title,
+                                date: widget.date,
+                                time: widget.time,
+                                imagePath: widget.imagePath,
+                              ), 
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -247,7 +257,7 @@ class _OrganizerDetailActivityPageState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: kSoftBlue.withOpacity(0.3), // Menggunakan kSoftBlue
+        color: kSoftBlue.withOpacity(0.3), // Menggunakan kSoftBlue dari palet
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: kSoftBlue), // Menggunakan kSoftBlue
       ),
@@ -288,7 +298,7 @@ class _OrganizerDetailActivityPageState
               Text(
                 "$current Pendaftar",
                 style: TextStyle(
-                  color: primary, // Warna Primary
+                  color: primary, // Warna Primary (kSkyBlue)
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -306,7 +316,7 @@ class _OrganizerDetailActivityPageState
               value: progress,
               minHeight: 10,
               backgroundColor: kSoftBlue, // Latar belakang progress bar
-              color: primary, // Warna Primary
+              color: primary, // Warna Primary (kSkyBlue)
             ),
           ),
           const SizedBox(height: 8),
@@ -368,7 +378,7 @@ class _OrganizerDetailActivityPageState
                       backgroundColor: Colors.white,
                       foregroundColor: kDarkBlueGray,
                       elevation: 0,
-                      side: BorderSide(color: kLightGray),
+                      side: const BorderSide(color: kLightGray),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -440,7 +450,7 @@ class _OrganizerDetailActivityPageState
                 // Navigasi ke List Pelamar
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: primary, // Warna Primary
+                backgroundColor: primary, // Warna Primary (kSkyBlue)
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -469,7 +479,7 @@ class _OrganizerDetailActivityPageState
           Expanded(
             child: Text(
               text,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 color: kDarkBlueGray,
                 height: 1.4,
@@ -489,7 +499,7 @@ class _OrganizerDetailActivityPageState
         decoration: BoxDecoration(
           color: kLightGray.withOpacity(0.5), // Menggunakan kLightGray
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: kLightGray, width: 1),
+          border: const Border.fromBorderSide(BorderSide(color: kLightGray, width: 1)),
         ),
         child: Row(
           children: [
@@ -523,13 +533,13 @@ class _OrganizerDetailActivityPageState
   }
 }
 
-// --- DELEGATE HEADER (Menggunakan kBlueGray dan kDarkBlueGray) ---
+// --- DELEGATE HEADER ---
 class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
   final String date;
   final String time;
 
-  final double _minHeight = 150; // Sedikit disesuaikan
+  final double _minHeight = 150;
   final double _maxHeight = 150;
 
   _MyPinnedHeaderDelegate({
@@ -544,7 +554,6 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    // final primary = Theme.of(context).colorScheme.primary; // Diganti
     final primary = kPrimaryColor;
 
     return Container(
@@ -595,7 +604,6 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   Widget _buildTag(BuildContext context, String label, IconData icon) {
-    // final primary = Theme.of(context).colorScheme.primary; // Diganti
     final primary = kPrimaryColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -626,7 +634,7 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
       children: [
         Icon(icon, color: kDarkBlueGray.withOpacity(0.7), size: 16),
         const SizedBox(width: 6),
-        Text(text, style: TextStyle(fontSize: 14, color: kDarkBlueGray)),
+        Text(text, style: const TextStyle(fontSize: 14, color: kDarkBlueGray)),
       ],
     );
   }

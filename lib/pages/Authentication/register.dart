@@ -310,6 +310,10 @@ class _RegisterPageState extends State<RegisterPage> {
       onTap: () {
         setState(() {
           _selectedRole = role;
+          // **[RESET INPUT JENIS KELAMIN SAAT GANTI ROLE]**
+          if (role == 'Organisasi') {
+             genderC.clear(); 
+          }
         });
       },
       child: AnimatedContainer(
@@ -356,6 +360,105 @@ class _RegisterPageState extends State<RegisterPage> {
 
   // ================== STEP 2 ==================
   Widget _buildStep2(BuildContext context, Color primary) {
+    // **[LIST WIDGET CONDITIONAL]**
+    final List<Widget> step2Fields = [
+      _fieldStep2(
+        icon: Icons.calendar_today,
+        hint: _selectedRole == 'Organisasi'
+            ? "Tanggal Berdiri"
+            : "Tanggal Lahir",
+        controller: tglC,
+        readOnly: true,
+        primaryColor: primary,
+        onTap: () async {
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: DateTime(2005, 1, 1),
+            firstDate: DateTime(1970),
+            lastDate: DateTime.now(),
+            builder: (context, child) {
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: ColorScheme.light(
+                    primary: primary,
+                    onPrimary: Colors.white,
+                    onSurface: kDarkBlueGray,
+                  ),
+                ),
+                child: child!,
+              );
+            },
+          );
+          if (picked != null) {
+            tglC.text =
+                "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}";
+          }
+        },
+      ),
+      const SizedBox(height: 16),
+      
+      // **[KONDISI: HANYA TAMPILKAN JIKA ROLE ADALAH 'Volunteer']**
+      if (_selectedRole == 'Volunteer') 
+        Column(
+          children: [
+            _fieldStep2(
+              icon: Icons.female,
+              hint: "Jenis Kelamin",
+              controller: genderC,
+              primaryColor: primary,
+              // Tambahkan logika dropdown/dialog pilihan jenis kelamin di sini jika diperlukan
+              readOnly: true, 
+              onTap: () {
+                // Contoh: Menampilkan BottomSheet atau Dialog untuk memilih jenis kelamin
+                showModalBottomSheet(
+                  context: context,
+                  builder: (ctx) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          title: const Text('Laki-laki'),
+                          onTap: () {
+                            genderC.text = 'Laki-laki';
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                        ListTile(
+                          title: const Text('Perempuan'),
+                          onTap: () {
+                            genderC.text = 'Perempuan';
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      
+      _fieldStep2(
+        icon: Icons.phone,
+        hint: "No Telepon",
+        controller: telpC,
+        keyboard: TextInputType.phone,
+        primaryColor: primary,
+      ),
+      const SizedBox(height: 16),
+      _fieldStep2(
+        icon: Icons.location_on_outlined,
+        hint: "Domisili",
+        controller: domisiliC,
+        primaryColor: primary,
+      ),
+      const SizedBox(height: 16),
+    ];
+    // ---------------------------------------------
+
+
     return Scaffold(
       backgroundColor: kBackground, // Putih
       body: SafeArea(
@@ -421,8 +524,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 children: [
                   Text(
-                    "Isi Data Diri",
-                    style: TextStyle(
+                    "Isi Data ${ _selectedRole == 'Organisasi' ? 'Organisasi' : 'Diri' }",
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: kDarkBlueGray,
@@ -436,62 +539,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     style: const TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 20),
-
-                  _fieldStep2(
-                    icon: Icons.calendar_today,
-                    hint: _selectedRole == 'Organisasi'
-                        ? "Tanggal Berdiri"
-                        : "Tanggal Lahir",
-                    controller: tglC,
-                    readOnly: true,
-                    primaryColor: primary,
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime(2005, 1, 1),
-                        firstDate: DateTime(1970),
-                        lastDate: DateTime.now(),
-                        builder: (context, child) {
-                          return Theme(
-                            data: Theme.of(context).copyWith(
-                              colorScheme: ColorScheme.light(
-                                primary: primary,
-                                onPrimary: Colors.white,
-                                onSurface: kDarkBlueGray,
-                              ),
-                            ),
-                            child: child!,
-                          );
-                        },
-                      );
-                      if (picked != null) {
-                        tglC.text =
-                            "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}";
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _fieldStep2(
-                    icon: Icons.female,
-                    hint: "Jenis Kelamin",
-                    controller: genderC,
-                    primaryColor: primary,
-                  ),
-                  const SizedBox(height: 16),
-                  _fieldStep2(
-                    icon: Icons.phone,
-                    hint: "No Telepon",
-                    controller: telpC,
-                    keyboard: TextInputType.phone,
-                    primaryColor: primary,
-                  ),
-                  const SizedBox(height: 16),
-                  _fieldStep2(
-                    icon: Icons.location_on_outlined,
-                    hint: "Domisili",
-                    controller: domisiliC,
-                    primaryColor: primary,
-                  ),
+                  
+                  // **[MENGGUNAKAN LIST WIDGET CONDITIONAL]**
+                  ...step2Fields, 
                 ],
               ),
             ),
@@ -509,6 +559,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     elevation: 2,
                   ),
                   onPressed: () {
+                    // Logika pendaftaran diselesaikan di sini
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => const LandingPage()),
