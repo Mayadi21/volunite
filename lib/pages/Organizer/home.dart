@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Organizer/Notification/notification.dart';
 import 'package:volunite/pages/Organizer/Activity/detail_activities_page.dart';
+import 'package:volunite/pages/Organizer/Activity/edit_activity.dart';
 import 'package:volunite/color_pallete.dart'; // Import Color Pallete
 
 class OrganizerHomeTab extends StatelessWidget {
@@ -540,8 +541,13 @@ class _EventManageCard extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => _ManageEventPage(title: title),
+                                builder: (_) => EditActivityPage(
+                                  title: title,
+                                  date: date,
+                                  time: time,
+                                  imagePath: image,
                               ),
+                              )
                             );
                           },
                           icon: const Icon(Icons.dashboard_customize, size: 18),
@@ -715,28 +721,28 @@ class _CreateEventPlaceholder extends StatelessWidget {
   }
 }
 
-class _ManageEventPage extends StatelessWidget {
-  const _ManageEventPage({super.key, required this.title});
-  final String title;
+// class _ManageEventPage extends StatelessWidget {
+//   const _ManageEventPage({super.key, required this.title});
+//   final String title;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBackground,
-      appBar: AppBar(
-        backgroundColor: kSkyBlue,
-        title: Text(
-          "Kelola: $title",
-          style: const TextStyle(color: Colors.white),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: const Center(
-        child: Text(
-          "Halaman kelola kegiatan.",
-          style: TextStyle(color: kBlueGray),
-        ),
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       backgroundColor: kBackground,
+//       appBar: AppBar(
+//         backgroundColor: kSkyBlue,
+//         title: Text(
+//           "Kelola: $title",
+//           style: const TextStyle(color: Colors.white),
+//         ),
+//         iconTheme: const IconThemeData(color: Colors.white),
+//       ),
+//       body: const Center(
+//         child: Text(
+//           "Halaman kelola kegiatan.",
+//           style: TextStyle(color: kBlueGray),
+//         ),
+//       ),
+//     );
+//   }
+// }
