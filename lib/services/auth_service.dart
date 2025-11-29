@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import 'package:volunite/models/user.dart';
+import 'package:volunite/models/user_model.dart';
 import 'package:volunite/models/auth_response.dart';
 
 class AuthService {
