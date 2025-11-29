@@ -18,6 +18,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final primaryDark = kDarkBlueGray;
   File? _imageFile;
 
+  // --- FUNGSI HELPER (TIDAK BERUBAH) ---
   void _showImageSourceDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -139,7 +140,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          elevation: 0,
                         ),
                         child: const Text(
                           'Tidak',
@@ -150,7 +150,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                     ),
-                    // -----------------------------
                     const SizedBox(width: 15),
                     Expanded(
                       child: ElevatedButton(
@@ -477,7 +476,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             '18,000 XP',
             style: TextStyle(
               color: Colors.white,
