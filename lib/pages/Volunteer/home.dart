@@ -6,8 +6,28 @@ import 'package:volunite/pages/Volunteer/Category/categories_page.dart';
 import 'package:volunite/pages/Volunteer/Category/category_activities_page.dart';
 import 'package:volunite/color_pallete.dart';
 
-class HomeTab extends StatelessWidget {
+// Import model dan service Anda
+import 'package:volunite/models/kegiatan_model.dart'; // Sesuaikan path jika perlu
+import 'package:volunite/services/kegiatan_service.dart'; // Sesuaikan path jika perlu
+
+// UBAH DARI StatelessWidget MENJADI StatefulWidget
+class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
+
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  // Inisialisasi Future untuk memuat data
+  late Future<List<Kegiatan>> _kegiatanFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Memuat data kegiatan saat widget pertama kali dibuat
+    _kegiatanFuture = KegiatanService.fetchKegiatan();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +40,7 @@ class HomeTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 👋 Header
+            // 👋 Header (Tidak Berubah)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -76,7 +96,7 @@ class HomeTab extends StatelessWidget {
 
             const SizedBox(height: 25),
 
-            // 🔍 Search Bar
+            // 🔍 Search Bar (Tidak Berubah)
             TextField(
               decoration: InputDecoration(
                 hintText: "Cari kegiatan relawan...",
@@ -101,7 +121,7 @@ class HomeTab extends StatelessWidget {
 
             const SizedBox(height: 25),
 
-            // 🧭 Kategori
+            // 🧭 Kategori (Tidak Berubah)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -130,12 +150,11 @@ class HomeTab extends StatelessWidget {
             ),
             const SizedBox(height: 15),
 
-            // LIST KATEGORI
+            // LIST KATEGORI (Tidak Berubah)
             SizedBox(
-              height: 95, // Sedikit diperbesar agar tidak terpotong bayangannya
+              height: 95,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                // Perhatikan penambahan parameter 'context' disini:
                 children: [
                   categoryItem(context, Icons.nature, "Lingkungan", primary),
                   categoryItem(context, Icons.school, "Pendidikan", primary),
@@ -153,7 +172,7 @@ class HomeTab extends StatelessWidget {
 
             const SizedBox(height: 25),
 
-            // 💎 Exp Card
+            // 💎 Exp Card (Tidak Berubah)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -209,7 +228,7 @@ class HomeTab extends StatelessWidget {
 
             const SizedBox(height: 30),
 
-            // Daftar Sekarang (Tidak berubah)
+            // 📢 JUDUL KEGIATAN
             const Text(
               "Daftar Sekarang",
               style: TextStyle(
@@ -221,28 +240,68 @@ class HomeTab extends StatelessWidget {
 
             const SizedBox(height: 15),
 
+            // ✅ BAGIAN PENTING: FutureBuilder untuk memuat dan memfilter kegiatan
             SizedBox(
               height: 230,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  eventCard(
-                    context,
-                    "assets/images/event1.jpg",
-                    "Pintar Bersama - KMB USU",
-                    "Sabtu, 19 Oktober 2024",
-                    "12.00 WIB - 17.00 WIB",
-                    primary,
-                  ),
-                  eventCard(
-                    context,
-                    "assets/images/event2.jpg",
-                    "Aksi Bersih Pantai",
-                    "Minggu, 20 Oktober 2024",
-                    "09.00 WIB - 12.00 WIB",
-                    primary,
-                  ),
-                ],
+              child: FutureBuilder<List<Kegiatan>>(
+                future: _kegiatanFuture,
+                builder: (context, snapshot) {
+                  // State Loading
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  // State Error
+                  if (snapshot.hasError) {
+                    return Center(
+                        child: Text(
+                            'Gagal memuat data. Periksa koneksi atau baseUrl Anda. Error: ${snapshot.error}'));
+                  }
+
+                  // State Data Tersedia
+                  if (snapshot.hasData) {
+                    // ** FILTER DATA DI SINI **
+                    final List<Kegiatan> allKegiatan = snapshot.data!;
+                    final List<Kegiatan> scheduledKegiatan = allKegiatan
+                        .where((k) => k.status.toLowerCase() == 'scheduled')
+                        .toList();
+
+                    // State Data Kosong Setelah Filter
+                    if (scheduledKegiatan.isEmpty) {
+                      return const Center(
+                        child: Text('Tidak ada kegiatan yang dijadwalkan saat ini.'),
+                      );
+                    }
+
+                    // Tampilkan data yang sudah difilter
+                    return ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: scheduledKegiatan.length,
+                      itemBuilder: (context, index) {
+                        final kegiatan = scheduledKegiatan[index];
+                        // Menggunakan eventCard yang sudah Anda buat, 
+                        // tetapi dengan data dinamis
+                        return eventCard(
+                          context,
+                          // Jika thumbnail null, gunakan placeholder
+                          kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg', 
+                          kegiatan.judul,
+                          // Format tanggal sesuai kebutuhan
+                          _formatDate(kegiatan.tanggalMulai), 
+                          _formatTimeRange(
+                            kegiatan.tanggalMulai, 
+                            kegiatan.tanggalBerakhir
+                          ),
+                          primary,
+                          kegiatan, // Kirim objek kegiatan untuk DetailPage
+                        );
+                      },
+                    );
+                  }
+
+                  // Fallback
+                  return const Center(child: Text('Tidak ada data kegiatan.'));
+                },
               ),
             ),
           ],
@@ -251,14 +310,43 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  // 🔹 Kategori item (UPDATED)
-  // Kita menambahkan BuildContext context agar bisa melakukan Navigasi
+  // --- Utility Functions (ditambahkan untuk memformat tanggal) ---
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Tanggal N/A';
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const monthNames = [
+      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    
+    final dayName = dayNames[date.weekday % 7];
+    final day = date.day;
+    final month = monthNames[date.month];
+    final year = date.year;
+
+    return '$dayName, $day $month $year';
+  }
+
+  String _formatTimeRange(DateTime? start, DateTime? end) {
+    if (start == null) return 'Waktu N/A';
+
+    final startTime = '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
+    
+    if (end != null) {
+      final endTime = '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
+      return '$startTime - $endTime';
+    }
+    
+    return startTime;
+  }
+  
+  // --- Static Widgets (diperbarui) ---
+
+  // 🔹 Kategori item (Tidak Berubah)
   static Widget categoryItem(
-    BuildContext context,
-    IconData icon,
-    String title,
-    Color primary,
-  ) {
+      BuildContext context, IconData icon, String title, Color primary) {
+    // ... (kode categoryItem tidak berubah)
     return GestureDetector(
       onTap: () {
         // Navigasi ke halaman list kegiatan berdasarkan kategori
@@ -310,132 +398,153 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  // 🔸 Event card (Tidak berubah)
+  // 🔸 Event card (DIUBAH untuk menerima objek Kegiatan)
   static Widget eventCard(
     BuildContext context,
-    String image,
-    String title,
-    String date,
-    String time,
-    Color primary,
-  ) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailActivitiesPage(
-              title: title,
-              date: date,
-              time: time,
-              imagePath: image,
+  String image,
+  String title,
+  String date,
+  String time,
+  Color primary,
+  Kegiatan kegiatan,
+) {
+  final bool isUrl = image.startsWith("http");
+
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DetailActivitiesPage(
+            kegiatan: kegiatan,
+            title: title,
+            date: date,
+            time: time,
+            imagePath: image,
+          ),
+        ),
+      );
+    },
+    child: Container(
+      width: 280,
+      margin: const EdgeInsets.only(right: 15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: kBlueGray.withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+
+            // -------------- PERBAIKAN DI SINI --------------
+            child: isUrl
+                ? Image.network(
+                    image,
+                    height: 130,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        height: 130,
+                        color: Colors.grey.shade200,
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 130,
+                        color: Colors.grey,
+                        child: const Icon(Icons.broken_image, size: 40),
+                      );
+                    },
+                  )
+                : Image.asset(
+                    image,
+                    height: 130,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+            // -------------------------------------------------
+          ),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15)
+                .copyWith(top: 10, bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: primary.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    kegiatan.status,
+                    style: TextStyle(
+                      color: primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: kDarkBlueGray,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today,
+                        size: 14, color: kBlueGray),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        date,
+                        style: const TextStyle(
+                            color: kBlueGray, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    const Icon(Icons.access_time,
+                        size: 14, color: kBlueGray),
+                    const SizedBox(width: 5),
+                    Text(
+                      time,
+                      style:
+                          const TextStyle(color: kBlueGray, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        );
-      },
-      child: Container(
-        width: 280,
-        margin: const EdgeInsets.only(right: 15),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: kBlueGray.withOpacity(0.18),
-              blurRadius: 10,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-              child: Image.asset(
-                image,
-                height: 130,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (ctx, err, stack) =>
-                    Container(height: 130, color: Colors.grey),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 15,
-              ).copyWith(top: 10, bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // badge "2 hari lagi"
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: kSkyBlue.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      "2 hari lagi",
-                      style: TextStyle(
-                        color: primary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: kDarkBlueGray,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today,
-                        size: 14,
-                        color: kBlueGray,
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          date,
-                          style: const TextStyle(
-                            color: kBlueGray,
-                            fontSize: 12,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time, size: 14, color: kBlueGray),
-                      const SizedBox(width: 5),
-                      Text(
-                        time,
-                        style: const TextStyle(color: kBlueGray, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
