@@ -1,6 +1,8 @@
 // lib/pages/kegiatan/activities_page.dart
 import 'package:flutter/material.dart';
 import 'package:volunite/color_pallete.dart';
+import 'package:volunite/models/kegiatan_model.dart';
+import 'package:volunite/services/kegiatan_service.dart';
 import 'package:volunite/pages/Volunteer/Activity/activity_card.dart'; // Impor ActivityCard dan Activity
 
 // =============================================================================
@@ -19,39 +21,28 @@ class _ActivitiesPageState extends State<ActivitiesPage>
   int _currentIndex = 0;
 
   // Data Dummy Kegiatan
-  final List<Activity> _dummyActivities = [
-    Activity(
-      title: 'Pintar Bersama - KMB USU',
-      date: DateTime(2024, 10, 19),
-      start: const TimeOfDay(hour: 12, minute: 0),
-      end: const TimeOfDay(hour: 17, minute: 0),
-      bannerUrl: 'assets/images/event1.jpg', // Gunakan Image.asset
-      status: ActivityStatus.upcoming,
-    ),
-    Activity(
-      title: 'Aksi Bersih Pantai',
-      date: DateTime(2024, 10, 20),
-      start: const TimeOfDay(hour: 9, minute: 0),
-      end: const TimeOfDay(hour: 12, minute: 0),
-      bannerUrl: 'assets/images/event2.jpg', // Gunakan Image.asset
-      status: ActivityStatus.upcoming,
-    ),
-    // Contoh kegiatan yang sudah selesai (untuk tab riwayat)
-    Activity(
-      title: 'Workshop Flutter Dasar',
-      date: DateTime(2024, 9, 5),
-      start: const TimeOfDay(hour: 10, minute: 0),
-      end: const TimeOfDay(hour: 16, minute: 0),
-      bannerUrl: 'assets/images/event1.jpg',
-      status: ActivityStatus.finished,
-    ),
-  ];
+  List<Kegiatan> kegiatanList = [];
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabSelection);
+
+    fetchData();
+  }
+
+  void fetchData() async{
+    try {
+      kegiatanList = await KegiatanService.fetchKegiatan();
+    } catch (e) {
+      print('Error fetching data: $e');
+    }
+
+    setState(() {
+      loading = false;
+    });
   }
 
   void _handleTabSelection() {
@@ -69,13 +60,15 @@ class _ActivitiesPageState extends State<ActivitiesPage>
 
   @override
   Widget build(BuildContext context) {
-    // Memisahkan data berdasarkan status
-    final upcomingActivities = _dummyActivities
-        .where((a) => a.status == ActivityStatus.upcoming)
+        // Memisahkan data berdasarkan status
+    final upcomingActivities = kegiatanList
+        .where((a) => a.status == "upcoming")
         .toList();
-    final historyActivities = _dummyActivities
-        .where((a) => a.status == ActivityStatus.finished)
+
+    final historyActivities = kegiatanList
+        .where((a) => a.status == "finished")
         .toList();
+
 
     return Scaffold(
       backgroundColor: kBackground,
@@ -138,11 +131,13 @@ class _ActivitiesPageState extends State<ActivitiesPage>
           ),
         ),
       ),
-      body: TabBarView(
+      body: loading
+    ? const Center(child: CircularProgressIndicator())
+    : TabBarView(
         controller: _tabController,
         children: [
-          _ActivityList(activities: upcomingActivities),
-          _ActivityList(activities: historyActivities),
+          ActivityList(activities: upcomingActivities),
+          ActivityList(activities: historyActivities),
         ],
       ),
     );
@@ -208,41 +203,83 @@ class CustomTabButton extends StatelessWidget {
 // -----------------------------------------------------------------------------
 // TAB CONTENT - ACTIVITY LIST
 // -----------------------------------------------------------------------------
-class _ActivityList extends StatelessWidget {
-  final List<Activity> activities;
+// class _ActivityList extends StatelessWidget {
+//   final List<Activity> activities;
 
-  const _ActivityList({required this.activities});
+//   const _ActivityList({required this.activities});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     if (activities.isEmpty) {
+//       return const Center(
+//         child: Text(
+//           'Tidak ada kegiatan saat ini.',
+//           style: TextStyle(color: kBlueGray),
+//         ),
+//       );
+//     }
+
+//     return ListView.separated(
+//       padding: const EdgeInsets.all(16),
+//       itemCount: activities.length + 1, // +1 untuk SearchField
+//       itemBuilder: (context, index) {
+//         if (index == 0) {
+//           return const _SearchField();
+//         }
+//         final activity = activities[index - 1];
+//         return ActivityCard(activity: activity);
+//       },
+//       separatorBuilder: (context, index) {
+//         if (index == 0) {
+//           return const SizedBox(height: 16);
+//         }
+//         return const SizedBox(height: 14);
+//       },
+//     );
+//   }
+// }
+
+class ActivityList extends StatelessWidget {
+  final List<Kegiatan> activities;
+
+  const ActivityList({required this.activities});
 
   @override
   Widget build(BuildContext context) {
     if (activities.isEmpty) {
       return const Center(
         child: Text(
-          'Tidak ada kegiatan saat ini.',
+          'Tidak ada kegiatan.',
           style: TextStyle(color: kBlueGray),
         ),
       );
     }
 
-    return ListView.separated(
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: activities.length + 1, // +1 untuk SearchField
+      itemCount: activities.length + 1,
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return const _SearchField();
-        }
-        final activity = activities[index - 1];
-        return ActivityCard(activity: activity);
-      },
-      separatorBuilder: (context, index) {
-        if (index == 0) {
-          return const SizedBox(height: 16);
-        }
-        return const SizedBox(height: 14);
+        if (index == 0) return const _SearchField();
+
+        final item = activities[index - 1];
+
+        return ActivityCard(
+          activity: Activity(
+            title: item.judul,
+            date: item.tanggalMulai ?? DateTime.now(),
+            bannerUrl: item.thumbnail ?? "assets/images/event1.jpg",
+            start: const TimeOfDay(hour: 0, minute: 0),
+            end: const TimeOfDay(hour: 0, minute: 0),
+            status: item.status == "upcoming"
+                ? ActivityStatus.upcoming
+                : ActivityStatus.finished,
+          ),
+        );
       },
     );
   }
 }
+
 
 // -----------------------------------------------------------------------------
 // SEARCH FIELD COMPONENT

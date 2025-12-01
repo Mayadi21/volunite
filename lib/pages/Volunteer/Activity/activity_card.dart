@@ -88,7 +88,7 @@ class ActivityCard extends StatelessWidget {
           // Banner
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-            child: Image.asset(
+            child: Image.network(
               activity.bannerUrl,
               height: 160,
               width: double.infinity,
