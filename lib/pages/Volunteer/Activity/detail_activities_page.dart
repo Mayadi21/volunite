@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:volunite/color_pallete.dart'; // Impor color palette
+import 'package:volunite/color_pallete.dart'; 
+import 'package:volunite/models/kegiatan_model.dart';
 
 class DetailActivitiesPage extends StatefulWidget {
+  // Catatan: Jika kegiatan null, kita akan menggunakan fallback data (title, date, time)
+  final Kegiatan? kegiatan;
   final String title;
   final String date;
   final String time;
@@ -9,6 +12,7 @@ class DetailActivitiesPage extends StatefulWidget {
 
   const DetailActivitiesPage({
     super.key,
+    required this.kegiatan,
     required this.title,
     required this.date,
     required this.time,
@@ -22,11 +26,24 @@ class DetailActivitiesPage extends StatefulWidget {
 class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   bool _isDescriptionExpanded = false;
 
-  final String fullDescription =
-      'Kegiatan volunteer yang mengajak Anda untuk berbagi ilmu dan inspirasi kepada anak-anak yang membutuhkan. Melalui acara ini, Anda dapat berkontribusi dalam memberikan pendidikan dan pengalaman belajar yang menyenangkan. Mari bersama-sama menciptakan perubahan positif dan memberikan dampak nyata bagi generasi muda. Gabung sekarang dan jadilah bagian dari gerakan kebaikan ini!';
+  // Mendapatkan deskripsi dinamis dari model, atau fallback ke string kosong
+  String get _dynamicDescription {
+    return widget.kegiatan?.deskripsi ?? 'Deskripsi tidak tersedia.';
+  }
+
+  // Mendapatkan syarat & ketentuan dari model (diparsing per baris)
+  List<String> get _dynamicRequirements {
+    final reqString = widget.kegiatan?.syaratKetentuan;
+    if (reqString == null || reqString.trim().isEmpty) {
+      return ['Syarat dan ketentuan belum ditetapkan.'];
+    }
+    // Asumsi syarat dipisahkan oleh baris baru (\n)
+    return reqString.split('\n').where((s) => s.trim().isNotEmpty).toList();
+  }
 
   // --- Form Report ---
   void _showReportForm(BuildContext context) {
+    // ... (Fungsi _showReportForm tidak diubah untuk menjaga fokus pada data)
     final formKey = GlobalKey<FormState>();
     final descriptionController = TextEditingController();
     String? selectedComplaintType;
@@ -286,7 +303,16 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.asset(widget.imagePath, fit: BoxFit.cover),
+                      Image.network(
+                          widget.imagePath,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.broken_image, size: 80),
+                            );
+                          },
+                        ),
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -335,7 +361,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Deskripsi
+                        // Deskripsi (Menggunakan Data Backend)
                         const Text(
                           'Deskripsi Kegiatan',
                           style: TextStyle(
@@ -346,7 +372,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          fullDescription,
+                          _dynamicDescription, // MENGAMBIL DARI GETTER
                           maxLines: _isDescriptionExpanded ? null : 4,
                           overflow: _isDescriptionExpanded
                               ? TextOverflow.visible
@@ -377,7 +403,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Syarat & Ketentuan
+                        // Syarat & Ketentuan (Menggunakan Data Backend)
                         Theme(
                           data: Theme.of(
                             context,
@@ -397,19 +423,9 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                               bottom: 16,
                             ),
                             children: [
-                              _buildRequirementItem(
-                                'Mahasiswa/i semester 3,5,7',
-                              ),
-                              _buildRequirementItem(
-                                'Memiliki pengalaman organisasi',
-                              ),
-                              _buildRequirementItem(
-                                'Mampu bekerja dalam sebuah tim',
-                              ),
-                              _buildRequirementItem(
-                                'Mampu bekerja dibawah tekanan',
-                              ),
-                              _buildRequirementItem('Kreatif'),
+                              // MENGGUNAKAN DATA DINAMIS DARI _dynamicRequirements
+                              for (var requirement in _dynamicRequirements)
+                                _buildRequirementItem(requirement),
                             ],
                           ),
                         ),
@@ -456,7 +472,11 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     );
   }
 
+  // Widget Lokasi (Diubah untuk menggunakan data backend)
   Widget _buildLocationCard() {
+    final locationText = widget.kegiatan?.lokasi ?? 'Lokasi tidak diketahui';
+    final locationTitle = widget.kegiatan?.organizer?.nama ?? 'Lokasi Kegiatan'; // Judul Lokasi bisa dari nama Organizer atau statis
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -468,8 +488,10 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
+              // Peta Hardcoded (Sulit Diganti tanpa API Key/Widget Peta)
               child: Image.network(
-                'https://media.wired.com/photos/59269cd37034dc5f91bec0f1/master/w_2560%2Cc_limit/GoogleMapTA.jpg',
+                // Gunakan placeholder peta statis jika URL peta dinamis tidak tersedia
+                'https://media.wired.com/photos/59269cd37034dc5f91bec0f1/master/w_2560%2Cc_limit/GoogleMapTA.jpg', 
                 width: 80,
                 height: 80,
                 fit: BoxFit.cover,
@@ -480,18 +502,18 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Sekretariat KMB-USU',
-                    style: TextStyle(
+                  Text(
+                    locationTitle, // MENGAMBIL JUDUL DARI BACKEND
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                       color: kDarkBlueGray,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Jalan Brigjend Katamso Dalam No.62. A U R, Kec. Medan Maimun, Kota Medan',
-                    style: TextStyle(
+                  Text(
+                    locationText, // MENGAMBIL LOKASI DARI BACKEND
+                    style: const TextStyle(
                       fontSize: 12,
                       color: kBlueGray,
                       height: 1.4,
@@ -499,7 +521,11 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      // Logic navigasi peta (misalnya menggunakan url_launcher)
+                      // final url = 'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(locationText)}';
+                      // launchUrl(Uri.parse(url));
+                    },
                     icon: const Icon(Icons.location_on_outlined, size: 16),
                     label: const Text('Dapatkan Lokasi'),
                     style: ElevatedButton.styleFrom(
@@ -524,9 +550,15 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 
   Widget _buildParticipantsInfo() {
+    // ... (kode _buildParticipantsInfo tidak diubah, namun data kuota bisa diganti dengan widget.kegiatan?.kuota)
     Widget buildAvatar(String url) {
       return CircleAvatar(radius: 15, backgroundImage: NetworkImage(url));
     }
+    
+    // Kuota dinamis
+    final kuotaText = widget.kegiatan?.kuota != null 
+        ? '${widget.kegiatan!.kuota}+ Bergabung' 
+        : '43+ Bergabung'; // Fallback kuota hardcoded
 
     return Row(
       children: [
@@ -552,8 +584,8 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
           ),
         ),
         const SizedBox(width: 8),
-        const Text(
-          '43+ Bergabung',
+        Text(
+          kuotaText, // MENGGUNAKAN KUOTA DINAMIS
           style: TextStyle(fontWeight: FontWeight.bold, color: kDarkBlueGray),
         ),
       ],
@@ -561,6 +593,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 
   Widget _buildBottomBar() {
+    // ... (kode _buildBottomBar tidak diubah)
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 24,
@@ -624,6 +657,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     );
   }
 
+  // Widget Item Persyaratan (Dipanggil di ExpansionTile)
   Widget _buildRequirementItem(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -634,7 +668,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              text,
+              text, // MENGGUNAKAN TEXT DINAMIS
               style: const TextStyle(
                 fontSize: 14,
                 color: kDarkBlueGray,
@@ -648,6 +682,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 
   Widget _buildDocumentCard() {
+    // ... (kode _buildDocumentCard tidak diubah)
     return InkWell(
       onTap: () {},
       child: Container(
@@ -689,6 +724,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 
   Widget _buildOrganizersList() {
+    // ... (kode _buildOrganizersList tidak diubah)
     final List<String> logoPaths = [
       'assets/images/event1.jpg',
       'assets/images/event2.jpg',
@@ -813,7 +849,7 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-         Icon(icon, color: kBlueGray, size: 16),
+        Icon(icon, color: kBlueGray, size: 16),
         const SizedBox(width: 4),
         Text(text, style: const TextStyle(fontSize: 14, color: kDarkBlueGray)),
       ],

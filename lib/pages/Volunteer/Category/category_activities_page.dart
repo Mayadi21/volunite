@@ -109,6 +109,7 @@ class CategoryActivitiesPage extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => DetailActivitiesPage(
+                    kegiatan: null,
                     title: activity.title,
                     date:
                         "${activity.date.day}/${activity.date.month}/${activity.date.year}",
