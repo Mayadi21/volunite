@@ -1,4 +1,4 @@
-import 'user_model.dart';
+import '../../models/user_model.dart';
 
 class AuthResponse {
   final User user;
