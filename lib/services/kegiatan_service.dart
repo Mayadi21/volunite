@@ -1,32 +1,29 @@
+// FILE: kegiatan_service.dart
+// Fungsi: Mengambil daftar kegiatan dari endpoint API volunteer/kegiatan.
+// Kegunaan: Dipanggil dari UI untuk menampilkan list kegiatan ke user.
+// Cara manggil: final data = await KegiatanService.fetchKegiatan();
+// Keunggulan: Tidak perlu lagi ambil token — ApiClient sudah sisipkan otomatis.
+
+
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../models/kegiatan_model.dart';
+import 'package:volunite/models/kegiatan_model.dart';
+import 'package:volunite/services/core/api_client.dart';
 
 class KegiatanService {
-  // Contoh untuk Android emulator:
-  // static const String baseUrl = "http://10.0.2.2:8000/api/kegiatan";
-  // iOS simulator:
-  // static const String baseUrl = "http://127.0.0.1:8000/api/kegiatan";
-  // Real device -> gunakan IP mesin dev: http://192.168.x.x:8000/api/kegiatan
-
-  // static const String baseUrl = "http://10.0.2.2:8000/api/kegiatan";
-  // static const String baseUrl = "http://127.0.0.1:8000/api/kegiatan";
-  static const String baseUrl = "http://192.168.1.6:8000/api/kegiatan";
-
-
   static Future<List<Kegiatan>> fetchKegiatan() async {
-    final uri = Uri.parse(baseUrl);
-    final response = await http.get(uri, headers: {
-      'Accept': 'application/json',
-    });
+    // akan otomatis kirim Authorization: Bearer <token>
+    final response = await ApiClient.get('/volunteer/kegiatan');
 
     if (response.statusCode == 200) {
-      // Response assumed berupa JSON array: [ {kegiatan}, {kegiatan}, ... ]
-      final List<dynamic> jsonList = json.decode(response.body) as List<dynamic>;
-      return jsonList.map((e) => Kegiatan.fromJson(e as Map<String, dynamic>)).toList();
+      final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+
+      return jsonList
+          .map((e) => Kegiatan.fromJson(e as Map<String, dynamic>))
+          .toList();
     } else {
-      // lempar error informatif
-      throw Exception('Gagal fetch kegiatan. Status: ${response.statusCode}. Body: ${response.body}');
+      throw Exception(
+        'Gagal fetch kegiatan. Status: ${response.statusCode}. Body: ${response.body}',
+      );
     }
   }
 }

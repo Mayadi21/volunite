@@ -7,8 +7,8 @@ import 'package:volunite/pages/Admin/admin_main_page.dart';
 import 'package:volunite/color_pallete.dart';
 
 // tambahkan ini:
-import 'package:volunite/services/auth_service.dart';
-import 'package:volunite/services/token_storage.dart';
+import 'package:volunite/services/auth/auth_service.dart';
+import 'package:volunite/services/core/token_storage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
