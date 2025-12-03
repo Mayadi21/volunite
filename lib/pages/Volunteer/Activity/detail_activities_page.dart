@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:volunite/color_pallete.dart';
+import 'package:volunite/models/kegiatan_model.dart';
+import 'package:volunite/services/pendaftaran_service.dart';
+// import 'package:volunite/models/pendaftaran_model.dart'; // Sudah tidak perlu model di sini
+import 'package:volunite/services/auth/auth_service.dart';
 
 class DetailActivitiesPage extends StatefulWidget {
+  final Kegiatan? kegiatan;
   final String title;
   final String date;
   final String time;
@@ -8,6 +14,7 @@ class DetailActivitiesPage extends StatefulWidget {
 
   const DetailActivitiesPage({
     super.key,
+    required this.kegiatan,
     required this.title,
     required this.date,
     required this.time,
@@ -20,18 +27,488 @@ class DetailActivitiesPage extends StatefulWidget {
 
 class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   bool _isDescriptionExpanded = false;
+  
+  // State untuk status loading di dalam modal
+  bool _isLoading = false; 
 
-  final String fullDescription =
-      'Kegiatan volunteer yang mengajak Anda untuk berbagi ilmu dan inspirasi kepada anak-anak yang membutuhkan. Melalui acara ini, Anda dapat berkontribusi dalam memberikan pendidikan dan pengalaman belajar yang menyenangkan. Mari bersama-sama menciptakan perubahan positif dan memberikan dampak nyata bagi generasi muda. Gabung sekarang dan jadilah bagian dari gerakan kebaikan ini!';
+  // Mendapatkan deskripsi dinamis dari model, atau fallback ke string kosong
+  String get _dynamicDescription {
+    return widget.kegiatan?.deskripsi ?? 'Deskripsi tidak tersedia.';
+  }
+
+  // Mendapatkan syarat & ketentuan dari model (diparsing per baris)
+  List<String> get _dynamicRequirements {
+    final reqString = widget.kegiatan?.syaratKetentuan;
+    if (reqString == null || reqString.trim().isEmpty) {
+      return ['Syarat dan ketentuan belum ditetapkan.'];
+    }
+    // Asumsi syarat dipisahkan oleh baris baru (\n)
+    return reqString.split('\n').where((s) => s.trim().isNotEmpty).toList();
+  }
+
+  // =========================================================
+  // FUNGSI UNTUK MENAMPILKAN FORM PENDAFTARAN KEGIATAN
+  // =========================================================
+  void _showRegistrationForm(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
+    final domisiliController = TextEditingController();
+    final noHpController = TextEditingController();
+    final komitmenController = TextEditingController();
+    final keterampilanController = TextEditingController();
+
+    // 🔥 PERBAIKAN: Instansiasi Service
+    final pendaftaranService = PendaftaranService();
+    // Diasumsikan AuthService juga dapat diinstansiasi seperti ini
+    final authService = AuthService();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: kBackground,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            
+            // LOGIKA SUBMIT FORM
+            void _submitForm() async {
+              if (formKey.currentState!.validate()) {
+                
+                setModalState(() => _isLoading = true); // Tampilkan loading
+                
+                // 🔥 Ambil user login
+                // PERBAIKAN: Pemanggilan getCurrentUser() yang disesuaikan
+                final user = await authService.getCurrentUser(); 
+                
+                // Pastikan user dan ID kegiatan tersedia
+                if (user == null || widget.kegiatan?.id == null) {
+                  setModalState(() => _isLoading = false);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("⚠️ Anda harus login atau ID kegiatan tidak valid."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
+                // Kirim ke service dengan parameter yang diharapkan
+                final success = await pendaftaranService.daftarKegiatan(
+                  // Pastikan ID user dan kegiatan bertipe INT sesuai definisi Service
+                  userId: user.id as int, 
+                  kegiatanId: widget.kegiatan!.id as int, 
+                  nomorTelepon: noHpController.text,
+                  domisili: domisiliController.text,
+                  komitmen: komitmenController.text,
+                  keterampilan: keterampilanController.text,
+                );
+                
+                setModalState(() => _isLoading = false); // Sembunyikan loading
+                Navigator.pop(context); // Tutup modal
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ Pendaftaran kegiatan berhasil dikirim!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('❌ Gagal mengirim pendaftaran. Coba lagi.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header (tetap)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Form Pendaftaran Kegiatan',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, color: kBlueGray),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Input Domisili
+                    _buildFormLabel("Domisili"),
+                    _buildTextFormField(
+                      controller: domisiliController,
+                      hintText: 'Masukkan domisili Anda',
+                      validatorText: 'Domisili harus diisi',
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Input No HP
+                    _buildFormLabel("Nomor HP Aktif"),
+                    _buildTextFormField(
+                      controller: noHpController,
+                      hintText: 'Masukkan nomor HP Anda (e.g. 0812...)',
+                      validatorText: 'Nomor HP harus diisi',
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Input Komitmen
+                    _buildFormLabel("Komitmen (Tuliskan janji komitmen Anda)"),
+                    _buildTextFormField(
+                      controller: komitmenController,
+                      hintText: 'Tulis komitmen Anda untuk kegiatan ini',
+                      validatorText: 'Komitmen harus diisi',
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Input Keterampilan
+                    _buildFormLabel("Keterampilan yang Dimiliki"),
+                    _buildTextFormField(
+                      controller: keterampilanController,
+                      hintText: 'Contoh: Desain Grafis, Komunikasi, Editing',
+                      validatorText: 'Keterampilan harus diisi',
+                    ),
+                    const SizedBox(height: 24),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        // Menonaktifkan tombol saat loading
+                        onPressed: _isLoading ? null : _submitForm, 
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kSkyBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                ),
+                              )
+                            : const Text(
+                                'Kirim Pendaftaran',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+  
+  // 🔥 FUNGSI _showModalPendaftaranKegiatanEdit DIHAPUS karena tidak terdefinisi/duplikat
+
+  // ... (Sisa class _DetailActivitiesPageState, termasuk _buildFormLabel, _buildTextFormField, 
+  // _showReportForm, build, _buildLocationCard, _buildParticipantsInfo, _buildBottomBar, 
+  // _buildRequirementItem, _buildDocumentCard, _buildOrganizersList, dan _MyPinnedHeaderDelegate tetap sama)
+  
+// Widget pembantu untuk label form
+  Widget _buildFormLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontWeight: FontWeight.w600,
+        color: kDarkBlueGray,
+      ),
+    );
+  }
+
+  // Widget pembantu untuk TextFormField
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String hintText,
+    required String validatorText,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(color: kBlueGray),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: kSoftBlue),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: kSoftBlue),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: kSkyBlue,
+            width: 1.3,
+          ),
+        ),
+        contentPadding: const EdgeInsets.all(16),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return validatorText;
+        }
+        return null;
+      },
+    );
+  }
+  
+  // --- Fungsi _showReportForm tidak diubah ---
+  void _showReportForm(BuildContext context) {
+    // ... (Fungsi _showReportForm yang sudah ada)
+    final formKey = GlobalKey<FormState>();
+    final descriptionController = TextEditingController();
+    String? selectedComplaintType;
+
+    final List<String> complaintOptions = [
+      'Informasi Palsu (Hoax)',
+      'Penipuan',
+      'Ujaran Kebencian',
+      'Konten Tidak Pantas',
+      'Spam',
+      'Lainnya',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: kBackground,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Laporkan Kegiatan',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, color: kBlueGray),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    const Text(
+                      "Jenis Keluhan",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: kDarkBlueGray,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedComplaintType,
+                      icon: const Icon(Icons.arrow_drop_down, color: kBlueGray),
+                      decoration: InputDecoration(
+                        hintText: 'Pilih jenis masalah',
+                        hintStyle: const TextStyle(color: kBlueGray),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: kSoftBlue),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: kSoftBlue),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: kSkyBlue,
+                            width: 1.3,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      items: complaintOptions.map((String item) {
+                        return DropdownMenuItem<String>(
+                          value: item,
+                          child: Text(
+                            item,
+                            style: const TextStyle(color: kDarkBlueGray),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setModalState(() {
+                          selectedComplaintType = newValue;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Harap pilih jenis keluhan';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    const Text(
+                      "Deskripsi Keluhan",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: kDarkBlueGray,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: descriptionController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Jelaskan detail masalah yang Anda temukan...',
+                        hintStyle: const TextStyle(color: kBlueGray),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: kSoftBlue),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: kSoftBlue),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: kSkyBlue,
+                            width: 1.3,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Deskripsi harus diisi';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (formKey.currentState!.validate()) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Laporan berhasil dikirim'),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kDarkBlueGray,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Kirim Laporan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-
-    // --- PERBAIKAN OVERFLOW: Dapatkan tinggi safe area bawah ---
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
+      backgroundColor: kBackground,
       body: Stack(
         children: [
           CustomScrollView(
@@ -40,12 +517,12 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
               SliverAppBar(
                 expandedHeight: screenHeight * 0.35,
                 pinned: true,
-                backgroundColor: Colors.blue,
                 elevation: 0,
+                backgroundColor: kBlueGray,
                 leading: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: CircleAvatar(
-                    backgroundColor: Colors.black.withOpacity(0.3),
+                    backgroundColor: Colors.black.withOpacity(0.35),
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.of(context).pop(),
@@ -53,10 +530,26 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   ),
                 ),
                 actions: [
+                  // Tombol Report
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CircleAvatar(
-                      backgroundColor: Colors.black.withOpacity(0.3),
+                      backgroundColor: Colors.black.withOpacity(0.35),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.flag_outlined,
+                          color: Colors.white,
+                        ),
+                        tooltip: 'Laporkan',
+                        onPressed: () => _showReportForm(context),
+                      ),
+                    ),
+                  ),
+                  // Tombol Share
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: CircleAvatar(
+                      backgroundColor: Colors.black.withOpacity(0.35),
                       child: IconButton(
                         icon: const Icon(Icons.share, color: Colors.white),
                         onPressed: () {},
@@ -66,11 +559,37 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   collapseMode: CollapseMode.pin,
-                  background: Image.asset(widget.imagePath, fit: BoxFit.cover),
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(
+                          widget.imagePath,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.broken_image, size: 80),
+                            );
+                          },
+                        ),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withOpacity(0.35),
+                              Colors.black.withOpacity(0.15),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
-              // 2. Header Konten yang Pinned
+              // 2. Header Konten
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _MyPinnedHeaderDelegate(
@@ -80,47 +599,46 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 ),
               ),
 
-              // 3. Konten yang Bisa Scroll
+              // 3. Konten Scroll
               SliverToBoxAdapter(
                 child: Container(
-                  color: Colors.white,
+                  color: kBackground,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                    ).copyWith(top: 0.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- Konten  ---
+                        const SizedBox(height: 16),
                         _buildLocationCard(),
                         const SizedBox(height: 24),
                         _buildParticipantsInfo(),
                         const SizedBox(height: 24),
                         const Divider(
-                          color: Colors.black12,
+                          color: Color(0x11000000),
                           thickness: 1,
                           height: 1,
                         ),
                         const SizedBox(height: 24),
 
-                        // --- Deskripsi ---
+                        // Deskripsi (Menggunakan Data Backend)
                         const Text(
                           'Deskripsi Kegiatan',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          fullDescription,
+                          _dynamicDescription, // MENGAMBIL DARI GETTER
                           maxLines: _isDescriptionExpanded ? null : 4,
                           overflow: _isDescriptionExpanded
                               ? TextOverflow.visible
                               : TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[700],
+                            color: kBlueGray,
                             height: 1.5,
                           ),
                         ),
@@ -136,7 +654,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                                 ? 'Lihat Lebih Sedikit'
                                 : 'Lihat Lebih Banyak',
                             style: const TextStyle(
-                              color: Colors.blue,
+                              color: kSkyBlue,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
@@ -144,6 +662,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         ),
                         const SizedBox(height: 24),
 
+                        // Syarat & Ketentuan (Menggunakan Data Backend)
                         Theme(
                           data: Theme.of(
                             context,
@@ -151,7 +670,11 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                           child: ExpansionTile(
                             title: const Text(
                               'Syarat dan Ketentuan',
-                              // ... style ...
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: kDarkBlueGray,
+                              ),
                             ),
                             tilePadding: EdgeInsets.zero,
                             childrenPadding: const EdgeInsets.only(
@@ -159,42 +682,34 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                               bottom: 16,
                             ),
                             children: [
-                              _buildRequirementItem(
-                                'Mahasiswa/i semester 3,5,7',
-                              ),
-                              _buildRequirementItem(
-                                'Memiliki pengalaman organisasi',
-                              ),
-                              _buildRequirementItem(
-                                'Mampu bekerja dalam sebuah tim',
-                              ),
-                              _buildRequirementItem(
-                                'Mampu bekerja dibawah tekanan',
-                              ),
-                              _buildRequirementItem('Kreatif'),
+                              // MENGGUNAKAN DATA DINAMIS DARI _dynamicRequirements
+                              for (var requirement in _dynamicRequirements)
+                                _buildRequirementItem(requirement),
                             ],
                           ),
                         ),
                         const SizedBox(height: 24),
 
-                        // --- Dokumen Pendukung ---
+                        // Dokumen Pendukung
                         const Text(
                           'Dokumen Pendukung',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray,
                           ),
                         ),
                         const SizedBox(height: 16),
                         _buildDocumentCard(),
                         const SizedBox(height: 24),
 
-                        // --- Pihak Penyelenggara ---
+                        // Pihak Penyelenggara
                         const Text(
                           'Pihak Penyelenggara',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -209,24 +724,32 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
             ],
           ),
 
+          // Bottom Bar
           Positioned(bottom: 0, left: 0, right: 0, child: _buildBottomBar()),
         ],
       ),
     );
   }
 
+  // Widget Lokasi (Diubah untuk menggunakan data backend)
   Widget _buildLocationCard() {
+    final locationText = widget.kegiatan?.lokasi ?? 'Lokasi tidak diketahui';
+    final locationTitle = widget.kegiatan?.organizer?.nama ?? 'Lokasi Kegiatan'; // Judul Lokasi bisa dari nama Organizer atau statis
+
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.grey[50],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      color: Colors.white,
+      shadowColor: kBlueGray.withOpacity(0.18),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
+              // Peta Hardcoded (Sulit Diganti tanpa API Key/Widget Peta)
               child: Image.network(
+                // Gunakan placeholder peta statis jika URL peta dinamis tidak tersedia
                 'https://media.wired.com/photos/59269cd37034dc5f91bec0f1/master/w_2560%2Cc_limit/GoogleMapTA.jpg',
                 width: 80,
                 height: 80,
@@ -238,22 +761,34 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Sekretariat KMB-USU',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  Text(
+                    locationTitle, // MENGAMBIL JUDUL DARI BACKEND
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: kDarkBlueGray,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Jalan Brigjend Katamso Dalam No.62. A U R, Kec. Medan Maimun, Kota Medan',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    locationText, // MENGAMBIL LOKASI DARI BACKEND
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: kBlueGray,
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      // Logic navigasi peta (misalnya menggunakan url_launcher)
+                      // final url = 'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(locationText)}';
+                      // launchUrl(Uri.parse(url));
+                    },
                     icon: const Icon(Icons.location_on_outlined, size: 16),
                     label: const Text('Dapatkan Lokasi'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[600],
+                      backgroundColor: kSkyBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
@@ -274,9 +809,15 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 
   Widget _buildParticipantsInfo() {
+    // ... (kode _buildParticipantsInfo tidak diubah, namun data kuota bisa diganti dengan widget.kegiatan?.kuota)
     Widget buildAvatar(String url) {
       return CircleAvatar(radius: 15, backgroundImage: NetworkImage(url));
     }
+
+    // Kuota dinamis
+    final kuotaText = widget.kegiatan?.kuota != null
+        ? '${widget.kegiatan!.kuota}+ Bergabung'
+        : '43+ Bergabung'; // Fallback kuota hardcoded
 
     return Row(
       children: [
@@ -302,15 +843,16 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
           ),
         ),
         const SizedBox(width: 8),
-        const Text(
-          '43+ Bergabung',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+        Text(
+          kuotaText, // MENGGUNAKAN KUOTA DINAMIS
+          style: TextStyle(fontWeight: FontWeight.bold, color: kDarkBlueGray),
         ),
       ],
     );
   }
 
   Widget _buildBottomBar() {
+    // ... (kode _buildBottomBar diubah pada onPressed ElevatedButton)
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 24,
@@ -339,7 +881,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 onPressed: () {},
                 icon: const Icon(
                   Icons.favorite_border,
-                  color: Colors.blue,
+                  color: kSkyBlue,
                   size: 28,
                 ),
               ),
@@ -349,15 +891,16 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+                  color: kBlueGray,
                 ),
               ),
             ],
           ),
           ElevatedButton(
-            onPressed: () {},
+            // Memanggil _showRegistrationForm()
+            onPressed: () => _showRegistrationForm(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue[600],
+              backgroundColor: kSkyBlue,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
@@ -374,20 +917,21 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     );
   }
 
+  // Widget Item Persyaratan (Dipanggil di ExpansionTile)
   Widget _buildRequirementItem(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle, color: Colors.blue, size: 20),
+          const Icon(Icons.check_circle, color: kSkyBlue, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              text,
-              style: TextStyle(
+              text, // MENGGUNAKAN TEXT DINAMIS
+              style: const TextStyle(
                 fontSize: 14,
-                color: Colors.grey[800],
+                color: kDarkBlueGray,
                 height: 1.4,
               ),
             ),
@@ -398,36 +942,41 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 
   Widget _buildDocumentCard() {
+    // ... (kode _buildDocumentCard tidak diubah)
     return InkWell(
       onTap: () {},
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.grey[50],
+          color: kBackground,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!, width: 1),
+          border: Border.all(color: kSoftBlue.withOpacity(0.9), width: 1),
         ),
         child: Row(
           children: [
-            Icon(Icons.picture_as_pdf, color: Colors.red[700], size: 40),
+            const Icon(Icons.picture_as_pdf, size: 40, color: kDarkBlueGray),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
+                children: const [
+                  Text(
                     'Dokumen Pedoman Volunteer.pdf',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: kDarkBlueGray,
+                    ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     'Klik untuk melihat',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 12, color: kBlueGray),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.download_for_offline_outlined, color: Colors.blue),
+            const Icon(Icons.download_for_offline_outlined, color: kSkyBlue),
           ],
         ),
       ),
@@ -435,6 +984,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 
   Widget _buildOrganizersList() {
+    // ... (kode _buildOrganizersList tidak diubah)
     final List<String> logoPaths = [
       'assets/images/event1.jpg',
       'assets/images/event2.jpg',
@@ -455,9 +1005,8 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[300]!, width: 1),
+                border: Border.all(color: kSoftBlue.withOpacity(0.9), width: 1),
                 image: DecorationImage(
-                  // --- INI BAGIAN PENTING ---
                   image: AssetImage(logoPaths[index]),
                   fit: BoxFit.contain,
                 ),
@@ -470,6 +1019,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 }
 
+// --- DELEGATE UNTUK HEADER YANG PINNED ---
 class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
   final String date;
@@ -495,9 +1045,9 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+            color: kBlueGray.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -508,7 +1058,11 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
           children: [
             Text(
               title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: kDarkBlueGray,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -536,23 +1090,28 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   Widget _buildTag(String label, IconData icon) {
     return Chip(
-      avatar: Icon(icon, size: 16, color: Colors.blue[700]),
+      avatar: Icon(icon, size: 16, color: kDarkBlueGray),
       label: Text(label),
-      backgroundColor: Colors.blue[50],
-      labelStyle: TextStyle(color: Colors.blue[700], fontSize: 12),
+      backgroundColor: kSoftBlue,
+      labelStyle: const TextStyle(
+        color: kDarkBlueGray,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.blue[100]!),
+        side: const BorderSide(color: kSkyBlue),
       ),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, color: Colors.grey[600], size: 16),
+        Icon(icon, color: kBlueGray, size: 16),
         const SizedBox(width: 4),
-        Text(text, style: TextStyle(fontSize: 14, color: Colors.grey[800])),
+        Text(text, style: const TextStyle(fontSize: 14, color: kDarkBlueGray)),
       ],
     );
   }

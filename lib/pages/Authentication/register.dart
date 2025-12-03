@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Authentication/login.dart';
 import 'package:volunite/pages/Volunteer/navbar.dart';
+import 'package:volunite/color_pallete.dart'; // 1. Import Color Palette
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -10,6 +11,10 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  // --- STATE BARU: Variable untuk menyimpan role yang dipilih ---
+  String _selectedRole = 'Volunteer';
+  // -------------------------------------------------------------
+
   // step 1
   final nameC = TextEditingController();
   final emailC = TextEditingController();
@@ -39,7 +44,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    // Menggunakan kBlueGray sesuai permintaan
+    const primary = kBlueGray;
 
     return PopScope(
       canPop: _currentStep == 1,
@@ -57,148 +63,293 @@ class _RegisterPageState extends State<RegisterPage> {
   // ================== STEP 1 ==================
   Widget _buildStep1(BuildContext context, Color primary) {
     return Scaffold(
-      backgroundColor: primary,
+      // Background transparan untuk Gradient
+      backgroundColor: Colors.transparent,
       resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            const Text(
-              "Registrasi Akun",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 28.0),
-              child: Text(
-                "Daftarkan akun Anda sekarang dan mulai kegiatan volunteer!",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 12.5),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
+      body: Container(
+        // Gradient konsisten dengan halaman Login
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [kBlueGray, kSkyBlue],
+            begin: Alignment.topLeft, stops: [0.0, 0.5],
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+
+              // Header Teks
+              const Text(
+                "Registrasi Akun",
+                style: TextStyle(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
-                padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Center(
-                      child: Text(
-                        "Langkah Ke 1 dari 2",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+              ),
+              const SizedBox(height: 8),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 28.0),
+                child: Text(
+                  "Daftarkan akun Anda sekarang dan mulai kegiatan volunteer!",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Container Putih
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: kBackground, // Menggunakan kBackground/Putih
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24),
                     ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: 1 / 2,
-                        minHeight: 4,
-                        backgroundColor: Colors.grey.shade300,
-                        color: primary,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      "Buat Akun",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      "Pastikan data yang dimasukkan akurat dan sesuai kebutuhan.",
-                      style: TextStyle(color: Colors.black54, fontSize: 12.5),
-                    ),
-                    const SizedBox(height: 14),
-                    _field(
-                      icon: Icons.person,
-                      hint: "Masukkan nama Anda",
-                      controller: nameC,
-                    ),
-                    const SizedBox(height: 12),
-                    _field(
-                      icon: Icons.email,
-                      hint: "Masukkan email Anda",
-                      controller: emailC,
-                      keyboard: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 12),
-                    _field(
-                      icon: Icons.lock,
-                      hint: "Masukkan password Anda",
-                      controller: passC,
-                      obscure: true,
-                    ),
-                    const SizedBox(height: 12),
-                    _field(
-                      icon: Icons.lock,
-                      hint: "Konfirmasi password Anda",
-                      controller: pass2C,
-                      obscure: true,
-                    ),
-                    const Spacer(),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _currentStep = 2;
-                          });
-                        },
-                        child: const Text(
-                          "Selanjutnya",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Sudah punya akun? "),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LoginPage(),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(22, 30, 22, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Indikator Langkah
+                      Center(
+                        child: Column(
+                          children: [
+                            const Text(
+                              "Langkah 1 dari 2",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: kDarkBlueGray,
                               ),
-                            );
-                          },
-                          child: Text(
-                            "Login",
-                            style: TextStyle(
-                              color: primary,
-                              fontWeight: FontWeight.w700,
                             ),
+                            const SizedBox(height: 10),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: LinearProgressIndicator(
+                                value: 1 / 2,
+                                minHeight: 6,
+                                backgroundColor: Colors.grey.shade200,
+                                color: primary, // kBlueGray
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Konten Form (Scrollable)
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Buat Akun",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: kDarkBlueGray,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                "Pastikan data yang dimasukkan akurat.",
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+
+                              _field(
+                                icon: Icons.person,
+                                hint: "Masukkan nama Anda",
+                                controller: nameC,
+                                primaryColor: primary,
+                              ),
+                              const SizedBox(height: 16),
+                              _field(
+                                icon: Icons.email,
+                                hint: "Masukkan email Anda",
+                                controller: emailC,
+                                keyboard: TextInputType.emailAddress,
+                                primaryColor: primary,
+                              ),
+                              const SizedBox(height: 16),
+                              _field(
+                                icon: Icons.lock,
+                                hint: "Masukkan password Anda",
+                                controller: passC,
+                                obscure: true,
+                                primaryColor: primary,
+                              ),
+                              const SizedBox(height: 16),
+                              _field(
+                                icon: Icons.lock,
+                                hint: "Konfirmasi password Anda",
+                                controller: pass2C,
+                                obscure: true,
+                                primaryColor: primary,
+                              ),
+
+                              // --- PILIHAN ROLE ---
+                              const SizedBox(height: 24),
+                              const Text(
+                                "Daftar Sebagai:",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: kDarkBlueGray,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildRoleButton(
+                                      role: 'Volunteer',
+                                      icon: Icons.person_outline,
+                                      isSelected: _selectedRole == 'Volunteer',
+                                      primaryColor: primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildRoleButton(
+                                      role: 'Organisasi',
+                                      icon: Icons.apartment,
+                                      isSelected: _selectedRole == 'Organisasi',
+                                      primaryColor: primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // --------------------
+                              const SizedBox(height: 30),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primary,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _currentStep = 2;
+                                    });
+                                  },
+                                  child: const Text(
+                                    "Selanjutnya",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text(
+                                    "Sudah punya akun? ",
+                                    style: TextStyle(color: kBlueGray),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const LoginPage(),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      "Login",
+                                      style: TextStyle(
+                                        color: primary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET TOMBOL ROLE ---
+  Widget _buildRoleButton({
+    required String role,
+    required IconData icon,
+    required bool isSelected,
+    required Color primaryColor,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedRole = role;
+          // **[RESET INPUT JENIS KELAMIN SAAT GANTI ROLE]**
+          if (role == 'Organisasi') {
+             genderC.clear(); 
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? primaryColor : Colors.grey.shade300,
+            width: 1.5,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey.shade500,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              role,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey.shade500,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -209,18 +360,118 @@ class _RegisterPageState extends State<RegisterPage> {
 
   // ================== STEP 2 ==================
   Widget _buildStep2(BuildContext context, Color primary) {
+    // **[LIST WIDGET CONDITIONAL]**
+    final List<Widget> step2Fields = [
+      _fieldStep2(
+        icon: Icons.calendar_today,
+        hint: _selectedRole == 'Organisasi'
+            ? "Tanggal Berdiri"
+            : "Tanggal Lahir",
+        controller: tglC,
+        readOnly: true,
+        primaryColor: primary,
+        onTap: () async {
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: DateTime(2005, 1, 1),
+            firstDate: DateTime(1970),
+            lastDate: DateTime.now(),
+            builder: (context, child) {
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: ColorScheme.light(
+                    primary: primary,
+                    onPrimary: Colors.white,
+                    onSurface: kDarkBlueGray,
+                  ),
+                ),
+                child: child!,
+              );
+            },
+          );
+          if (picked != null) {
+            tglC.text =
+                "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}";
+          }
+        },
+      ),
+      const SizedBox(height: 16),
+      
+      // **[KONDISI: HANYA TAMPILKAN JIKA ROLE ADALAH 'Volunteer']**
+      if (_selectedRole == 'Volunteer') 
+        Column(
+          children: [
+            _fieldStep2(
+              icon: Icons.female,
+              hint: "Jenis Kelamin",
+              controller: genderC,
+              primaryColor: primary,
+              // Tambahkan logika dropdown/dialog pilihan jenis kelamin di sini jika diperlukan
+              readOnly: true, 
+              onTap: () {
+                // Contoh: Menampilkan BottomSheet atau Dialog untuk memilih jenis kelamin
+                showModalBottomSheet(
+                  context: context,
+                  builder: (ctx) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          title: const Text('Laki-laki'),
+                          onTap: () {
+                            genderC.text = 'Laki-laki';
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                        ListTile(
+                          title: const Text('Perempuan'),
+                          onTap: () {
+                            genderC.text = 'Perempuan';
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      
+      _fieldStep2(
+        icon: Icons.phone,
+        hint: "No Telepon",
+        controller: telpC,
+        keyboard: TextInputType.phone,
+        primaryColor: primary,
+      ),
+      const SizedBox(height: 16),
+      _fieldStep2(
+        icon: Icons.location_on_outlined,
+        hint: "Domisili",
+        controller: domisiliC,
+        primaryColor: primary,
+      ),
+      const SizedBox(height: 16),
+    ];
+    // ---------------------------------------------
+
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: kBackground, // Putih
       body: SafeArea(
         child: Column(
           children: [
             // header
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Row(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                    color: primary,
                     onPressed: () {
                       setState(() {
                         _currentStep = 1;
@@ -239,99 +490,76 @@ class _RegisterPageState extends State<RegisterPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 2),
-            const Text(
-              "Langkah Ke 2 dari 2",
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 16),
+
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(height: 2, color: primary),
-            ),
-            const SizedBox(height: 14),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Isi Data Diri",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Data diri hanya digunakan untuk informasi semata",
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
                 children: [
-                  _fieldStep2(
-                    icon: Icons.calendar_today,
-                    hint: "Tanggal Lahir",
-                    controller: tglC,
-                    readOnly: true,
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime(2005, 1, 1),
-                        firstDate: DateTime(1970),
-                        lastDate: DateTime.now(),
-                      );
-                      if (picked != null) {
-                        tglC.text =
-                            "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}";
-                      }
-                    },
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Langkah 2 dari 2",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: kDarkBlueGray,
+                    ),
                   ),
-                  const SizedBox(height: 14),
-                  _fieldStep2(
-                    icon: Icons.female,
-                    hint: "Jenis Kelamin",
-                    controller: genderC,
-                  ),
-                  const SizedBox(height: 14),
-                  _fieldStep2(
-                    icon: Icons.phone,
-                    hint: "No Telepon",
-                    controller: telpC,
-                    keyboard: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 14),
-                  _fieldStep2(
-                    icon: Icons.location_on_outlined,
-                    hint: "Domisili",
-                    controller: domisiliC,
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: 2 / 2,
+                      minHeight: 6,
+                      backgroundColor: Colors.grey.shade200,
+                      color: primary,
+                    ),
                   ),
                 ],
               ),
             ),
+
+            const SizedBox(height: 24),
+
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                children: [
+                  Text(
+                    "Isi Data ${ _selectedRole == 'Organisasi' ? 'Organisasi' : 'Diri' }",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: kDarkBlueGray,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _selectedRole == 'Organisasi'
+                        ? "Lengkapi data organisasi Anda"
+                        : "Data diri hanya digunakan untuk informasi semata",
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // **[MENGGUNAKAN LIST WIDGET CONDITIONAL]**
+                  ...step2Fields, 
+                ],
+              ),
+            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+              padding: const EdgeInsets.all(24.0),
               child: SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primary,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 2,
                   ),
                   onPressed: () {
+                    // Logika pendaftaran diselesaikan di sini
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => const LandingPage()),
@@ -342,6 +570,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
+                      fontSize: 16,
                     ),
                   ),
                 ),
@@ -358,6 +587,7 @@ class _RegisterPageState extends State<RegisterPage> {
     required IconData icon,
     required String hint,
     required TextEditingController controller,
+    required Color primaryColor,
     bool obscure = false,
     TextInputType keyboard = TextInputType.text,
   }) {
@@ -367,16 +597,25 @@ class _RegisterPageState extends State<RegisterPage> {
       keyboardType: keyboard,
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, color: Colors.grey[600]),
+        hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+        prefixIcon: Icon(icon, color: primaryColor),
         filled: true,
-        fillColor: const Color(0xFFF5F6F8),
+        fillColor: kLightGray, // Menggunakan kLightGray/Putih Abu
         contentPadding: const EdgeInsets.symmetric(
-          vertical: 14,
-          horizontal: 14,
+          vertical: 16,
+          horizontal: 20,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryColor, width: 1.5),
         ),
       ),
     );
@@ -387,6 +626,7 @@ class _RegisterPageState extends State<RegisterPage> {
     required IconData icon,
     required String hint,
     required TextEditingController controller,
+    required Color primaryColor,
     bool readOnly = false,
     void Function()? onTap,
     TextInputType keyboard = TextInputType.text,
@@ -398,16 +638,25 @@ class _RegisterPageState extends State<RegisterPage> {
       keyboardType: keyboard,
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, color: Colors.grey),
+        hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+        prefixIcon: Icon(icon, color: primaryColor),
         filled: true,
-        fillColor: const Color(0xFFF5F6F8),
+        fillColor: kLightGray,
         contentPadding: const EdgeInsets.symmetric(
-          vertical: 14,
-          horizontal: 14,
+          vertical: 16,
+          horizontal: 20,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryColor, width: 1.5),
         ),
       ),
     );

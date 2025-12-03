@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:volunite/pages/Authentication/reset_password.dart';
+import 'package:volunite/color_pallete.dart'; // 1. Import Palette
 
 class OTPVerificationPage extends StatefulWidget {
   final String email;
@@ -12,7 +13,7 @@ class OTPVerificationPage extends StatefulWidget {
 }
 
 class _OTPVerificationPageState extends State<OTPVerificationPage> {
-  final Color primary = const Color(0xFF0C5E70);
+  // Warna diambil dari palette, tidak di-hardcode lagi
 
   final List<TextEditingController> otpControllers = List.generate(
     4,
@@ -52,131 +53,157 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: primary,
+      // 2. Background transparan untuk Gradient
+      backgroundColor: Colors.transparent,
       resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: Column(
-          children: [
+      body: Container(
+        // Gradient background agar konsisten
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [kBlueGray, kSkyBlue],
+            begin: Alignment.topLeft, stops: [0.0, 0.5],
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
 
-            const SizedBox(height: 20),
+              Image.asset(
+                'assets/images/logo/volunite_logo.png',
+                height: 200,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 20),
 
-            Image.asset(
-              'assets/images/logo/volunite_logo.png', 
-              height: 200, 
-              color: Colors.white, 
-            ),
-            const SizedBox(height: 20),
-
-            Padding(
-              padding: const EdgeInsets.only(bottom: 50.0),
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                padding: const EdgeInsets.fromLTRB(22, 30, 22, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      "OTP",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
+              // Container Putih (Bottom Sheet look)
+              Expanded(
+                // Menggunakan Expanded agar mengisi sisa layar ke bawah
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: kBackground, // Menggunakan kBackground/White
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24),
                     ),
-                    const SizedBox(height: 8),
-
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20.0),
-                      child: Text(
-                        "Silahkan masukkan kode OTP yang telah dikirim ke email Anda",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.black54, fontSize: 13),
-                      ),
-                    ),
-
-                    Text(
-                      "@${widget.email}",
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(4, (index) {
-                        return _buildOTPBox(
-                          controller: otpControllers[index],
-                          focusNode: focusNodes[index],
-                          onChanged: (value) {
-                            if (value.length == 1 && index < 3) {
-                              focusNodes[index + 1].requestFocus();
-                            }
-                            if (value.isEmpty &&
-                                index > 0 &&
-                                !focusNodes[index].hasFocus) {
-                              focusNodes[index - 1].requestFocus();
-                            }
-                          },
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 50),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: () {
-                          final otpCode = otpControllers
-                              .map((c) => c.text)
-                              .join();
-                          print("Kode OTP yang dimasukkan: $otpCode");
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ResetPasswordPage(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          "Selanjutnya",
+                  ),
+                  padding: const EdgeInsets.fromLTRB(22, 30, 22, 16),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          "Verifikasi OTP",
                           style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: kDarkBlueGray, // Judul Gelap
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20.0),
+                          child: Text(
+                            "Silahkan masukkan kode OTP yang telah dikirim ke email Anda",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: kBlueGray, fontSize: 13),
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+                        Text(
+                          widget
+                              .email, // Menghapus '@' manual jika email sudah lengkap
+                          style: const TextStyle(
+                            color: kDarkBlueGray,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: List.generate(4, (index) {
+                            return _buildOTPBox(
+                              controller: otpControllers[index],
+                              focusNode: focusNodes[index],
+                              onChanged: (value) {
+                                if (value.length == 1 && index < 3) {
+                                  focusNodes[index + 1].requestFocus();
+                                }
+                                if (value.isEmpty &&
+                                    index > 0 &&
+                                    !focusNodes[index].hasFocus) {
+                                  focusNodes[index - 1].requestFocus();
+                                }
+                              },
+                            );
+                          }),
+                        ),
+
+                        const SizedBox(height: 50),
+
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kBlueGray, // Tombol sesuai tema
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () {
+                              final otpCode = otpControllers
+                                  .map((c) => c.text)
+                                  .join();
+                              print("Kode OTP yang dimasukkan: $otpCode");
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ResetPasswordPage(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              "Selanjutnya",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                      ],
                     ),
-                    const SizedBox(height: 15),
-                  ],
+                  ),
                 ),
               ),
-            ),
-            const Spacer(),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+
   Widget _buildOTPBox({
     required TextEditingController controller,
     required FocusNode focusNode,
     required void Function(String)? onChanged,
   }) {
-    final Color primary = const Color(0xFF0C5E70);
+    // 3. Logika warna menggunakan Palette
+    const activeColor = kBlueGray;
     final bool isFilled = controller.text.isNotEmpty;
-    final Color boxColor = isFilled ? primary : Colors.white;
-    final Color textColor = isFilled ? Colors.white : primary;
+
+    final Color boxColor = isFilled ? activeColor : Colors.white;
+    final Color textColor = isFilled ? Colors.white : activeColor;
 
     return SizedBox(
       width: 60,
@@ -190,34 +217,30 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
         style: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,
-          color: textColor, 
+          color: textColor,
         ),
         inputFormatters: [
           LengthLimitingTextInputFormatter(1),
-          FilteringTextInputFormatter.digitsOnly, 
+          FilteringTextInputFormatter.digitsOnly,
         ],
         decoration: InputDecoration(
           filled: true,
           fillColor: boxColor,
           contentPadding: EdgeInsets.zero,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: primary, width: 1.5),
-          ),
+          // Border default (saat tidak fokus)
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(
-              color: primary,
-              width: 1.5,
-            ),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: activeColor, width: 1.5),
           ),
+          // Border saat diklik (fokus)
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(
-              color: primary,
-              width: 2,
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: activeColor, // Bisa diganti kDarkBlueGray jika ingin beda
+              width: 2.5,
             ),
           ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
