@@ -151,7 +151,7 @@ class _AddNewUserPageState extends State<AddNewUserPage> {
                       ),
                     const SizedBox(height: 20),
                     DropdownButtonFormField<String>(
-                      value: _selectedRole,
+                      initialValue: _selectedRole,
                       decoration: const InputDecoration(
                         labelText: 'Role Pengguna',
                         border: OutlineInputBorder(),
