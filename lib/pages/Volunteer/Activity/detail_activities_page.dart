@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/models/kegiatan_model.dart';
 import 'package:volunite/services/pendaftaran_service.dart';
-// import 'package:volunite/models/pendaftaran_model.dart'; // Sudah tidak perlu model di sini
 import 'package:volunite/services/auth/auth_service.dart';
 
 class DetailActivitiesPage extends StatefulWidget {
@@ -27,9 +27,62 @@ class DetailActivitiesPage extends StatefulWidget {
 
 class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   bool _isDescriptionExpanded = false;
-  
+
+  // 🔥 State untuk status pendaftaran
+  bool _isRegistered = false;
+
   // State untuk status loading di dalam modal
-  bool _isLoading = false; 
+  bool _isLoading = false;
+
+  // Inisialisasi Service (Dibuat final)
+  // Gunakan instansiasi dari State class
+  final PendaftaranService _pendaftaranService = PendaftaranService();
+  final AuthService _authService = AuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRegistrationStatus(); // 🔥 Panggil fungsi pemeriksaan status
+  }
+
+  // =========================================================
+  // 🔥 PERBAIKAN LOGIC: Fungsi untuk memeriksa status pendaftaran
+  // =========================================================
+  Future<void> _checkRegistrationStatus() async {
+    final kegiatanId = widget.kegiatan?.id;
+    final user = await _authService.getCurrentUser();
+
+    // Cek apakah user login dan ID kegiatan tersedia
+    if (kegiatanId != null && user != null) {
+      try {
+        // 🔥 PANGGILAN SERVICE BARU: Hapus parameter userId
+        final isRegistered = await _pendaftaranService.isUserRegistered(
+          kegiatanId as int, // Kirim ID Kegiatan (sudah dicek null)
+        );
+
+        if (mounted) {
+          setState(() {
+            _isRegistered = isRegistered;
+          });
+        }
+      } catch (e) {
+        // Log error jika diperlukan
+        print('Error checking registration status: $e');
+        if (mounted) {
+          setState(() {
+            _isRegistered = false;
+          });
+        }
+      }
+    } else {
+      // Jika user null (belum login), set ke false
+      if (mounted) {
+        setState(() {
+          _isRegistered = false;
+        });
+      }
+    }
+  }
 
   // Mendapatkan deskripsi dinamis dari model, atau fallback ke string kosong
   String get _dynamicDescription {
@@ -56,11 +109,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     final komitmenController = TextEditingController();
     final keterampilanController = TextEditingController();
 
-    // 🔥 PERBAIKAN: Instansiasi Service
-    final pendaftaranService = PendaftaranService();
-    // Diasumsikan AuthService juga dapat diinstansiasi seperti ini
-    final authService = AuthService();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -71,45 +119,47 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            
             // LOGIKA SUBMIT FORM
             void _submitForm() async {
               if (formKey.currentState!.validate()) {
-                
                 setModalState(() => _isLoading = true); // Tampilkan loading
-                
-                // 🔥 Ambil user login
-                // PERBAIKAN: Pemanggilan getCurrentUser() yang disesuaikan
-                final user = await authService.getCurrentUser(); 
-                
+
+                final user = await _authService.getCurrentUser();
+
                 // Pastikan user dan ID kegiatan tersedia
                 if (user == null || widget.kegiatan?.id == null) {
                   setModalState(() => _isLoading = false);
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text("⚠️ Anda harus login atau ID kegiatan tidak valid."),
+                      content: Text(
+                        "⚠️ Anda harus login atau ID kegiatan tidak valid.",
+                      ),
                       backgroundColor: Colors.orange,
                     ),
                   );
                   return;
                 }
 
-                // Kirim ke service dengan parameter yang diharapkan
-                final success = await pendaftaranService.daftarKegiatan(
-                  // Pastikan ID user dan kegiatan bertipe INT sesuai definisi Service
-                  userId: user.id as int, 
-                  kegiatanId: widget.kegiatan!.id as int, 
+                // 🔥 PERBAIKAN UTAMA: Hapus userId dari panggilan daftarKegiatan
+                // karena backend mengambilnya dari token.
+                final success = await _pendaftaranService.daftarKegiatan(
+                  // userId: user.id as int, // Dihapus
+                  kegiatanId: widget.kegiatan!.id as int,
                   nomorTelepon: noHpController.text,
                   domisili: domisiliController.text,
                   komitmen: komitmenController.text,
                   keterampilan: keterampilanController.text,
                 );
-                
+
                 setModalState(() => _isLoading = false); // Sembunyikan loading
                 Navigator.pop(context); // Tutup modal
 
                 if (success) {
+                  // 🔥 Perbarui state _isRegistered
+                  setState(() {
+                    _isRegistered = true;
+                  });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('✅ Pendaftaran kegiatan berhasil dikirim!'),
@@ -176,6 +226,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                       hintText: 'Masukkan nomor HP Anda (e.g. 0812...)',
                       validatorText: 'Nomor HP harus diisi',
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     ),
                     const SizedBox(height: 16),
 
@@ -202,7 +253,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                       width: double.infinity,
                       child: ElevatedButton(
                         // Menonaktifkan tombol saat loading
-                        onPressed: _isLoading ? null : _submitForm, 
+                        onPressed: _isLoading ? null : _submitForm,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kSkyBlue,
                           foregroundColor: Colors.white,
@@ -238,21 +289,12 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
       },
     );
   }
-  
-  // 🔥 FUNGSI _showModalPendaftaranKegiatanEdit DIHAPUS karena tidak terdefinisi/duplikat
 
-  // ... (Sisa class _DetailActivitiesPageState, termasuk _buildFormLabel, _buildTextFormField, 
-  // _showReportForm, build, _buildLocationCard, _buildParticipantsInfo, _buildBottomBar, 
-  // _buildRequirementItem, _buildDocumentCard, _buildOrganizersList, dan _MyPinnedHeaderDelegate tetap sama)
-  
-// Widget pembantu untuk label form
+  // Widget pembantu untuk label form
   Widget _buildFormLabel(String label) {
     return Text(
       label,
-      style: const TextStyle(
-        fontWeight: FontWeight.w600,
-        color: kDarkBlueGray,
-      ),
+      style: const TextStyle(fontWeight: FontWeight.w600, color: kDarkBlueGray),
     );
   }
 
@@ -263,11 +305,13 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     required String validatorText,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(color: kBlueGray),
@@ -283,10 +327,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: kSkyBlue,
-            width: 1.3,
-          ),
+          borderSide: const BorderSide(color: kSkyBlue, width: 1.3),
         ),
         contentPadding: const EdgeInsets.all(16),
       ),
@@ -298,7 +339,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
       },
     );
   }
-  
+
   // --- Fungsi _showReportForm tidak diubah ---
   void _showReportForm(BuildContext context) {
     // ... (Fungsi _showReportForm yang sudah ada)
@@ -501,7 +542,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -563,15 +603,15 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                     fit: StackFit.expand,
                     children: [
                       Image.network(
-                          widget.imagePath,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.broken_image, size: 80),
-                            );
-                          },
-                        ),
+                        widget.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.broken_image, size: 80),
+                          );
+                        },
+                      ),
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -734,7 +774,9 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   // Widget Lokasi (Diubah untuk menggunakan data backend)
   Widget _buildLocationCard() {
     final locationText = widget.kegiatan?.lokasi ?? 'Lokasi tidak diketahui';
-    final locationTitle = widget.kegiatan?.organizer?.nama ?? 'Lokasi Kegiatan'; // Judul Lokasi bisa dari nama Organizer atau statis
+    final locationTitle =
+        widget.kegiatan?.organizer?.nama ??
+        'Lokasi Kegiatan'; // Judul Lokasi bisa dari nama Organizer atau statis
 
     return Card(
       elevation: 0,
@@ -851,8 +893,8 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     );
   }
 
+  // 🔥 FUNGSI _buildBottomBar yang sudah dimodifikasi
   Widget _buildBottomBar() {
-    // ... (kode _buildBottomBar diubah pada onPressed ElevatedButton)
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 24,
@@ -896,22 +938,57 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
               ),
             ],
           ),
-          ElevatedButton(
-            // Memanggil _showRegistrationForm()
-            onPressed: () => _showRegistrationForm(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: kSkyBlue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-            ),
-            child: const Text(
-              'Daftar Kegiatan',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-          ),
+          // 🔥 LOGIC KONDISIONAL TOMBOL
+          _isRegistered
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50], // Warna latar belakang ringan
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.green, width: 1.5),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.green,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Sudah Mendaftar',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.green[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ElevatedButton(
+                  // Tombol daftar ditampilkan jika _isRegistered == false
+                  onPressed: () => _showRegistrationForm(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kSkyBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 16,
+                    ),
+                  ),
+                  child: const Text(
+                    'Daftar Kegiatan',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
         ],
       ),
     );
