@@ -1,324 +1,279 @@
 import 'package:flutter/material.dart';
 import 'package:volunite/color_pallete.dart';
-// Pastikan import ini sesuai dengan lokasi file card Anda
+import 'package:volunite/models/kegiatan_model.dart';
 import 'package:volunite/pages/Organizer/Activity/activity_card.dart';
+import 'package:volunite/pages/Organizer/Activity/create_activity_page.dart';
+import 'package:volunite/pages/Organizer/Activity/edit_activity_page.dart';
+import 'package:volunite/pages/Organizer/Activity/detail_activities_page.dart'; // Import Detail Page
+import 'package:volunite/services/kegiatan_service.dart';
 
 class OrganizerActivitiesPage extends StatefulWidget {
   const OrganizerActivitiesPage({super.key});
 
   @override
-  State<OrganizerActivitiesPage> createState() =>
-      _OrganizerActivitiesPageState();
+  State<OrganizerActivitiesPage> createState() => _OrganizerActivitiesPageState();
 }
 
-class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage>
-    with SingleTickerProviderStateMixin {
+class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _currentIndex = 0;
-
-  // Data Dummy
-  final List<OrganizerActivityItem> _items = [
-    OrganizerActivityItem(
-      title: 'Pintar Bersama - KMB USU',
-      banner: 'assets/images/event1.jpg',
-      start: DateTime(2025, 11, 15, 12, 0),
-      end: DateTime(2025, 11, 15, 17, 0),
-      location: 'USU - Ruang B.204',
-      registered: 46,
-      quota: 60,
-    ),
-    OrganizerActivityItem(
-      title: 'Aksi Bersih Pantai',
-      banner: 'assets/images/event2.jpg',
-      start: DateTime(2025, 11, 16, 9, 0),
-      end: DateTime(2025, 11, 16, 12, 0),
-      location: 'Pantai Cermin',
-      registered: 82,
-      quota: 120,
-    ),
-    OrganizerActivityItem(
-      title: 'Donor Darah',
-      banner: 'assets/images/event2.jpg',
-      start: DateTime(2025, 10, 5, 9, 0),
-      end: DateTime(2025, 10, 5, 13, 0),
-      location: 'Aula Fakultas',
-      registered: 120,
-      quota: 120,
-    ),
-  ];
+  late Future<List<Kegiatan>> _futureKegiatan;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(_handleTabSelection);
+    _refreshData();
   }
 
-  void _handleTabSelection() {
+  void _refreshData() {
     setState(() {
-      _currentIndex = _tabController.index;
+      _futureKegiatan = KegiatanService.fetchOrganizerKegiatan();
     });
   }
 
-  @override
-  void dispose() {
-    _tabController.removeListener(_handleTabSelection);
-    _tabController.dispose();
-    super.dispose();
+  // --- LOGIC HAPUS PERMANEN (HARD DELETE) ---
+  Future<void> _handleDelete(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Hapus Kegiatan?"),
+        content: const Text("Kegiatan ini belum dipublikasikan/dihadiri. Data akan dihapus permanen."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Batal")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Hapus"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final success = await KegiatanService.deleteKegiatan(id);
+      if (success) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Kegiatan dihapus permanen.")));
+        _refreshData();
+      }
+    }
+  }
+
+  // --- LOGIC BATALKAN (SOFT DELETE) ---
+  Future<void> _handleCancel(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Batalkan Kegiatan?"),
+        content: const Text("Status akan berubah menjadi 'Cancelled'. Data peserta tidak akan hilang."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Kembali")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            child: const Text("Ya, Batalkan"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final success = await KegiatanService.cancelKegiatan(id);
+      if (success) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Kegiatan dibatalkan.")));
+        _refreshData();
+      }
+    }
+  }
+
+  // --- MENU KELOLA ---
+  void _showManageOptions(BuildContext context, Kegiatan item) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        // Cek Status
+        bool isWaiting = item.status.toLowerCase() == 'waiting';
+        // bool isScheduled = item.status.toLowerCase() == 'scheduled';
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.visibility, color: kBlueGray),
+                title: const Text("Lihat Detail"),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => OrganizerDetailActivityPage(kegiatan: item)));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit, color: kSkyBlue),
+                title: const Text("Edit Kegiatan"),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditActivityPage(kegiatan: item)));
+                  if (result == true) _refreshData();
+                },
+              ),
+              const Divider(),
+              
+              // LOGIKA TOMBOL HAPUS vs BATAL
+              if (isWaiting)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text("Hapus Permanen", style: TextStyle(color: Colors.red)),
+                  subtitle: const Text("Hanya bisa dilakukan saat status Waiting", style: TextStyle(fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleDelete(item.id);
+                  },
+                )
+              else
+                ListTile(
+                  leading: const Icon(Icons.cancel, color: Colors.orange),
+                  title: const Text("Batalkan Kegiatan", style: TextStyle(color: Colors.orange)),
+                  subtitle: const Text("Pindahkan ke riwayat (Cancelled)", style: TextStyle(fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleCancel(item.id);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    // Logika filter data
-    final upcoming = _items.where((e) => e.end.isAfter(now)).toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
-    final history = _items.where((e) => e.end.isBefore(now)).toList()
-      ..sort((a, b) => b.start.compareTo(a.start));
-
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        backgroundColor:
-            Colors.transparent, // Transparan agar gradient terlihat
-        // === BAGIAN GRADIENT (Sama persis Volunteer) ===
+        backgroundColor: Colors.transparent,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [kBlueGray, kSkyBlue], // Warna gradient
+              colors: [kBlueGray, kSkyBlue],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
         ),
-
-        title: const Text(
-          'Kegiatan Penyelenggara',
-          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-        ),
-
-        // actions: [], // DIHAPUS: Tidak ada icon notifikasi
+        title: const Text('Manajemen Kegiatan', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Container(
               height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(24),
-              ),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(24)),
               child: TabBar(
                 controller: _tabController,
                 indicatorColor: Colors.transparent,
-                indicator: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                ),
+                indicator: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
                 labelColor: kDarkBlueGray,
                 unselectedLabelColor: Colors.white.withOpacity(0.85),
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-                splashFactory: NoSplash.splashFactory,
-                tabs: [
-                  _CustomTabButton(
-                    label: 'Mendatang',
-                    icon: Icons.calendar_month,
-                    isActive: _currentIndex == 0,
-                  ),
-                  _CustomTabButton(
-                    label: 'Riwayat',
-                    icon: Icons.history,
-                    isActive: _currentIndex == 1,
-                  ),
-                ],
+                labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                tabs: const [Tab(text: "Aktif"), Tab(text: "Selesai")],
               ),
             ),
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _ActivityTabContent(
-            items: upcoming,
-            isHistory: false,
-            onManage: (item) => _openManage(context, item.title),
-            onApplicants: () {},
-            emptyTitle: "Belum ada kegiatan mendatang",
-            emptySubtitle: "Buat kegiatan baru agar relawan bisa mendaftar.",
-          ),
-          _ActivityTabContent(
-            items: history,
-            isHistory: true,
-            onManage: (item) => _openManage(context, item.title),
-            onApplicants: () {},
-            emptyTitle: "Riwayat kosong",
-            emptySubtitle:
-                "Kegiatan yang sudah selesai akan ditampilkan di sini.",
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Navigasi ke halaman buat kegiatan
+      
+      body: FutureBuilder<List<Kegiatan>>(
+        future: _futureKegiatan,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
+          if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text("Belum ada kegiatan."));
+
+          final allItems = snapshot.data!;
+          final now = DateTime.now();
+
+          // FILTER LOGIC
+          final activeItems = allItems.where((e) {
+            final status = e.status.toLowerCase();
+            // Masukkan Waiting, Scheduled, On Progress
+            return status != 'finished' && status != 'cancelled' && status != 'rejected';
+          }).toList()..sort((a, b) => (a.tanggalMulai ?? now).compareTo(b.tanggalMulai ?? now));
+
+          final historyItems = allItems.where((e) {
+            final status = e.status.toLowerCase();
+            // Masukkan Finished, Cancelled, Rejected
+            return status == 'finished' || status == 'cancelled' || status == 'rejected';
+          }).toList()..sort((a, b) => (b.tanggalMulai ?? now).compareTo(a.tanggalMulai ?? now)); // Descending
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _ActivityTabContent(
+                items: activeItems,
+                isHistory: false,
+                onManage: (item) => _showManageOptions(context, item),
+                onRefresh: () async => _refreshData(),
+                emptyText: "Tidak ada kegiatan aktif.",
+              ),
+              _ActivityTabContent(
+                items: historyItems,
+                isHistory: true,
+                onManage: (item) => _showManageOptions(context, item), // Tetap bisa lihat detail/edit terbatas
+                onRefresh: () async => _refreshData(),
+                emptyText: "Belum ada riwayat kegiatan.",
+              ),
+            ],
+          );
         },
-        icon: const Icon(Icons.add),
-        label: const Text("Buat Kegiatan"),
+      ),
+
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateActivityPage()));
+          if (result == true) _refreshData();
+        },
         backgroundColor: kSkyBlue,
-        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text("Buat Baru", style: TextStyle(color: Colors.white)),
       ),
     );
   }
-
-  void _openManage(BuildContext context, String title) {
-    // Navigasi ke halaman kelola
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("Kelola $title")));
-  }
 }
 
-// --- WIDGET PENDUKUNG HALAMAN INI ---
-
 class _ActivityTabContent extends StatelessWidget {
-  final List<OrganizerActivityItem> items;
+  final List<Kegiatan> items;
   final bool isHistory;
-  final Function(OrganizerActivityItem) onManage;
-  final VoidCallback onApplicants;
-  final String emptyTitle;
-  final String emptySubtitle;
+  final Function(Kegiatan) onManage;
+  final Future<void> Function() onRefresh;
+  final String emptyText;
 
   const _ActivityTabContent({
     required this.items,
     required this.isHistory,
     required this.onManage,
-    required this.onApplicants,
-    required this.emptyTitle,
-    required this.emptySubtitle,
+    required this.onRefresh,
+    required this.emptyText,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.event_busy, size: 56, color: kBlueGray),
-              const SizedBox(height: 12),
-              Text(
-                emptyTitle,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: kDarkBlueGray,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                emptySubtitle,
-                style: const TextStyle(color: kBlueGray),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: items.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) return const _SearchField();
+    if (items.isEmpty) return Center(child: Text(emptyText, style: const TextStyle(color: kBlueGray)));
 
-        final item = items[index - 1];
-        // Memanggil Card yang sudah dipisah
-        return OrganizerActivityCard(
-          item: item,
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: items.length,
+        separatorBuilder: (ctx, i) => const SizedBox(height: 14),
+        itemBuilder: (ctx, i) => OrganizerActivityCard(
+          item: items[i],
           isHistory: isHistory,
-          onManage: () => onManage(item),
-          onApplicants: onApplicants,
-        );
-      },
-      separatorBuilder: (context, index) {
-        if (index == 0) return const SizedBox(height: 16);
-        return const SizedBox(height: 14);
-      },
-    );
-  }
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField();
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: 'Cari kegiatan di sini...',
-        hintStyle: const TextStyle(color: kBlueGray),
-        prefixIcon: const Icon(Icons.search, color: kBlueGray),
-        filled: true,
-        fillColor: kSoftBlue.withOpacity(0.5),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 10),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
-          borderSide: const BorderSide(color: kSkyBlue, width: 1.2),
-        ),
-      ),
-    );
-  }
-}
-
-class _CustomTabButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isActive;
-  const _CustomTabButton({
-    required this.label,
-    required this.icon,
-    required this.isActive,
-  });
-  @override
-  Widget build(BuildContext context) {
-    const Color activeColor = kDarkBlueGray;
-    final Color inactiveColor = Colors.white.withOpacity(0.85);
-    return Padding(
-      padding: const EdgeInsets.all(4.0),
-      child: Tab(
-        child: Container(
-          decoration: BoxDecoration(
-            color: isActive ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isActive ? activeColor : inactiveColor,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  color: isActive ? activeColor : inactiveColor,
-                ),
-              ),
-            ],
-          ),
+          onManage: () => onManage(items[i]),
+          onApplicants: () {},
         ),
       ),
     );
