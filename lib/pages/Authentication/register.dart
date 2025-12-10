@@ -1,7 +1,14 @@
+// FILE: register.dart
+// Fungsi: Halaman registrasi awal (akun + role + Google).
+// Kegunaan: User membuat akun (manual) atau login/daftar via Google.
+// Cara ke tahap berikutnya: setelah akun siap, arahkan ke CompleteProfilePage(role: ...).
+
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Authentication/login.dart';
-import 'package:volunite/pages/Volunteer/navbar.dart';
-import 'package:volunite/color_pallete.dart'; // 1. Import Color Palette
+import 'package:volunite/color_pallete.dart';
+import 'package:volunite/services/auth/auth_service.dart';
+import 'package:volunite/services/auth/auth_response.dart';
+import 'package:volunite/pages/Authentication/complete_profile_page.dart'; // <--- import halaman baru
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -11,23 +18,14 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  // --- STATE BARU: Variable untuk menyimpan role yang dipilih ---
+  // role yang dipilih
   String _selectedRole = 'Volunteer';
-  // -------------------------------------------------------------
 
-  // step 1
+  // form akun
   final nameC = TextEditingController();
   final emailC = TextEditingController();
   final passC = TextEditingController();
   final pass2C = TextEditingController();
-
-  // step 2
-  final tglC = TextEditingController();
-  final genderC = TextEditingController();
-  final telpC = TextEditingController();
-  final domisiliC = TextEditingController();
-
-  int _currentStep = 1;
 
   @override
   void dispose() {
@@ -35,43 +33,22 @@ class _RegisterPageState extends State<RegisterPage> {
     emailC.dispose();
     passC.dispose();
     pass2C.dispose();
-    tglC.dispose();
-    genderC.dispose();
-    telpC.dispose();
-    domisiliC.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Menggunakan kBlueGray sesuai permintaan
     const primary = kBlueGray;
 
-    return PopScope(
-      canPop: _currentStep == 1,
-      onPopInvoked: (didPop) {
-        if (!didPop && _currentStep == 2) {
-          setState(() => _currentStep = 1);
-        }
-      },
-      child: _currentStep == 1
-          ? _buildStep1(context, primary)
-          : _buildStep2(context, primary),
-    );
-  }
-
-  // ================== STEP 1 ==================
-  Widget _buildStep1(BuildContext context, Color primary) {
     return Scaffold(
-      // Background transparan untuk Gradient
       backgroundColor: Colors.transparent,
       resizeToAvoidBottomInset: true,
       body: Container(
-        // Gradient konsisten dengan halaman Login
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [kBlueGray, kSkyBlue],
-            begin: Alignment.topLeft, stops: [0.0, 0.5],
+            begin: Alignment.topLeft,
+            stops: [0.0, 0.5],
             end: Alignment.bottomRight,
           ),
         ),
@@ -79,8 +56,6 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             children: [
               const SizedBox(height: 20),
-
-              // Header Teks
               const Text(
                 "Registrasi Akun",
                 style: TextStyle(
@@ -100,12 +75,11 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 24),
 
-              // Container Putih
               Expanded(
                 child: Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
-                    color: kBackground, // Menggunakan kBackground/Putih
+                    color: kBackground,
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(24),
                     ),
@@ -114,7 +88,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Indikator Langkah
+                      // indikator (optional, bisa dihapus kalau mau)
                       Center(
                         child: Column(
                           children: [
@@ -132,7 +106,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 value: 1 / 2,
                                 minHeight: 6,
                                 backgroundColor: Colors.grey.shade200,
-                                color: primary, // kBlueGray
+                                color: primary,
                               ),
                             ),
                           ],
@@ -140,7 +114,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Konten Form (Scrollable)
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
@@ -195,7 +168,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                 primaryColor: primary,
                               ),
 
-                              // --- PILIHAN ROLE ---
                               const SizedBox(height: 24),
                               const Text(
                                 "Daftar Sebagai:",
@@ -228,8 +200,37 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ],
                               ),
 
-                              // --------------------
-                              const SizedBox(height: 30),
+                              const SizedBox(height: 24),
+
+                              // === TOMBOL LANJUTKAN DENGAN GOOGLE ===
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: OutlinedButton.icon(
+                                  onPressed: _handleGoogleRegister,
+                                  icon: Image.asset(
+                                    'assets/images/logo/google_logo.png',
+                                    height: 20,
+                                  ),
+                                  label: const Text(
+                                    "Lanjutkan dengan Google",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(color: primary),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              // === TOMBOL DAFTAR MANUAL ===
                               SizedBox(
                                 width: double.infinity,
                                 height: 50,
@@ -241,13 +242,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                     ),
                                     elevation: 2,
                                   ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _currentStep = 2;
-                                    });
-                                  },
+                                  onPressed: _handleManualRegister,
                                   child: const Text(
-                                    "Selanjutnya",
+                                    "Daftar",
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
@@ -256,6 +253,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 20),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -299,6 +297,100 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  // === LOGIN/REGISTER VIA GOOGLE → LANJUT KE COMPLETE PROFILE ===
+  Future<void> _handleGoogleRegister() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final authService = AuthService();
+
+      // mapping role UI -> role backend
+      final roleForBackend = _selectedRole == 'Organisasi'
+          ? 'Organizer'
+          : 'Volunteer';
+
+      final AuthResponse auth = await authService.loginWithGoogle(
+        role: roleForBackend,
+      );
+
+      Navigator.of(context).pop(); // tutup loading
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CompleteProfilePage(role: auth.user.role),
+        ),
+      );
+    } catch (e) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal masuk dengan Google: $e')));
+    }
+  }
+
+  // === REGISTER MANUAL → (NANTI) PANGGIL API /register → COMPLETE PROFILE ===
+  Future<void> _handleManualRegister() async {
+    // 1. Validasi input sederhana
+    if (nameC.text.isEmpty ||
+        emailC.text.isEmpty ||
+        passC.text.isEmpty ||
+        pass2C.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Semua field wajib diisi')));
+      return;
+    }
+
+    if (passC.text != pass2C.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password dan konfirmasi tidak sama')),
+      );
+      return;
+    }
+
+    // mapping role UI → role di DB
+    final String roleForBackend = _selectedRole == 'Organisasi'
+        ? 'Organizer'
+        : 'Volunteer';
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final authService = AuthService();
+      final AuthResponse auth = await authService.register(
+        nama: nameC.text.trim(),
+        email: emailC.text.trim(),
+        password: passC.text,
+        role: roleForBackend,
+      );
+
+      Navigator.of(context).pop(); // tutup dialog
+
+      // 3. Setelah register berhasil → ke halaman lengkapi profil
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CompleteProfilePage(role: auth.user.role),
+        ),
+      );
+    } catch (e) {
+      Navigator.of(context).pop(); // tutup dialog kalau error
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal mendaftar: $e')));
+    }
+  }
+
   // --- WIDGET TOMBOL ROLE ---
   Widget _buildRoleButton({
     required String role,
@@ -310,10 +402,6 @@ class _RegisterPageState extends State<RegisterPage> {
       onTap: () {
         setState(() {
           _selectedRole = role;
-          // **[RESET INPUT JENIS KELAMIN SAAT GANTI ROLE]**
-          if (role == 'Organisasi') {
-             genderC.clear(); 
-          }
         });
       },
       child: AnimatedContainer(
@@ -358,231 +446,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // ================== STEP 2 ==================
-  Widget _buildStep2(BuildContext context, Color primary) {
-    // **[LIST WIDGET CONDITIONAL]**
-    final List<Widget> step2Fields = [
-      _fieldStep2(
-        icon: Icons.calendar_today,
-        hint: _selectedRole == 'Organisasi'
-            ? "Tanggal Berdiri"
-            : "Tanggal Lahir",
-        controller: tglC,
-        readOnly: true,
-        primaryColor: primary,
-        onTap: () async {
-          final picked = await showDatePicker(
-            context: context,
-            initialDate: DateTime(2005, 1, 1),
-            firstDate: DateTime(1970),
-            lastDate: DateTime.now(),
-            builder: (context, child) {
-              return Theme(
-                data: Theme.of(context).copyWith(
-                  colorScheme: ColorScheme.light(
-                    primary: primary,
-                    onPrimary: Colors.white,
-                    onSurface: kDarkBlueGray,
-                  ),
-                ),
-                child: child!,
-              );
-            },
-          );
-          if (picked != null) {
-            tglC.text =
-                "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}";
-          }
-        },
-      ),
-      const SizedBox(height: 16),
-      
-      // **[KONDISI: HANYA TAMPILKAN JIKA ROLE ADALAH 'Volunteer']**
-      if (_selectedRole == 'Volunteer') 
-        Column(
-          children: [
-            _fieldStep2(
-              icon: Icons.female,
-              hint: "Jenis Kelamin",
-              controller: genderC,
-              primaryColor: primary,
-              // Tambahkan logika dropdown/dialog pilihan jenis kelamin di sini jika diperlukan
-              readOnly: true, 
-              onTap: () {
-                // Contoh: Menampilkan BottomSheet atau Dialog untuk memilih jenis kelamin
-                showModalBottomSheet(
-                  context: context,
-                  builder: (ctx) {
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          title: const Text('Laki-laki'),
-                          onTap: () {
-                            genderC.text = 'Laki-laki';
-                            Navigator.pop(ctx);
-                          },
-                        ),
-                        ListTile(
-                          title: const Text('Perempuan'),
-                          onTap: () {
-                            genderC.text = 'Perempuan';
-                            Navigator.pop(ctx);
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      
-      _fieldStep2(
-        icon: Icons.phone,
-        hint: "No Telepon",
-        controller: telpC,
-        keyboard: TextInputType.phone,
-        primaryColor: primary,
-      ),
-      const SizedBox(height: 16),
-      _fieldStep2(
-        icon: Icons.location_on_outlined,
-        hint: "Domisili",
-        controller: domisiliC,
-        primaryColor: primary,
-      ),
-      const SizedBox(height: 16),
-    ];
-    // ---------------------------------------------
-
-
-    return Scaffold(
-      backgroundColor: kBackground, // Putih
-      body: SafeArea(
-        child: Column(
-          children: [
-            // header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                    color: primary,
-                    onPressed: () {
-                      setState(() {
-                        _currentStep = 1;
-                      });
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    "Kembali",
-                    style: TextStyle(
-                      color: primary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Langkah 2 dari 2",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: kDarkBlueGray,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: 2 / 2,
-                      minHeight: 6,
-                      backgroundColor: Colors.grey.shade200,
-                      color: primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                children: [
-                  Text(
-                    "Isi Data ${ _selectedRole == 'Organisasi' ? 'Organisasi' : 'Diri' }",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: kDarkBlueGray,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _selectedRole == 'Organisasi'
-                        ? "Lengkapi data organisasi Anda"
-                        : "Data diri hanya digunakan untuk informasi semata",
-                    style: const TextStyle(fontSize: 13, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  // **[MENGGUNAKAN LIST WIDGET CONDITIONAL]**
-                  ...step2Fields, 
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  onPressed: () {
-                    // Logika pendaftaran diselesaikan di sini
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LandingPage()),
-                    );
-                  },
-                  child: const Text(
-                    "Daftar",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ================== WIDGET FIELD STEP 1 ==================
+  // field input umum
   Widget _field({
     required IconData icon,
     required String hint,
@@ -594,47 +458,6 @@ class _RegisterPageState extends State<RegisterPage> {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      keyboardType: keyboard,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-        prefixIcon: Icon(icon, color: primaryColor),
-        filled: true,
-        fillColor: kLightGray, // Menggunakan kLightGray/Putih Abu
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 16,
-          horizontal: 20,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryColor, width: 1.5),
-        ),
-      ),
-    );
-  }
-
-  // ================== WIDGET FIELD STEP 2 ==================
-  Widget _fieldStep2({
-    required IconData icon,
-    required String hint,
-    required TextEditingController controller,
-    required Color primaryColor,
-    bool readOnly = false,
-    void Function()? onTap,
-    TextInputType keyboard = TextInputType.text,
-  }) {
-    return TextField(
-      controller: controller,
-      readOnly: readOnly,
-      onTap: onTap,
       keyboardType: keyboard,
       decoration: InputDecoration(
         hintText: hint,

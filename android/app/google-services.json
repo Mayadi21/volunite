@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "121494888478",
+    "project_id": "volunite-e513b",
+    "storage_bucket": "volunite-e513b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:121494888478:android:39c3fb59abdb2f3aee8e0f",
+        "android_client_info": {
+          "package_name": "com.example.volunite"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "121494888478-bbo3iag53lkolpff5ks0eq6qt11e6cki.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.volunite",
+            "certificate_hash": "edd63a4167a15ae69089a1615b69479a2521672f"
+          }
+        },
+        {
+          "client_id": "121494888478-4cbh3h8upemjh9knhv2c9glir7tb1cla.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBMEnxMtELQuAPlo4lKhq3hj7qoihgeZAE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "121494888478-4cbh3h8upemjh9knhv2c9glir7tb1cla.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
