@@ -472,7 +472,7 @@ class _ActivityItem {
 }
 
 class _CreateEventPlaceholder extends StatelessWidget {
-  const _CreateEventPlaceholder({super.key};
+  const _CreateEventPlaceholder({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
