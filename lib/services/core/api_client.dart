@@ -13,8 +13,11 @@ import 'token_storage.dart';
 
 class ApiClient {
   // Ubah baseUrl di sini saja kalau pindah server
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
-
+  static String get baseUrl {
+    if (kIsWeb) return 'http://127.0.0.1:8000/api';
+    if (Platform.isAndroid) return 'http://10.0.2.2:8000/api';
+    return 'http://127.0.0.1:8000/api'; // iOS
+  }
   /// Build header dasar
   static Future<Map<String, String>> _buildHeaders({
     bool withAuth = true,
