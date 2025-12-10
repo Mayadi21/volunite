@@ -1,20 +1,34 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:volunite/models/kegiatan_model.dart';
 import 'package:volunite/services/core/api_client.dart';
 
 class KegiatanService {
   
-  // 1. GET PUBLIC (Volunteer)
+  // 1. GET PUBLIC (Volunteer) - ENDPOINT DIPERBAIKI
   static Future<List<Kegiatan>> fetchKegiatan() async {
-    final response = await ApiClient.get('/kegiatan');
-     if (response.statusCode == 200) {
-      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-      final List<dynamic> jsonList = jsonResponse['data'];
-      return jsonList.map((e) => Kegiatan.fromJson(e)).toList();
-    } else {
-      throw Exception('Gagal fetch: ${response.statusCode}');
+    try {
+      final response = await ApiClient.get('/kegiatan');
+      
+      if (kDebugMode) {
+        print('🔍 [KegiatanService] Status Code: ${response.statusCode}');
+        print('🔍 [KegiatanService] Response Body: ${response.body}');
+      }
+      
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        final List<dynamic> jsonList = jsonResponse['data'];
+        return jsonList.map((e) => Kegiatan.fromJson(e)).toList();
+      } else {
+        throw Exception('Gagal fetch: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [KegiatanService] Error: $e');
+      }
+      rethrow;
     }
   }
 
