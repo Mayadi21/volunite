@@ -1,44 +1,44 @@
-// lib/pages/Organizer/Activity/detail_activities_page.dart
 import 'package:flutter/material.dart';
-import 'package:volunite/color_pallete.dart'; // Menggunakan color_pallete.dart Anda
-import 'package:volunite/pages/Organizer/Activity/edit_activity.dart'; // Import halaman edit
+import 'package:intl/intl.dart'; // Wajib untuk format tanggal
+import 'package:volunite/color_pallete.dart';
+import 'package:volunite/models/kegiatan_model.dart'; // Import Model
+import 'package:volunite/pages/Organizer/Activity/edit_activity_page.dart';
 
-const kPrimaryColor = kSkyBlue; // Ditetapkan sebagai warna utama dari palet
+const kPrimaryColor = kSkyBlue;
 
 class OrganizerDetailActivityPage extends StatefulWidget {
-  final String title;
-  final String date;
-  final String time;
-  final String imagePath;
+  // Menerima Model Kegiatan Utuh
+  final Kegiatan kegiatan; 
 
   const OrganizerDetailActivityPage({
     super.key,
-    required this.title,
-    required this.date,
-    required this.time,
-    required this.imagePath,
+    required this.kegiatan,
   });
 
   @override
-  State<OrganizerDetailActivityPage> createState() =>
-      _OrganizerDetailActivityPageState();
+  State<OrganizerDetailActivityPage> createState() => _OrganizerDetailActivityPageState();
 }
 
-class _OrganizerDetailActivityPageState
-    extends State<OrganizerDetailActivityPage> {
+class _OrganizerDetailActivityPageState extends State<OrganizerDetailActivityPage> {
   bool _isDescriptionExpanded = false;
-
-  final String fullDescription =
-      'Kegiatan volunteer yang mengajak Anda untuk berbagi ilmu dan inspirasi kepada anak-anak yang membutuhkan. Melalui acara ini, Anda dapat berkontribusi dalam memberikan pendidikan dan pengalaman belajar yang menyenangkan. Mari bersama-sama menciptakan perubahan positif dan memberikan dampak nyata bagi generasi muda.';
 
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final primary = kPrimaryColor; // Menggunakan kSkyBlue dari palet
+    final primary = kPrimaryColor;
+    
+    // Parsing Data dari Model
+    final item = widget.kegiatan;
+    final start = item.tanggalMulai ?? DateTime.now();
+    final end = item.tanggalBerakhir ?? DateTime.now();
+    
+    // Format Tanggal & Jam
+    final dateStr = DateFormat('EEEE, dd MMM yyyy', 'id_ID').format(start); // Perlu locale id_ID di main.dart idealnya
+    final timeStr = '${DateFormat('HH:mm').format(start)} - ${DateFormat('HH:mm').format(end)} WIB';
 
     return Scaffold(
-      backgroundColor: kBackground, // Menggunakan kBackground dari palet
+      backgroundColor: kBackground,
       body: Stack(
         children: [
           CustomScrollView(
@@ -47,12 +47,12 @@ class _OrganizerDetailActivityPageState
               SliverAppBar(
                 expandedHeight: screenHeight * 0.35,
                 pinned: true,
-                backgroundColor: primary, // Menggunakan kSkyBlue
+                backgroundColor: primary,
                 elevation: 0,
                 leading: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: CircleAvatar(
-                    backgroundColor: kDarkBlueGray.withOpacity(0.3), // Warna dari palet
+                    backgroundColor: kDarkBlueGray.withOpacity(0.3),
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.of(context).pop(),
@@ -60,7 +60,7 @@ class _OrganizerDetailActivityPageState
                   ),
                 ),
                 actions: [
-                  // --- Tombol Edit (SUDAH DIREVISI UNTUK NAVIGASI) ---
+                  // Tombol Edit
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CircleAvatar(
@@ -68,165 +68,97 @@ class _OrganizerDetailActivityPageState
                       child: IconButton(
                         icon: const Icon(Icons.edit, color: Colors.white),
                         tooltip: 'Edit Kegiatan',
-                        onPressed: () {
-                          // NAVIGASI KE HALAMAN EDIT
-                          Navigator.push(
+                        onPressed: () async {
+                          // Navigasi ke Halaman Edit dengan membawa object kegiatan
+                          final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => EditActivityPage(
-                                title: widget.title,
-                                date: widget.date,
-                                time: widget.time,
-                                imagePath: widget.imagePath,
-                              ), 
+                              builder: (context) => EditActivityPage(kegiatan: item),
                             ),
                           );
+                          
+                          // Jika berhasil update (result == true), refresh halaman ini?
+                          // Idealnya pakai setState atau reload data, tapi karena ini detail,
+                          // biasanya user back dulu ke dashboard untuk refresh.
+                          if (result == true) {
+                            if (mounted) Navigator.pop(context, true); // Balik ke dashboard minta refresh
+                          }
                         },
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: CircleAvatar(
-                      backgroundColor: kDarkBlueGray.withOpacity(0.3),
-                      child: IconButton(
-                        icon: const Icon(Icons.share, color: Colors.white),
-                        onPressed: () {},
                       ),
                     ),
                   ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   collapseMode: CollapseMode.pin,
-                  background: Image.asset(widget.imagePath, fit: BoxFit.cover),
+                  background: item.thumbnail != null
+                      ? Image.network(item.thumbnail!, fit: BoxFit.cover)
+                      : Container(color: Colors.grey, child: const Icon(Icons.image, size: 50, color: Colors.white)),
                 ),
               ),
 
-              // 2. Header Konten yang Pinned
+              // 2. Header Konten yang Pinned (Judul)
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _MyPinnedHeaderDelegate(
-                  title: widget.title,
-                  date: widget.date,
-                  time: widget.time,
+                  title: item.judul,
+                  date: dateStr,
+                  time: timeStr,
+                  // Ambil kategori pertama dan kedua jika ada
+                  tags: item.kategori.take(2).map((e) => e.namaKategori).toList(), 
                 ),
               ),
 
-              // 3. Konten yang Bisa Scroll
+              // 3. Konten Scrollable
               SliverToBoxAdapter(
                 child: Container(
-                  color: Colors.white, // Konten tetap putih untuk kontras
+                  color: Colors.white,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                    ).copyWith(top: 0.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0).copyWith(top: 0.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- Statistik Pendaftar (Khusus Organizer) ---
-                        _buildOrganizerStatsCard(primary),
+                        // Statistik Pendaftar
+                        _buildOrganizerStatsCard(primary, item.kuota ?? 0),
                         const SizedBox(height: 24),
 
-                        _buildLocationCard(),
+                        // Lokasi
+                        _buildLocationCard(item.lokasi ?? "Lokasi belum ditentukan"),
                         const SizedBox(height: 24),
 
-                        const Divider(
-                          color: kLightGray, // Menggunakan kLightGray
-                          thickness: 1,
-                          height: 1,
-                        ),
+                        const Divider(color: kLightGray, thickness: 1, height: 1),
                         const SizedBox(height: 24),
 
-                        // --- Deskripsi ---
-                        const Text(
-                          'Deskripsi Kegiatan',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: kDarkBlueGray, // Warna teks gelap
-                          ),
-                        ),
+                        // Deskripsi
+                        const Text('Deskripsi Kegiatan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kDarkBlueGray)),
                         const SizedBox(height: 8),
                         Text(
-                          fullDescription,
+                          item.deskripsi ?? "Tidak ada deskripsi",
                           maxLines: _isDescriptionExpanded ? null : 4,
-                          overflow: _isDescriptionExpanded
-                              ? TextOverflow.visible
-                              : TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: kDarkBlueGray.withOpacity(0.8), // Warna teks abu-abu
-                            height: 1.5,
-                          ),
+                          overflow: _isDescriptionExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 14, color: kDarkBlueGray.withOpacity(0.8), height: 1.5),
                         ),
-                        const SizedBox(height: 4),
                         InkWell(
-                          onTap: () {
-                            setState(() {
-                              _isDescriptionExpanded = !_isDescriptionExpanded;
-                            });
-                          },
+                          onTap: () => setState(() => _isDescriptionExpanded = !_isDescriptionExpanded),
                           child: Text(
-                            _isDescriptionExpanded
-                                ? 'Lihat Lebih Sedikit'
-                                : 'Lihat Lebih Banyak',
-                            style: TextStyle(
-                              color: primary, // Warna Primary
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                            _isDescriptionExpanded ? 'Lihat Lebih Sedikit' : 'Lihat Lebih Banyak',
+                            style: TextStyle(color: primary, fontWeight: FontWeight.bold, fontSize: 14),
                           ),
                         ),
                         const SizedBox(height: 24),
 
-                        // --- Syarat dan Ketentuan ---
+                        // Syarat & Ketentuan
                         Theme(
-                          data: Theme.of(
-                            context,
-                          ).copyWith(dividerColor: Colors.transparent),
+                          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                           child: ExpansionTile(
-                            title: const Text(
-                              'Syarat dan Ketentuan',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: kDarkBlueGray,
-                              ),
-                            ),
+                            title: const Text('Syarat dan Ketentuan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kDarkBlueGray)),
                             tilePadding: EdgeInsets.zero,
-                            childrenPadding: const EdgeInsets.only(
-                              top: 8,
-                              bottom: 16,
-                            ),
+                            childrenPadding: const EdgeInsets.only(top: 8, bottom: 16),
                             children: [
-                              _buildRequirementItem(
-                                'Mahasiswa/i semester 3,5,7',
-                              ),
-                              _buildRequirementItem(
-                                'Memiliki pengalaman organisasi',
-                              ),
-                              _buildRequirementItem(
-                                'Mampu bekerja dalam sebuah tim',
-                              ),
-                              _buildRequirementItem('Kreatif'),
+                              _buildRequirementItem(item.syaratKetentuan ?? "-"),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 24),
-
-                        // --- Dokumen Pendukung ---
-                        const Text(
-                          'Dokumen Pendukung',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: kDarkBlueGray,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDocumentCard(),
-
-                        // Padding bawah ekstra agar konten tidak tertutup bottom bar
+                        
                         SizedBox(height: bottomPadding + 120),
                       ],
                     ),
@@ -236,11 +168,9 @@ class _OrganizerDetailActivityPageState
             ],
           ),
 
-          // Bottom Bar Melayang (Versi Organizer)
+          // Bottom Bar
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
+            bottom: 0, left: 0, right: 0,
             child: _buildBottomBar(primary),
           ),
         ],
@@ -248,18 +178,19 @@ class _OrganizerDetailActivityPageState
     );
   }
 
-  // --- WIDGET KHUSUS ORGANIZER: Statistik Pendaftar ---
-  Widget _buildOrganizerStatsCard(Color primary) {
-    int current = 46;
-    int quota = 60;
-    double progress = current / quota;
+  // --- WIDGETS ---
+
+  Widget _buildOrganizerStatsCard(Color primary, int quota) {
+    // TODO: Nanti ambil data real pendaftar dari backend (relasi pendaftaran)
+    int current = 0; 
+    double progress = (quota > 0) ? current / quota : 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: kSoftBlue.withOpacity(0.3), // Menggunakan kSoftBlue dari palet
+        color: kSoftBlue.withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kSoftBlue), // Menggunakan kSoftBlue
+        border: Border.all(color: kSoftBlue),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,27 +198,11 @@ class _OrganizerDetailActivityPageState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "Status Pendaftaran",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: kDarkBlueGray), // Warna teks gelap
-              ),
+              const Text("Status Pendaftaran", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kDarkBlueGray)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.green, // Tetap hijau untuk "Aktif"
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  "Aktif",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(8)),
+                child: const Text("Aktif", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -295,99 +210,38 @@ class _OrganizerDetailActivityPageState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                "$current Pendaftar",
-                style: TextStyle(
-                  color: primary, // Warna Primary (kSkyBlue)
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                "Kuota: $quota",
-                style: TextStyle(color: kDarkBlueGray.withOpacity(0.7), fontSize: 14),
-              ),
+              Text("$current Pendaftar", style: TextStyle(color: primary, fontWeight: FontWeight.bold, fontSize: 14)),
+              Text("Kuota: $quota", style: TextStyle(color: kDarkBlueGray.withOpacity(0.7), fontSize: 14)),
             ],
           ),
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 10,
-              backgroundColor: kSoftBlue, // Latar belakang progress bar
-              color: primary, // Warna Primary (kSkyBlue)
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "12 pelamar belum diverifikasi",
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.orange, // Tetap orange untuk peringatan
-              fontWeight: FontWeight.w500,
-            ),
+            child: LinearProgressIndicator(value: progress, minHeight: 10, backgroundColor: kSoftBlue, color: primary),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLocationCard() {
+  Widget _buildLocationCard(String location) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: kLightGray.withOpacity(0.5), // Menggunakan kLightGray
+      color: kLightGray.withOpacity(0.5),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                'https://media.wired.com/photos/59269cd37034dc5f91bec0f1/master/w_2560%2Cc_limit/GoogleMapTA.jpg',
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-              ),
-            ),
+            const Icon(Icons.location_on, size: 40, color: kSkyBlue),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Sekretariat KMB-USU',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: kDarkBlueGray),
-                  ),
+                  const Text('Lokasi Pelaksanaan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: kDarkBlueGray)),
                   const SizedBox(height: 4),
-                  Text(
-                    'Jalan Brigjend Katamso Dalam No.62. A U R, Kec. Medan Maimun, Kota Medan',
-                    style: TextStyle(
-                        fontSize: 12, color: kDarkBlueGray.withOpacity(0.7)),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.map, size: 16),
-                    label: const Text('Lihat Peta'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: kDarkBlueGray,
-                      elevation: 0,
-                      side: const BorderSide(color: kLightGray),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                    ),
-                  ),
+                  Text(location, style: TextStyle(fontSize: 12, color: kDarkBlueGray.withOpacity(0.7))),
                 ],
               ),
             ),
@@ -397,70 +251,27 @@ class _OrganizerDetailActivityPageState
     );
   }
 
-  // --- BOTTOM BAR KHUSUS ORGANIZER ---
   Widget _buildBottomBar(Color primary) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 16,
-      ).copyWith(bottom: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16).copyWith(bottom: 32),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
       ),
       child: Row(
         children: [
-          // Tombol Sekunder: Tutup/Pause
-          Expanded(
-            flex: 1,
-            child: OutlinedButton(
-              onPressed: () {
-                // Logic Tutup Pendaftaran
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                side: const BorderSide(color: Colors.red),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Tutup',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Tombol Primer: Lihat Pelamar
           Expanded(
             flex: 2,
             child: ElevatedButton(
-              onPressed: () {
-                // Navigasi ke List Pelamar
-              },
+              onPressed: () {},
               style: ElevatedButton.styleFrom(
-                backgroundColor: primary, // Warna Primary (kSkyBlue)
+                backgroundColor: primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text(
-                'Lihat Pelamar (12)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+              child: const Text('Lihat Pelamar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
         ],
@@ -470,74 +281,25 @@ class _OrganizerDetailActivityPageState
 
   Widget _buildRequirementItem(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(Icons.check_circle, color: Colors.green, size: 20),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 14,
-                color: kDarkBlueGray,
-                height: 1.4,
-              ),
-            ),
-          ),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 14, color: kDarkBlueGray, height: 1.4))),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDocumentCard() {
-    return InkWell(
-      onTap: () {},
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: kLightGray.withOpacity(0.5), // Menggunakan kLightGray
-          borderRadius: BorderRadius.circular(12),
-          border: const Border.fromBorderSide(BorderSide(color: kLightGray, width: 1)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.picture_as_pdf, color: kDarkBlueGray.withOpacity(0.8), size: 40),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Dokumen Pedoman Volunteer.pdf',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: kDarkBlueGray),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Klik untuk preview',
-                    style: TextStyle(
-                        fontSize: 12, color: kDarkBlueGray.withOpacity(0.7)),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.visibility_outlined, color: kDarkBlueGray),
-          ],
-        ),
       ),
     );
   }
 }
 
-// --- DELEGATE HEADER ---
+// --- DELEGATE HEADER (Disesuaikan untuk menerima List String tags) ---
 class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
   final String date;
   final String time;
+  final List<String> tags;
 
   final double _minHeight = 150;
   final double _maxHeight = 150;
@@ -546,48 +308,30 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.title,
     required this.date,
     required this.time,
+    required this.tags,
   });
 
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     final primary = kPrimaryColor;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 3))],
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: kDarkBlueGray),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+            Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: kDarkBlueGray), maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 8),
             Row(
-              children: [
-                _buildTag(context, 'Pendidikan', Icons.school_outlined),
-                const SizedBox(width: 8),
-                _buildTag(context, 'Sosial', Icons.people_outline),
-              ],
+              children: tags.map((tag) => Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: _buildTag(context, tag),
+              )).toList(),
             ),
             const SizedBox(height: 12),
             Row(
@@ -603,7 +347,7 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
     );
   }
 
-  Widget _buildTag(BuildContext context, String label, IconData icon) {
+  Widget _buildTag(BuildContext context, String label) {
     final primary = kPrimaryColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -612,20 +356,7 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: primary.withOpacity(0.2)),
       ),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: primary),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+      child: Text(label, style: TextStyle(color: primary, fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 
@@ -641,14 +372,10 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   double get maxExtent => _maxHeight;
-
   @override
   double get minExtent => _minHeight;
-
   @override
   bool shouldRebuild(covariant _MyPinnedHeaderDelegate oldDelegate) {
-    return title != oldDelegate.title ||
-        date != oldDelegate.date ||
-        time != oldDelegate.time;
+    return title != oldDelegate.title || date != oldDelegate.date;
   }
 }

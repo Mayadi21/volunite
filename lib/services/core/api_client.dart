@@ -5,8 +5,10 @@
 // Keuntungan: Semua request standar (GET/POST/PUT/DELETE) jadi satu pintu terpusat.
 
 import 'dart:convert';
+import 'dart:io'; 
+import 'package:flutter/foundation.dart'; // PENTING: Untuk kIsWeb
 import 'package:http/http.dart' as http;
-
+import 'package:image_picker/image_picker.dart'; // Ganti dart:io File dengan XFile
 import 'token_storage.dart';
 
 class ApiClient {
@@ -71,5 +73,51 @@ class ApiClient {
     final uri = Uri.parse('$baseUrl$path');
     final headers = await _buildHeaders(withAuth: auth);
     return http.delete(uri, headers: headers);
+  }
+
+  /// POST MultiPart(Field & File) /path
+  static Future<http.Response> postMultipart(
+    String path, {
+    Map<String, String> fields = const {},
+    XFile? file,    // <-- GANTI TIPE DATA JADI XFile
+    String? fileKey,
+  }) async {
+    final uri = Uri.parse('$baseUrl$path');
+    final request = http.MultipartRequest('POST', uri);
+
+    final token = await TokenStorage.getToken();
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    request.headers['Accept'] = 'application/json';
+
+    if (fields.isNotEmpty) {
+      request.fields.addAll(fields);
+    }
+
+    // --- LOGIKA HYBRID (WEB & MOBILE) ---
+    if (file != null && fileKey != null) {
+      if (kIsWeb) {
+        // KHUSUS WEB: Kirim sebagai Bytes (Memori)
+        final bytes = await file.readAsBytes();
+        final pic = http.MultipartFile.fromBytes(
+          fileKey,
+          bytes,
+          filename: file.name, // Web butuh nama file eksplisit
+        );
+        request.files.add(pic);
+      } else {
+        // KHUSUS MOBILE: Kirim lewat Path (Disk)
+        final pic = await http.MultipartFile.fromPath(
+          fileKey, 
+          file.path
+        );
+        request.files.add(pic);
+      }
+    }
+    // -------------------------------------
+
+    final streamedResponse = await request.send();
+    return await http.Response.fromStream(streamedResponse);
   }
 }
