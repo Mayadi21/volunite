@@ -4,13 +4,15 @@ import 'package:volunite/models/kegiatan_model.dart';
 import 'package:volunite/services/core/api_client.dart';
 
 class KegiatanService {
-  
   // 1. GET PUBLIC (Volunteer)
   static Future<List<Kegiatan>> fetchKegiatan() async {
     final response = await ApiClient.get('/kegiatan');
-     if (response.statusCode == 200) {
-      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-      final List<dynamic> jsonList = jsonResponse['data'];
+
+    if (response.statusCode == 200) {
+      // PERUBAHAN: Langsung terima sebagai List, bukan Map
+      final List<dynamic> jsonList = jsonDecode(response.body);
+
+      // Langsung mapping, tidak perlu jsonResponse['data']
       return jsonList.map((e) => Kegiatan.fromJson(e)).toList();
     } else {
       throw Exception('Gagal fetch: ${response.statusCode}');
@@ -18,7 +20,7 @@ class KegiatanService {
   }
 
   // 2. CREATE (Organizer)
-   static Future<bool> createKegiatan({
+  static Future<bool> createKegiatan({
     required String judul,
     required String deskripsi,
     required String? linkGrup, // Param Link WA
@@ -30,7 +32,7 @@ class KegiatanService {
     required List<int> kategoriIds,
     required XFile? imageFile,
   }) async {
-       Map<String, String> fields = {
+    Map<String, String> fields = {
       'judul': judul,
       'deskripsi': deskripsi,
       'lokasi': lokasi,
@@ -60,12 +62,12 @@ class KegiatanService {
 
   // 3. GET LIST ORGANIZER (Dashboard)
   static Future<List<Kegiatan>> fetchOrganizerKegiatan() async {
-    final response = await ApiClient.get('/organizer/kegiatan'); 
+    final response = await ApiClient.get('/organizer/kegiatan');
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-      final List<dynamic> jsonList = jsonResponse['data']; 
-      
+      final List<dynamic> jsonList = jsonResponse['data'];
+
       return jsonList
           .map((e) => Kegiatan.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -86,9 +88,8 @@ class KegiatanService {
     required String tanggalMulai,
     required String tanggalBerakhir,
     required List<int> kategoriIds,
-    XFile? imageFile, 
+    XFile? imageFile,
   }) async {
-    
     Map<String, String> fields = {
       'judul': judul,
       'deskripsi': deskripsi,
@@ -108,7 +109,7 @@ class KegiatanService {
     }
 
     final response = await ApiClient.postMultipart(
-      '/organizer/kegiatan/$id', 
+      '/organizer/kegiatan/$id',
       fields: fields,
       file: imageFile,
       fileKey: 'thumbnail',
