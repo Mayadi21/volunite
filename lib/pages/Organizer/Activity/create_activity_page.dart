@@ -1,12 +1,10 @@
-// lib/pages/Organizer/Activity/create_activity_page.dart
-
-import 'dart:io'; 
-import 'package:flutter/foundation.dart'; // Untuk kIsWeb
+import 'dart:io';
+import 'package:flutter/foundation.dart'; // untuk kIsWeb
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // WAJIB: Untuk memblokir input huruf
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:volunite/color_pallete.dart'; // Pastikan path ini benar
+import 'package:volunite/color_pallete.dart'; // Import file warna Anda
 import 'package:volunite/models/kategori_model.dart';
 import 'package:volunite/services/kategori_service.dart';
 import 'package:volunite/services/kegiatan_service.dart';
@@ -20,28 +18,25 @@ class CreateActivityPage extends StatefulWidget {
 
 class _CreateActivityPageState extends State<CreateActivityPage> {
   final _formKey = GlobalKey<FormState>();
+  
+  // State
   bool _isLoading = false;
   bool _isLoadingKategori = true;
-
-  // Controllers
-  final _judulController = TextEditingController();
-  final _deskripsiController = TextEditingController();
-  final _lokasiController = TextEditingController();
-  final _syaratController = TextEditingController();
-  final _kuotaController = TextEditingController();
-
-  // Data Variables
-  DateTime? _tanggalMulai;
-  DateTime? _tanggalBerakhir;
-  
-  // Menggunakan XFile agar kompatibel Web & Mobile
-  XFile? _selectedImage;
-  
-  // Data Kategori
   List<Kategori> _kategoriList = [];
   final List<int> _selectedKategoriIds = [];
-
-  final ImagePicker _picker = ImagePicker();
+  
+  // Controllers
+  final _judulCtrl = TextEditingController();
+  final _deskripsiCtrl = TextEditingController();
+  final _linkGrupCtrl = TextEditingController();
+  final _lokasiCtrl = TextEditingController();
+  final _syaratCtrl = TextEditingController();
+  final _kuotaCtrl = TextEditingController();
+  
+  // Data
+  DateTime? _tglMulai;
+  DateTime? _tglSelesai;
+  XFile? _selectedImage;
 
   @override
   void initState() {
@@ -49,447 +44,284 @@ class _CreateActivityPageState extends State<CreateActivityPage> {
     _loadKategori();
   }
 
-  @override
-  void dispose() {
-    _judulController.dispose();
-    _deskripsiController.dispose();
-    _lokasiController.dispose();
-    _syaratController.dispose();
-    _kuotaController.dispose();
-    super.dispose();
-  }
-
-  // --- 1. LOAD KATEGORI DARI API ---
   Future<void> _loadKategori() async {
     try {
       final data = await KategoriService.fetchKategori();
-      setState(() {
-        _kategoriList = data;
-        _isLoadingKategori = false;
-      });
-    } catch (e) {
-      setState(() => _isLoadingKategori = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memuat kategori: $e')),
-        );
-      }
-    }
+      setState(() { _kategoriList = data; _isLoadingKategori = false; });
+    } catch (e) { setState(() => _isLoadingKategori = false); }
   }
 
-  // --- 2. PICK IMAGE (WEB & MOBILE COMPATIBLE) ---
   Future<void> _pickImage() async {
-    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    
-    if (pickedFile != null) {
-      setState(() {
-        _selectedImage = pickedFile;
-      });
-    }
+    final XFile? picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked != null) setState(() => _selectedImage = picked);
   }
 
-  // --- 3. PICK DATE TIME ---
   Future<void> _selectDateTime(bool isStart) async {
-    final DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
-      builder: (context, child) {
+    final date = await showDatePicker(
+      context: context, 
+      initialDate: DateTime.now(), firstDate: DateTime.now(), lastDate: DateTime(2100),
+      builder: (context, child) { // Custom Color DatePicker
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: kPrimaryColor),
+            colorScheme: const ColorScheme.light(primary: kSkyBlue, onPrimary: Colors.white, onSurface: kDarkBlueGray),
           ),
           child: child!,
         );
-      },
-    );
-    if (pickedDate == null) return;
-
-    if (!mounted) return;
-    final TimeOfDay? pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: kPrimaryColor),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (pickedTime == null) return;
-
-    final DateTime fullDateTime = DateTime(
-      pickedDate.year, pickedDate.month, pickedDate.day,
-      pickedTime.hour, pickedTime.minute,
-    );
-
-    setState(() {
-      if (isStart) {
-        _tanggalMulai = fullDateTime;
-      } else {
-        _tanggalBerakhir = fullDateTime;
       }
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    if (time == null) return;
+    
+    setState(() {
+      final val = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      if(isStart) _tglMulai = val; else _tglSelesai = val;
     });
   }
 
-  // --- 4. SUBMIT FORM ---
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
-    // Validasi Manual
-    if (_selectedImage == null) {
-      _showErrorSnackBar('Gambar kegiatan wajib diupload!');
-      return;
-    }
-    if (_tanggalMulai == null || _tanggalBerakhir == null) {
-      _showErrorSnackBar('Tanggal mulai dan selesai wajib diisi!');
-      return;
-    }
-    if (_tanggalBerakhir!.isBefore(_tanggalMulai!)) {
-      _showErrorSnackBar('Tanggal selesai tidak boleh sebelum tanggal mulai!');
-      return;
-    }
-    if (_selectedKategoriIds.isEmpty) {
-      _showErrorSnackBar('Pilih minimal 1 kategori!');
-      return;
-    }
+    if (_selectedImage == null) return _msg('Gambar wajib diupload!', isError: true);
+    if (_tglMulai == null || _tglSelesai == null) return _msg('Tanggal wajib diisi!', isError: true);
+    if (_selectedKategoriIds.isEmpty) return _msg('Pilih minimal 1 kategori!', isError: true);
 
     setState(() => _isLoading = true);
-
-    // Format Tanggal untuk Laravel
-    final dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
-
-    // Panggil Service
+    
+    final fmt = DateFormat('yyyy-MM-dd HH:mm:ss');
     final success = await KegiatanService.createKegiatan(
-      judul: _judulController.text,
-      deskripsi: _deskripsiController.text,
-      lokasi: _lokasiController.text,
-      syaratKetentuan: _syaratController.text,
-      kuota: _kuotaController.text,
-      tanggalMulai: dateFormat.format(_tanggalMulai!),
-      tanggalBerakhir: dateFormat.format(_tanggalBerakhir!),
+      judul: _judulCtrl.text,
+      deskripsi: _deskripsiCtrl.text,
+      linkGrup: _linkGrupCtrl.text,
+      lokasi: _lokasiCtrl.text,
+      syaratKetentuan: _syaratCtrl.text,
+      kuota: _kuotaCtrl.text,
+      tanggalMulai: fmt.format(_tglMulai!),
+      tanggalBerakhir: fmt.format(_tglSelesai!),
       kategoriIds: _selectedKategoriIds,
-      imageFile: _selectedImage, // Kirim XFile
+      imageFile: _selectedImage,
     );
 
     setState(() => _isLoading = false);
-
-    if (mounted) {
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Kegiatan Berhasil Dibuat!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context, true); // Kembali ke dashboard & refresh
-      } else {
-        _showErrorSnackBar('Gagal membuat kegiatan. Silakan coba lagi.');
-      }
+    if (success && mounted) {
+      _msg('Kegiatan Berhasil Dibuat!');
+      Navigator.pop(context, true);
+    } else if (mounted) {
+      _msg('Gagal membuat kegiatan', isError: true);
     }
   }
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
+  void _msg(String txt, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(txt), backgroundColor: isError ? Colors.red : Colors.green
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kBackground, // Background Soft
       appBar: AppBar(
-        title: const Text('Buat Kegiatan Baru', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: kPrimaryColor,
-        foregroundColor: Colors.white,
+        title: const Text("Buat Kegiatan Baru", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: kSkyBlue,
+        iconTheme: const IconThemeData(color: Colors.white),
+        centerTitle: true,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: _isLoading 
-                ? const SizedBox(
-                    width: 20, height: 20, 
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                  )
-                : const Icon(Icons.check),
-            tooltip: 'Publish',
-            onPressed: _isLoading ? null : _submit,
-          ),
-        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              
-              // --- 1. UPLOAD GAMBAR (HYBRID PREVIEW) ---
-              _buildSectionTitle('Gambar Kegiatan'),
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  height: 180,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildImagePicker(),
+                const SizedBox(height: 24),
+
+                _sectionLabel("Informasi Utama"),
+                _CustomTextField(label: "Judul Kegiatan", controller: _judulCtrl, icon: Icons.event),
+                const SizedBox(height: 16),
+                
+                const Text("Kategori", style: TextStyle(fontWeight: FontWeight.w600, color: kBlueGray)),
+                const SizedBox(height: 8),
+                _buildKategoriChips(),
+                const SizedBox(height: 20),
+
+                Row(
+                  children: [
+                    Expanded(child: _DateTimePicker(label: "Mulai", val: _tglMulai, onTap: () => _selectDateTime(true))),
+                    const SizedBox(width: 12),
+                    Expanded(child: _DateTimePicker(label: "Selesai", val: _tglSelesai, onTap: () => _selectDateTime(false))),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _CustomTextField(label: "Lokasi", controller: _lokasiCtrl, icon: Icons.location_on),
+                const SizedBox(height: 16),
+                _CustomTextField(label: "Kuota Peserta", controller: _kuotaCtrl, icon: Icons.group, isNumber: true),
+
+                const SizedBox(height: 30),
+                _sectionLabel("Detail Lengkap"),
+                
+                _CustomTextField(label: "Link Grup WhatsApp (Opsional)", controller: _linkGrupCtrl, icon: Icons.chat, isRequired: false),
+                const SizedBox(height: 16),
+                _CustomTextField(label: "Deskripsi", controller: _deskripsiCtrl, maxLines: 4),
+                const SizedBox(height: 16),
+                _CustomTextField(label: "Syarat & Ketentuan", controller: _syaratCtrl, maxLines: 3),
+
+                const SizedBox(height: 40),
+                SizedBox(
                   width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: kLightGray, width: 1.5),
-                  ),
-                  child: _selectedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8.5),
-                          child: kIsWeb
-                              ? Image.network(
-                                  _selectedImage!.path, // Web pakai path (blob url)
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.file(
-                                  File(_selectedImage!.path), // Mobile convert ke File
-                                  fit: BoxFit.cover,
-                                ),
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_photo_alternate_outlined, size: 40, color: kPrimaryColor.withOpacity(0.7)),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Tap untuk upload thumbnail",
-                              style: TextStyle(color: kDarkBlueGray.withOpacity(0.6)),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // --- 2. INFORMASI DASAR ---
-              _buildSectionTitle('Informasi Dasar'),
-              _buildTextField(
-                controller: _judulController, 
-                hint: 'Judul Kegiatan', 
-                icon: Icons.title
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _lokasiController, 
-                hint: 'Lokasi Pelaksanaan', 
-                icon: Icons.location_on_outlined
-              ),
-              const SizedBox(height: 16),
-               _buildTextField(
-                controller: _kuotaController, 
-                hint: 'Kuota Relawan', 
-                icon: Icons.people_outline,
-                inputType: TextInputType.number, // Ini mentrigger logika di bawah
-              ),
-              const SizedBox(height: 24),
-
-              // --- 3. WAKTU PELAKSANAAN ---
-              _buildSectionTitle('Waktu Pelaksanaan'),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDateTimePicker(
-                      label: "Mulai",
-                      value: _tanggalMulai,
-                      onTap: () => _selectDateTime(true),
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kSkyBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 4,
+                      shadowColor: kSkyBlue.withOpacity(0.4),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
+                    child: _isLoading 
+                      ? const CircularProgressIndicator(color: Colors.white) 
+                      : const Text("PUBLIKASIKAN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildDateTimePicker(
-                      label: "Selesai",
-                      value: _tanggalBerakhir,
-                      onTap: () => _selectDateTime(false),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // --- 4. DETAIL ---
-              _buildSectionTitle('Detail Kegiatan'),
-              _buildTextField(
-                controller: _deskripsiController, 
-                hint: 'Deskripsi lengkap kegiatan...', 
-                maxLines: 4
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _syaratController, 
-                hint: 'Syarat & Ketentuan...', 
-                maxLines: 3
-              ),
-              const SizedBox(height: 24),
-
-              // --- 5. KATEGORI ---
-              _buildSectionTitle('Kategori (Min. 1)'),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: kLightGray, width: 1.5),
                 ),
-                child: _isLoadingKategori
-                    ? const Center(child: Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: CircularProgressIndicator(),
-                      ))
-                    : Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _kategoriList.map((kategori) {
-                          final isSelected = _selectedKategoriIds.contains(kategori.id);
-                          return FilterChip(
-                            label: Text(kategori.namaKategori),
-                            labelStyle: TextStyle(
-                              color: isSelected ? Colors.white : kDarkBlueGray,
-                              fontSize: 12,
-                            ),
-                            selected: isSelected,
-                            selectedColor: kPrimaryColor,
-                            backgroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                              side: BorderSide(
-                                color: isSelected ? kPrimaryColor : kLightGray,
-                              ),
-                            ),
-                            onSelected: (bool selected) {
-                              setState(() {
-                                if (selected) {
-                                  _selectedKategoriIds.add(kategori.id);
-                                } else {
-                                  _selectedKategoriIds.remove(kategori.id);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-              ),
-              
-              const SizedBox(height: 40),
-
-              // --- TOMBOL SUBMIT BAWAH ---
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: _isLoading 
-                    ? const Text('Memproses...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
-                    : const Text('Buat Kegiatan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // --- WIDGET HELPER ---
-
-  Widget _buildSectionTitle(String title) {
+  Widget _sectionLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: kDarkBlueGray,
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kDarkBlueGray)),
+    );
+  }
+
+  Widget _buildImagePicker() {
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Container(
+        height: 200, width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kLightGray),
         ),
+        child: _selectedImage != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: kIsWeb 
+                ? Image.network(_selectedImage!.path, fit: BoxFit.cover)
+                : Image.file(File(_selectedImage!.path), fit: BoxFit.cover),
+            )
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.add_a_photo_rounded, size: 48, color: kSkyBlue),
+                SizedBox(height: 8),
+                Text("Upload Banner", style: TextStyle(color: kBlueGray, fontWeight: FontWeight.w600)),
+              ],
+            ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    IconData? icon,
-    int maxLines = 1,
-    TextInputType inputType = TextInputType.text,
-  }) {
+  Widget _buildKategoriChips() {
+    if (_isLoadingKategori) return const LinearProgressIndicator(minHeight: 2, color: kSkyBlue);
+    return Wrap(
+      spacing: 8, runSpacing: 8,
+      children: _kategoriList.map((k) {
+        final isSelected = _selectedKategoriIds.contains(k.id);
+        return ChoiceChip(
+          label: Text(k.namaKategori),
+          selected: isSelected,
+          selectedColor: kSkyBlue,
+          backgroundColor: Colors.white,
+          side: BorderSide(color: isSelected ? Colors.transparent : kLightGray),
+          labelStyle: TextStyle(color: isSelected ? Colors.white : kDarkBlueGray),
+          onSelected: (val) => setState(() => val ? _selectedKategoriIds.add(k.id) : _selectedKategoriIds.remove(k.id)),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// --- WIDGET REUSABLE (Simpan di file terpisah jika mau, misal: form_widgets.dart) ---
+
+class _CustomTextField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final IconData? icon;
+  final int maxLines;
+  final bool isNumber;
+  final bool isRequired;
+
+  const _CustomTextField({
+    required this.label, required this.controller, 
+    this.icon, this.maxLines = 1, this.isNumber = false, this.isRequired = true
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
-      keyboardType: inputType,
-      
-      // >>> PERBAIKAN DI SINI <<<
-      // Jika inputType == number, paksa hanya angka (tidak bisa ketik huruf)
-      inputFormatters: inputType == TextInputType.number 
-          ? [FilteringTextInputFormatter.digitsOnly] 
-          : [],
-      // ------------------------
-
-      validator: (v) => v == null || v.isEmpty ? '$hint wajib diisi' : null,
+      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      inputFormatters: isNumber ? [FilteringTextInputFormatter.digitsOnly] : [],
+      validator: isRequired ? (v) => v == null || v.isEmpty ? '$label wajib diisi' : null : null,
+      style: const TextStyle(color: kDarkBlueGray),
       decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: icon != null ? Icon(icon, color: kDarkBlueGray.withOpacity(0.6)) : null,
-        contentPadding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 16.0),
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(10.0)),
-          borderSide: BorderSide(color: kLightGray),
-        ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(10.0)),
-          borderSide: BorderSide(color: kLightGray, width: 1.5),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(10.0)),
-          borderSide: BorderSide(color: kPrimaryColor, width: 2.0),
-        ),
+        labelText: label,
+        labelStyle: const TextStyle(color: kBlueGray),
+        alignLabelWithHint: maxLines > 1,
+        prefixIcon: icon != null ? Icon(icon, color: kSkyBlue) : null,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kLightGray)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kSkyBlue, width: 1.5)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
+}
 
-  Widget _buildDateTimePicker({
-    required String label,
-    required DateTime? value,
-    required VoidCallback onTap,
-  }) {
+class _DateTimePicker extends StatelessWidget {
+  final String label;
+  final DateTime? val;
+  final VoidCallback onTap;
+
+  const _DateTimePicker({required this.label, required this.val, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: kLightGray, width: 1.5),
+          color: Colors.white,
+          border: Border.all(color: kLightGray),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(fontSize: 12, color: kDarkBlueGray.withOpacity(0.7))),
+            Text(label, style: const TextStyle(fontSize: 11, color: kBlueGray)),
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 16, color: kPrimaryColor),
+                Icon(Icons.calendar_today_rounded, size: 16, color: val == null ? kBlueGray : kSkyBlue),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    value == null ? "- Pilih -" : DateFormat('dd/MM/yy HH:mm').format(value),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: value == null ? Colors.grey : kDarkBlueGray,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  val == null ? "- Pilih -" : DateFormat('dd MMM, HH:mm').format(val!),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: val == null ? kBlueGray : kDarkBlueGray),
                 ),
               ],
             ),
