@@ -1,76 +1,79 @@
-// lib/pages/Volunteer/Category/category_activities_page.dart
 import 'package:flutter/material.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
 
-// -----------------------------------------------------------------------------
-// 1. MODEL DATA
-// -----------------------------------------------------------------------------
-enum ActivityStatus { upcoming, finished }
-
-class Activity {
-  final String title;
-  final DateTime date;
-  final TimeOfDay start;
-  final TimeOfDay end;
-  final String bannerUrl;
-  final ActivityStatus status;
-
-  Activity({
-    required this.title,
-    required this.date,
-    required this.start,
-    required this.end,
-    required this.bannerUrl,
-    required this.status,
-  });
-}
+// Import model dan service Anda
+import 'package:volunite/models/kegiatan_model.dart'; 
+import 'package:volunite/services/kegiatan_service.dart'; 
 
 // -----------------------------------------------------------------------------
-// 2. HALAMAN UTAMA (CATEGORY PAGE)
+// 1. HALAMAN UTAMA (STATEFUL WIDGET)
 // -----------------------------------------------------------------------------
-class CategoryActivitiesPage extends StatelessWidget {
+class CategoryActivitiesPage extends StatefulWidget {
   final String categoryName;
 
-  CategoryActivitiesPage({super.key, required this.categoryName});
+  const CategoryActivitiesPage({super.key, required this.categoryName});
 
-  final List<Activity> _dummyActivities = [
-    Activity(
-      title: "Pintar Bersama - KMB USU",
-      date: DateTime.now().add(const Duration(days: 2)),
-      start: const TimeOfDay(hour: 12, minute: 0),
-      end: const TimeOfDay(hour: 17, minute: 0),
-      bannerUrl: "assets/images/event1.jpg",
-      status: ActivityStatus.upcoming,
-    ),
-    Activity(
-      title: "Aksi Bersih Pantai Cermin",
-      date: DateTime.now().add(const Duration(days: 5)),
-      start: const TimeOfDay(hour: 9, minute: 0),
-      end: const TimeOfDay(hour: 12, minute: 0),
-      bannerUrl: "assets/images/event2.jpg",
-      status: ActivityStatus.upcoming,
-    ),
-    Activity(
-      title: "Workshop Digital Marketing",
-      date: DateTime.now().subtract(const Duration(days: 5)),
-      start: const TimeOfDay(hour: 10, minute: 0),
-      end: const TimeOfDay(hour: 15, minute: 0),
-      bannerUrl: "assets/images/event1.jpg",
-      status: ActivityStatus.finished,
-    ),
-  ];
+  @override
+  State<CategoryActivitiesPage> createState() => _CategoryActivitiesPageState();
+}
+
+class _CategoryActivitiesPageState extends State<CategoryActivitiesPage> {
+  // Future untuk menyimpan hasil pemanggilan API
+  late Future<List<Kegiatan>> _kegiatanFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Memuat semua data kegiatan saat widget dibuat
+    _kegiatanFuture = KegiatanService.fetchKegiatan();
+  }
+
+  // --- Utility Functions untuk format tanggal/waktu (Disalin dari home.dart) ---
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Tanggal N/A';
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const monthNames = [
+      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    
+    // Penyesuaian indexing untuk dayNames: DateTime.weekday mengembalikan 1 (Senin) hingga 7 (Minggu)
+    final int weekdayIndex = date.weekday % 7; 
+    final dayName = dayNames[weekdayIndex];
+    
+    final day = date.day;
+    final month = monthNames[date.month];
+    final year = date.year;
+
+    return '$dayName, $day $month $year';
+  }
+
+  String _formatTimeRange(DateTime? start, DateTime? end) {
+    if (start == null) return 'Waktu N/A';
+
+    final startTime = '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
+    
+    if (end != null) {
+      final endTime = '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
+      return '$startTime - $endTime';
+    }
+    
+    return startTime;
+  }
+  
+  // -----------------------------------------------------------------------------
+  // WIDGET UTAMA
+  // -----------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
-        // 1. Background color dibuat transparan agar gradient terlihat
         backgroundColor: Colors.transparent,
         elevation: 0,
-
-        // 2. Menggunakan flexibleSpace untuk Gradient
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -80,16 +83,12 @@ class CategoryActivitiesPage extends StatelessWidget {
             ),
           ),
         ),
-
-        // 3. Icon Back diubah jadi Putih agar terlihat jelas
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-
-        // 4. Judul diubah jadi Putih
         title: Text(
-          categoryName,
+          widget.categoryName,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -97,31 +96,81 @@ class CategoryActivitiesPage extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(20),
-        itemCount: _dummyActivities.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 20),
-        itemBuilder: (context, index) {
-          final activity = _dummyActivities[index];
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DetailActivitiesPage(
-                    kegiatan: null,
-                    title: activity.title,
-                    date:
-                        "${activity.date.day}/${activity.date.month}/${activity.date.year}",
-                    time:
-                        "${activity.start.hour}:${activity.start.minute.toString().padLeft(2, '0')}",
-                    imagePath: activity.bannerUrl,
+      // MENGGUNAKAN FUTUREBUILDER UNTUK MEMUAT DATA DARI BACKEND
+      body: FutureBuilder<List<Kegiatan>>(
+        future: _kegiatanFuture,
+        builder: (context, snapshot) {
+          // State Loading
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          // State Error
+          if (snapshot.hasError) {
+            return Center(
+                child: Text('Gagal memuat data: ${snapshot.error}'));
+          }
+
+          // State Data Tersedia
+          if (snapshot.hasData) {
+            final allKegiatan = snapshot.data!;
+            
+            // LOGIKA FILTER BERDASARKAN categoryName (case-insensitive)
+            // Asumsi properti model Kegiatan untuk kategori adalah 'kategori' (String)
+            final List<Kegiatan> filteredKegiatan = allKegiatan
+        .where((k) => k.kategori.any((kategoriItem) => 
+            kategoriItem.namaKategori.toLowerCase() == widget.categoryName.toLowerCase())
+        )
+        .toList();
+
+            // State Data Kosong Setelah Filter
+            if (filteredKegiatan.isEmpty) {
+              return Center(
+                  child: Text(
+                      'Tidak ada kegiatan yang ditemukan untuk kategori ${widget.categoryName}.'));
+            }
+
+            // Tampilkan data yang sudah difilter
+            return ListView.separated(
+              padding: const EdgeInsets.all(20),
+              itemCount: filteredKegiatan.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 20),
+              itemBuilder: (context, index) {
+                final kegiatan = filteredKegiatan[index];
+                
+                // Format tanggal dan waktu
+                final formattedDate = _formatDate(kegiatan.tanggalMulai);
+                final formattedTime = _formatTimeRange(kegiatan.tanggalMulai, kegiatan.tanggalBerakhir);
+
+                return GestureDetector(
+                  onTap: () {
+                    // Navigasi ke DetailActivitiesPage
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DetailActivitiesPage(
+                          kegiatan: kegiatan, // Kirim objek Kegiatan nyata
+                          title: kegiatan.judul,
+                          date: formattedDate,
+                          time: formattedTime,
+                          imagePath: kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg',
+                        ),
+                      ),
+                    );
+                  },
+                  // Menggunakan Widget Card yang baru (KegiatanCard)
+                  child: KegiatanCard(
+                    kegiatan: kegiatan,
+                    date: formattedDate,
+                    timeRange: formattedTime,
                   ),
-                ),
-              );
-            },
-            child: ActivityCard(activity: activity),
-          );
+                );
+              },
+            );
+          }
+
+          // Fallback
+          return const Center(child: Text('Tidak ada data kegiatan.'));
         },
       ),
     );
@@ -129,47 +178,29 @@ class CategoryActivitiesPage extends StatelessWidget {
 }
 
 // -----------------------------------------------------------------------------
-// 3. WIDGET CARD
+// 2. WIDGET CARD BARU (KEGIATANCARD)
+// Widget ini menampilkan data menggunakan model Kegiatan dari backend.
 // -----------------------------------------------------------------------------
-class ActivityCard extends StatelessWidget {
-  final Activity activity;
-  const ActivityCard({super.key, required this.activity});
+class KegiatanCard extends StatelessWidget {
+  final Kegiatan kegiatan;
+  final String date;
+  final String timeRange;
+  
+  const KegiatanCard({
+    super.key, 
+    required this.kegiatan,
+    required this.date,
+    required this.timeRange,
+  });
 
-  String _formatDate(DateTime d) {
-    const hari = [
-      'Minggu',
-      'Senin',
-      'Selasa',
-      'Rabu',
-      'Kamis',
-      'Jumat',
-      'Sabtu',
-    ];
-    const bulan = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
-    ];
-    return '${hari[d.weekday % 7]}, ${d.day} ${bulan[d.month - 1]} ${d.year}';
-  }
-
-  String _formatTime(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}.${t.minute.toString().padLeft(2, '0')}';
+  // Logika untuk menentukan apakah kegiatan sudah selesai
+  bool get isFinished => kegiatan.status.toLowerCase() == 'completed' || kegiatan.status.toLowerCase() == 'finished';
 
   @override
   Widget build(BuildContext context) {
-    final isFinished = activity.status == ActivityStatus.finished;
-    final timeRange =
-        '${_formatTime(activity.start)} - ${_formatTime(activity.end)} WIB';
+    final image = kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg';
+    // Cek apakah thumbnail berupa URL atau Asset
+    final bool isUrl = image.startsWith("http"); 
 
     return Container(
       decoration: BoxDecoration(
@@ -188,17 +219,30 @@ class ActivityCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-            child: Image.asset(
-              activity.bannerUrl,
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 160,
-                color: Colors.grey[300],
-                child: const Center(child: Icon(Icons.image_not_supported)),
-              ),
-            ),
+            // Menampilkan gambar dari URL (Network) atau Asset
+            child: isUrl 
+              ? Image.network(
+                  image,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 160,
+                    color: Colors.grey[300],
+                    child: const Center(child: Icon(Icons.image_not_supported)),
+                  ),
+                )
+              : Image.asset(
+                  image,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 160,
+                    color: Colors.grey[300],
+                    child: const Center(child: Icon(Icons.image_not_supported)),
+                  ),
+                ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -210,7 +254,7 @@ class ActivityCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        activity.title,
+                        kegiatan.judul,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -227,7 +271,7 @@ class ActivityCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 _InfoRow(
                   icon: Icons.calendar_today,
-                  text: _formatDate(activity.date),
+                  text: date,
                 ),
                 const SizedBox(height: 4),
                 _InfoRow(icon: Icons.access_time, text: timeRange),
@@ -240,9 +284,11 @@ class ActivityCard extends StatelessWidget {
   }
 }
 
+
 // -----------------------------------------------------------------------------
-// KOMPONEN PEMBANTU
+// 3. KOMPONEN PEMBANTU (Tidak diubah dari file sebelumnya)
 // -----------------------------------------------------------------------------
+
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;

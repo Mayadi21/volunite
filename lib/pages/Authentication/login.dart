@@ -3,7 +3,7 @@ import 'package:volunite/pages/Authentication/forgot_password.dart';
 import 'package:volunite/pages/Authentication/register.dart';
 import 'package:volunite/pages/Volunteer/navbar.dart';
 import 'package:volunite/pages/Organizer/navbar.dart';
-import 'package:volunite/pages/Admin/admin_main_page.dart';
+import 'package:volunite/pages/Admin/navbar.dart';
 import 'package:volunite/color_pallete.dart';
 
 // tambahkan ini:
@@ -33,7 +33,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // === FUNGSI LOGIN SEBENARNYA ===
+  // === FUNGSI LOGIN EMAIL/PASSWORD ===
   Future<void> _login() async {
     final email = emailC.text.trim();
     final password = passC.text;
@@ -50,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final auth = await _authService.login(email: email, password: password);
 
-      // simpan token
+      // simpan token (sebenernya AuthService.login udah simpan juga, tapi gapapa)
       await TokenStorage.saveToken(auth.token);
 
       final role =
@@ -77,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
       } else if (role == 'Admin') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const AdminMainPage()),
+          MaterialPageRoute(builder: (_) => const AdminLandingPage()),
         );
       } else {
         ScaffoldMessenger.of(
@@ -85,6 +85,54 @@ class _LoginPageState extends State<LoginPage> {
         ).showSnackBar(SnackBar(content: Text('Role tidak dikenali: $role')));
       }
     } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // === FUNGSI LOGIN DENGAN GOOGLE ===
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // panggil loginWithGoogle TANPA role (role diambil dari DB)
+      final auth = await _authService.loginWithGoogle();
+
+      final role = auth.user.role;
+
+      if (role == 'Banned') {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Akun Anda diblokir.')));
+        return;
+      }
+
+      // arahkan sesuai role, sama seperti _login()
+      if (role == 'Volunteer') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LandingPage()),
+        );
+      } else if (role == 'Organizer') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OrganizerLandingPage()),
+        );
+      } else if (role == 'Admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminLandingPage()),
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Role tidak dikenali: $role')));
+      }
+    } catch (e) {
+      // misal: user cancel dialog Google → Exception('Login dengan Google dibatalkan.')
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
@@ -229,7 +277,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 20),
 
-                        // TOMBOL MASUK
+                        // TOMBOL MASUK EMAIL/PASSWORD
                         SizedBox(
                           width: double.infinity,
                           height: 50,
@@ -261,6 +309,34 @@ class _LoginPageState extends State<LoginPage> {
                                       fontSize: 16,
                                     ),
                                   ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // TOMBOL MASUK DENGAN GOOGLE
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: OutlinedButton.icon(
+                            onPressed: _isLoading ? null : _loginWithGoogle,
+                            icon: Image.asset(
+                              'assets/images/logo/google_logo.png',
+                              height: 20,
+                            ),
+                            label: const Text(
+                              "Lanjutkan dengan Google",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: kBlueGray),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                           ),
                         ),
 

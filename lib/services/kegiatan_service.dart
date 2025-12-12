@@ -6,8 +6,11 @@ import 'package:volunite/services/core/api_client.dart';
 
 class KegiatanService {
   
+  // --- [1] FITUR AUTO REFRESH (ALARM GLOBAL) ---
+  // Variabel ini akan didengarkan oleh halaman Activities & Home
   static final ValueNotifier<bool> shouldRefresh = ValueNotifier(false);
 
+  // Fungsi untuk membunyikan alarm
   static void triggerRefresh() {
     shouldRefresh.value = !shouldRefresh.value;
   }
