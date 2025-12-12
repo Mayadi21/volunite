@@ -13,6 +13,7 @@ class Kegiatan {
   final String? lokasi;
   final String? syaratKetentuan;
   final int? kuota;
+  final String? metodePenerimaan;
   final DateTime? tanggalMulai;
   final DateTime? tanggalBerakhir;
   final String status;
@@ -31,6 +32,7 @@ class Kegiatan {
     this.lokasi,
     this.syaratKetentuan,
     this.kuota,
+    this.metodePenerimaan,
     this.tanggalMulai,
     this.tanggalBerakhir,
     required this.status,
@@ -56,6 +58,7 @@ class Kegiatan {
       lokasi: json['lokasi'],
       syaratKetentuan: json['syarat_ketentuan'],
       kuota: json['kuota'],
+      metodePenerimaan: json['metode_penerimaan'],
       tanggalMulai: json['tanggal_mulai'] != null ? DateTime.parse(json['tanggal_mulai']) : null,
       tanggalBerakhir: json['tanggal_berakhir'] != null ? DateTime.parse(json['tanggal_berakhir']) : null,
       status: json['status'],

@@ -22,12 +22,27 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _refreshData();
+
+    // --- [2] PASANG PENDENGAR (LISTENER) ---
+    // Ketika ada sinyal refresh, fungsi _refreshData akan dijalankan
+    KegiatanService.shouldRefresh.addListener(_refreshData);
+  }
+
+  // --- [3] COPOT PENDENGAR SAAT KELUAR ---
+  @override
+  void dispose() {
+    KegiatanService.shouldRefresh.removeListener(_refreshData);
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _refreshData() {
-    setState(() {
-      _futureKegiatan = KegiatanService.fetchOrganizerKegiatan();
-    });
+    // Cek mounted agar tidak error
+    if (mounted) {
+      setState(() {
+        _futureKegiatan = KegiatanService.fetchOrganizerKegiatan();
+      });
+    }
   }
 
   Future<void> _handleDelete(int id) async {
@@ -45,12 +60,10 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
-        // Status checks
         bool isWaiting = item.status == 'Waiting';
         bool isFinished = item.status == 'finished';
         bool isRejected = item.status == 'Rejected';
         bool isCancelled = item.status == 'cancelled';
-
         bool canEdit = !isFinished && !isRejected && !isCancelled;
 
         return Padding(
@@ -60,30 +73,25 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
             children: [
               Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 20),
-              
               ListTile(
                 leading: const Icon(Icons.visibility_rounded, color: kBlueGray),
                 title: const Text("Lihat Detail Lengkap"),
                 onTap: () {
                   Navigator.pop(ctx);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => OrganizerDetailActivityPage(kegiatan: item)))
-                      .then((val) { if (val == true) _refreshData(); });
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => OrganizerDetailActivityPage(kegiatan: item)));
                 },
               ),
-              
               if (canEdit)
                 ListTile(
                   leading: const Icon(Icons.edit_rounded, color: kSkyBlue),
                   title: const Text("Edit Informasi"),
                   onTap: () async {
                     Navigator.pop(ctx);
-                    final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditActivityPage(kegiatan: item)));
-                    if (result == true) _refreshData();
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => EditActivityPage(kegiatan: item)));
+                    // Tidak perlu manual refresh di sini karena EditActivityPage sudah mengirim sinyal
                   },
                 ),
-              
               const Divider(indent: 16, endIndent: 16),
-              
               if (isWaiting)
                 ListTile(
                   leading: const Icon(Icons.delete_forever_rounded, color: Colors.red),
@@ -94,7 +102,7 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
                     _handleDelete(item.id);
                   },
                 )
-              else if (canEdit) // Kalau sudah jalan/scheduled, opsinya Cancel
+              else if (canEdit)
                 ListTile(
                   leading: const Icon(Icons.cancel_presentation_rounded, color: Colors.orange),
                   title: const Text("Batalkan Kegiatan"),
@@ -125,10 +133,7 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          tabs: const [
-            Tab(text: "Aktif"),
-            Tab(text: "Selesai"),
-          ],
+          tabs: const [Tab(text: "Aktif"), Tab(text: "Selesai")],
         ),
       ),
       body: FutureBuilder<List<Kegiatan>>(
@@ -140,14 +145,8 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text("Belum ada data kegiatan", style: TextStyle(color: kBlueGray)));
           }
-
           final all = snapshot.data!;
-          
-          // --- LOGIC PEMISAHAN TAB ---
-          // Aktif: Waiting, scheduled, on progress
           final active = all.where((e) => ['Waiting', 'scheduled', 'on progress'].contains(e.status)).toList();
-          
-          // Selesai: Rejected, finished, cancelled
           final history = all.where((e) => ['Rejected', 'finished', 'cancelled'].contains(e.status)).toList();
 
           return TabBarView(
@@ -161,8 +160,8 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateActivityPage()));
-          if (res == true) _refreshData();
+          await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateActivityPage()));
+          // Tidak perlu manual refresh di sini karena CreateActivityPage sudah mengirim sinyal
         },
         backgroundColor: kSkyBlue,
         child: const Icon(Icons.add, color: Colors.white),
@@ -175,7 +174,6 @@ class _ListContent extends StatelessWidget {
   final List<Kegiatan> items;
   final Function(Kegiatan) onManage;
   final bool isHistory;
-
   const _ListContent(this.items, this.onManage, {required this.isHistory});
 
   @override
@@ -187,25 +185,16 @@ class _ListContent extends StatelessWidget {
           children: [
             Icon(isHistory ? Icons.history : Icons.event_note, size: 60, color: kLightGray),
             const SizedBox(height: 10),
-            Text(
-              isHistory ? "Belum ada riwayat" : "Tidak ada kegiatan aktif",
-              style: const TextStyle(color: kBlueGray),
-            ),
+            Text(isHistory ? "Belum ada riwayat" : "Tidak ada kegiatan aktif", style: const TextStyle(color: kBlueGray)),
           ],
         ),
       );
     }
-
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (_, i) {
-        return OrganizerActivityCard(
-          item: items[i],
-          onManage: () => onManage(items[i]),
-        );
-      },
+      itemBuilder: (_, i) => OrganizerActivityCard(item: items[i], onManage: () => onManage(items[i])),
     );
   }
 }

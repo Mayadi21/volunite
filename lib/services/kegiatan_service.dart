@@ -1,10 +1,18 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart'; // Untuk ValueNotifier
 import 'package:image_picker/image_picker.dart';
 import 'package:volunite/models/kegiatan_model.dart';
 import 'package:volunite/services/core/api_client.dart';
 
 class KegiatanService {
   
+  static final ValueNotifier<bool> shouldRefresh = ValueNotifier(false);
+
+  static void triggerRefresh() {
+    shouldRefresh.value = !shouldRefresh.value;
+  }
+  // ---------------------------------------------
+
   // 1. GET PUBLIC (Volunteer)
   static Future<List<Kegiatan>> fetchKegiatan() async {
     final response = await ApiClient.get('/kegiatan');
@@ -18,24 +26,26 @@ class KegiatanService {
   }
 
   // 2. CREATE (Organizer)
-   static Future<bool> createKegiatan({
+  static Future<bool> createKegiatan({
     required String judul,
     required String deskripsi,
-    required String? linkGrup, // Param Link WA
+    required String? linkGrup,
     required String lokasi,
     required String syaratKetentuan,
     required String kuota,
+    required String metodePenerimaan,
     required String tanggalMulai,
     required String tanggalBerakhir,
     required List<int> kategoriIds,
     required XFile? imageFile,
   }) async {
-       Map<String, String> fields = {
+    Map<String, String> fields = {
       'judul': judul,
       'deskripsi': deskripsi,
       'lokasi': lokasi,
       'syarat_ketentuan': syaratKetentuan,
       'kuota': kuota,
+      'metode_penerimaan': metodePenerimaan,
       'tanggal_mulai': tanggalMulai,
       'tanggal_berakhir': tanggalBerakhir,
     };
@@ -79,10 +89,11 @@ class KegiatanService {
     required int id,
     required String judul,
     required String deskripsi,
-    required String? linkGrup, // Param Link WA
+    required String? linkGrup,
     required String lokasi,
     required String syaratKetentuan,
     required String kuota,
+    required String metodePenerimaan,
     required String tanggalMulai,
     required String tanggalBerakhir,
     required List<int> kategoriIds,
@@ -95,6 +106,7 @@ class KegiatanService {
       'lokasi': lokasi,
       'syarat_ketentuan': syaratKetentuan,
       'kuota': kuota,
+      'metode_penerimaan': metodePenerimaan,
       'tanggal_mulai': tanggalMulai,
       'tanggal_berakhir': tanggalBerakhir,
     };
