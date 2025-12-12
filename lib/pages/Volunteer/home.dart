@@ -7,10 +7,11 @@ import 'package:volunite/pages/Volunteer/Category/category_activities_page.dart'
 import 'package:volunite/color_pallete.dart';
 
 // Import model dan service Anda
-import 'package:volunite/models/kegiatan_model.dart'; // Sesuaikan path jika perlu
-import 'package:volunite/services/kegiatan_service.dart'; // Sesuaikan path jika perlu
+import 'package:volunite/models/kegiatan_model.dart'; 
+import 'package:volunite/services/kegiatan_service.dart'; 
+import 'package:volunite/services/auth/auth_service.dart';
+import 'package:volunite/models/user_model.dart'; // Pastikan model ini punya pathProfil
 
-// UBAH DARI StatelessWidget MENJADI StatefulWidget
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
 
@@ -19,19 +20,92 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  // Inisialisasi Future untuk memuat data
+  User? currentUser;
+  bool isLoadingUser = true;
   late Future<List<Kegiatan>> _kegiatanFuture;
 
   @override
   void initState() {
     super.initState();
-    // Memuat data kegiatan saat widget pertama kali dibuat
+    loadUser();
     _kegiatanFuture = KegiatanService.fetchKegiatan();
   }
+  
+  void loadUser() async {
+    final user = await AuthService().getCurrentUser();
+
+    setState(() {
+      currentUser = user;
+      isLoadingUser = false;
+    });
+  }
+
+  // 🔥 FUNGSI PEMBANTU UNTUK MENAMPILKAN GAMBAR PROFIL
+  Widget _buildProfileImage(String path) {
+    // Ukuran yang sesuai dengan radius 24 * 2
+    const double size = 48.0; 
+    
+    // Periksa apakah path adalah URL jaringan (http/https)
+    final bool isNetworkImage = path.startsWith("http") || path.startsWith("https");
+    
+    // Jika path adalah asset, pastikan path lengkapnya benar.
+    // Asumsi: Path database 'images/profile/...' mengacu pada folder 'assets/images/profile/...'
+    final String finalPath = path.startsWith('assets/') ? path : 'assets/$path';
+    
+    return ClipOval(
+      child: isNetworkImage
+          ? Image.network(
+              path,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  width: size,
+                  height: size,
+                  color: Colors.grey.shade200,
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                // Placeholder jika URL gagal dimuat
+                return Container(
+                  width: size,
+                  height: size,
+                  color: kSoftBlue,
+                  child: const Icon(Icons.person, size: 30, color: kDarkBlueGray),
+                );
+              },
+            )
+          : Image.asset(
+              finalPath, // Gunakan path asset yang sudah dikoreksi
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // Placeholder jika asset lokal tidak ditemukan
+                return Container(
+                  width: size,
+                  height: size,
+                  color: kSoftBlue,
+                  child: const Icon(Icons.person, size: 30, color: kDarkBlueGray),
+                );
+              },
+            ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+
+    // Tentukan path profil yang akan digunakan, jika null gunakan placeholder asset
+    final String profilePath = currentUser?.pathProfil ?? 'assets/images/profile_placeholder.jpeg';
+
 
     return Container(
       color: kBackground,
@@ -40,22 +114,24 @@ class _HomeTabState extends State<HomeTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 👋 Header (Tidak Berubah)
+            // 👋 Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(
+                    // 🔥 MODIFIKASI CIRCLE AVATAR UNTUK MEMANGGIL GAMBAR DINAMIS
+                    CircleAvatar(
                       radius: 24,
-                      backgroundImage: AssetImage(
-                        'assets/images/profile_placeholder.jpeg',
-                      ),
+                      backgroundColor: kSoftBlue, // Background saat loading
+                      child: isLoadingUser
+                          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                          : _buildProfileImage(profilePath),
                     ),
                     const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           "Hi, Selamat Datang 👋",
                           style: TextStyle(
@@ -65,7 +141,9 @@ class _HomeTabState extends State<HomeTab> {
                           ),
                         ),
                         Text(
-                          "Evan Arga",
+                          isLoadingUser 
+                          ? "Memuat..."
+                          : currentUser?.nama ?? 'User',
                           style: TextStyle(fontSize: 14, color: kBlueGray),
                         ),
                       ],
@@ -242,7 +320,7 @@ class _HomeTabState extends State<HomeTab> {
 
             // ✅ BAGIAN PENTING: FutureBuilder untuk memuat dan memfilter kegiatan
             SizedBox(
-              height: 230,
+              height:245,
               child: FutureBuilder<List<Kegiatan>>(
                 future: _kegiatanFuture,
                 builder: (context, snapshot) {
@@ -320,7 +398,11 @@ class _HomeTabState extends State<HomeTab> {
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
     
-    final dayName = dayNames[date.weekday % 7];
+    // Perbaikan indexing untuk dayNames: DateTime.weekday mengembalikan 1 (Senin) hingga 7 (Minggu)
+    // List dayNames dimulai dari Minggu (index 0)
+    final int weekdayIndex = date.weekday % 7; 
+    final dayName = dayNames[weekdayIndex];
+    
     final day = date.day;
     final month = monthNames[date.month];
     final year = date.year;
@@ -341,12 +423,11 @@ class _HomeTabState extends State<HomeTab> {
     return startTime;
   }
   
-  // --- Static Widgets (diperbarui) ---
+  // --- Static Widgets (dipertahankan) ---
 
   // 🔹 Kategori item (Tidak Berubah)
   static Widget categoryItem(
       BuildContext context, IconData icon, String title, Color primary) {
-    // ... (kode categoryItem tidak berubah)
     return GestureDetector(
       onTap: () {
         // Navigasi ke halaman list kegiatan berdasarkan kategori
@@ -398,153 +479,158 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // 🔸 Event card (DIUBAH untuk menerima objek Kegiatan)
+  // 🔸 Event card (DIUBAH untuk menerima objek Kegiatan dan handle gambar Network/Asset)
   static Widget eventCard(
     BuildContext context,
-  String image,
-  String title,
-  String date,
-  String time,
-  Color primary,
-  Kegiatan kegiatan,
-) {
-  final bool isUrl = image.startsWith("http");
+    String image,
+    String title,
+    String date,
+    String time,
+    Color primary,
+    Kegiatan kegiatan,
+  ) {
+    final bool isUrl = image.startsWith("http");
+    const double imageHeight = 130.0;
 
-  return GestureDetector(
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DetailActivitiesPage(
-            kegiatan: kegiatan,
-            title: title,
-            date: date,
-            time: time,
-            imagePath: image,
-          ),
-        ),
-      );
-    },
-    child: Container(
-      width: 280,
-      margin: const EdgeInsets.only(right: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: kBlueGray.withOpacity(0.18),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-
-            // -------------- PERBAIKAN DI SINI --------------
-            child: isUrl
-                ? Image.network(
-                    image,
-                    height: 130,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return Container(
-                        height: 130,
-                        color: Colors.grey.shade200,
-                        child: const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 130,
-                        color: Colors.grey,
-                        child: const Icon(Icons.broken_image, size: 40),
-                      );
-                    },
-                  )
-                : Image.asset(
-                    image,
-                    height: 130,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-            // -------------------------------------------------
-          ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15)
-                .copyWith(top: 10, bottom: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: primary.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    kegiatan.status,
-                    style: TextStyle(
-                      color: primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: kDarkBlueGray,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today,
-                        size: 14, color: kBlueGray),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Text(
-                        date,
-                        style: const TextStyle(
-                            color: kBlueGray, fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Icons.access_time,
-                        size: 14, color: kBlueGray),
-                    const SizedBox(width: 5),
-                    Text(
-                      time,
-                      style:
-                          const TextStyle(color: kBlueGray, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailActivitiesPage(
+              kegiatan: kegiatan,
+              title: title,
+              date: date,
+              time: time,
+              imagePath: image,
             ),
           ),
-        ],
+        );
+      },
+      child: Container(
+        width: 280,
+        margin: const EdgeInsets.only(right: 15),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: kBlueGray.withOpacity(0.18),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              child: isUrl
+                  ? Image.network(
+                      image,
+                      height: imageHeight,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          height: imageHeight,
+                          color: Colors.grey.shade200,
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: imageHeight,
+                          color: Colors.grey,
+                          child: const Icon(Icons.broken_image, size: 40),
+                        );
+                      },
+                    )
+                  : Image.asset(
+                      image,
+                      height: imageHeight,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: imageHeight,
+                          color: Colors.grey,
+                          child: const Icon(Icons.error, size: 40),
+                        );
+                      },
+                    ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15)
+                  .copyWith(top: 10, bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: primary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      kegiatan.status,
+                      style: TextStyle(
+                        color: primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: kDarkBlueGray,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today,
+                          size: 14, color: kBlueGray),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          date,
+                          style: const TextStyle(
+                              color: kBlueGray, fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time,
+                          size: 14, color: kBlueGray),
+                      const SizedBox(width: 5),
+                      Text(
+                        time,
+                        style:
+                            const TextStyle(color: kBlueGray, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
