@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:volunite/pages/Admin/users/edit_user_page.dart';
 import 'package:volunite/pages/Admin/data/admin_models.dart';
-import 'package:volunite/pages/Admin/data/mock_data.dart';
-import 'add_new_user_page.dart'; // <-- 1. DITAMBAHKAN
+import 'user_service.dart';
+import 'add_new_user_page.dart';
 
 class OrganizationListPage extends StatefulWidget {
   const OrganizationListPage({super.key});
@@ -11,24 +12,60 @@ class OrganizationListPage extends StatefulWidget {
 }
 
 class _OrganizationListPageState extends State<OrganizationListPage> {
-  // --- 2. FUNGSI BARU (SESUAI PERMINTAAN ANDA) ---
-  void _deleteOrganization(Organization org) {
+  bool _loading = true;
+  List<dynamic> _orgs = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOrgs();
+  }
+
+  Future<void> _fetchOrgs() async {
+    setState(() {
+      _loading = true;
+    });
+    try {
+      final data = await UserService.fetchUsers(role: 'Organizer');
+      setState(() {
+        _orgs = data['data'] ?? [];
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal memuat: $e')));
+    }
+  }
+
+  void _confirmDelete(int id, String name) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Organisasi'), // Diubah
-        content: Text('Anda yakin ingin menghapus ${org.name}?'), // Diubah
+        title: const Text('Hapus Organisasi'),
+        content: Text('Anda yakin ingin menghapus $name ?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Batal'),
+          ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                // Diubah ke mockOrganizations
-                mockOrganizations.removeWhere((o) => o.id == org.id);
-              });
+            onPressed: () async {
               Navigator.of(ctx).pop();
+              try {
+                await UserService.deleteUser(id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Berhasil dihapus')),
+                );
+                _fetchOrgs();
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Gagal hapus: $e')));
+              }
             },
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
@@ -37,68 +74,74 @@ class _OrganizationListPageState extends State<OrganizationListPage> {
     );
   }
 
-  // --- 3. FUNGSI BARU (UNTUK EDIT & TAMBAH) ---
-  void _showOrganizationForm([Organization? org]) {
-    Navigator.push(
+  void _openEditPage(int id) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddNewUserPage(
-          // Kirim data organisasi untuk mode edit
-          organizationToEdit: org,
-        ),
+        builder: (_) => EditUserPage(userId: id, title: 'Edit Organisasi'),
       ),
-    ).then((berhasilDitambahkan) {
-      // then() akan berjalan saat halaman AddNewUserPage ditutup (pop)
-      if (berhasilDitambahkan == true) {
-        setState(() {
-          // Ini akan me-refresh list untuk menampilkan data baru/yang diubah
-        });
-      }
-    });
+    );
+    if (result == true) {
+      _fetchOrgs();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: ListView.builder(
-        itemCount: mockOrganizations.length,
-        itemBuilder: (context, index) {
-          final org = mockOrganizations[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.green.withOpacity(0.2),
-                child: const Icon(Icons.business, color: Colors.green),
+      body: RefreshIndicator(
+        onRefresh: _fetchOrgs,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                itemCount: _orgs.length,
+                itemBuilder: (context, index) {
+                  final o = _orgs[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.green.withOpacity(0.2),
+                        child: const Icon(Icons.business, color: Colors.green),
+                      ),
+                      title: Text(o['nama'] ?? ''),
+                      subtitle: Text(o['email'] ?? ''),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () => _openEditPage(o['id']),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () =>
+                                _confirmDelete(o['id'], o['nama'] ?? ''),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-              title: Text(org.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(org.status),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.blue),
-                    // --- 4. DIPERBARUI ---
-                    onPressed: () => _showOrganizationForm(org), // Mode edit
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    // --- 5. DIPERBARUI (SESUAI PERMINTAAN ANDA) ---
-                    onPressed: () => _deleteOrganization(org),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
       ),
       floatingActionButton: FloatingActionButton(
-        // --- 6. DIPERBARUI ---
-        onPressed: () => _showOrganizationForm(), // Mode tambah
         backgroundColor: primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+        child: const Icon(Icons.add),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddUserPage()),
+          );
+          if (result == true) {
+            _fetchOrgs(); // refresh list
+          }
+        },
+      )
+
     );
   }
 }

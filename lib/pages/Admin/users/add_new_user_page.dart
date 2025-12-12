@@ -1,201 +1,162 @@
+// lib/pages/Admin/users/add_user_page.dart
 import 'package:flutter/material.dart';
-import 'package:volunite/pages/Admin/data/admin_models.dart';
-// --- TAMBAHKAN IMPORT INI ---
-import 'package:volunite/pages/Admin/data/mock_data.dart';
-// ------------------------------
+import 'user_service.dart';
 
-class AddNewUserPage extends StatefulWidget {
-  // ... (kode parameter opsional tidak berubah)
-  final Volunteer? volunteerToEdit;
-  final Organization? organizationToEdit;
-
-  const AddNewUserPage({
-    super.key,
-    this.volunteerToEdit,
-    this.organizationToEdit,
-  });
+class AddUserPage extends StatefulWidget {
+  const AddUserPage({super.key});
 
   @override
-  State<AddNewUserPage> createState() => _AddNewUserPageState();
+  State<AddUserPage> createState() => _AddUserPageState();
 }
 
-class _AddNewUserPageState extends State<AddNewUserPage> {
-  // ... (kode _formKey, _selectedRole, controllers, initState, dispose tidak berubah)
+class _AddUserPageState extends State<AddUserPage> {
   final _formKey = GlobalKey<FormState>();
-  String _selectedRole = 'Volunteer';
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  bool _isEditMode = false;
+  bool _submitting = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Cek apakah ini mode Edit atau Tambah
-    if (widget.volunteerToEdit != null) {
-      _isEditMode = true;
-      _selectedRole = 'Volunteer';
-      _nameController.text = widget.volunteerToEdit!.name;
-      _emailController.text = widget.volunteerToEdit!.email;
-    } else if (widget.organizationToEdit != null) {
-      _isEditMode = true;
-      _selectedRole = 'Organisasi';
-      _nameController.text = widget.organizationToEdit!.name;
-      _emailController.text = widget.organizationToEdit!.email;
+  final _namaCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _tanggalCtrl = TextEditingController();
+  final _noTelpCtrl = TextEditingController();
+  final _domisiliCtrl = TextEditingController();
+
+  String _selectedRole = 'Volunteer';
+  String _selectedGender = 'Laki-Laki';
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _submitting = true);
+
+    try {
+      await UserService.createUser(
+        nama: _namaCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
+        password: _passwordCtrl.text.trim(),
+        role: _selectedRole,
+        tanggalLahir: _tanggalCtrl.text.trim(),
+        jenisKelamin: _selectedGender,
+        noTelepon: _noTelpCtrl.text.trim(),
+        domisili: _domisiliCtrl.text.trim(),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User berhasil ditambahkan')),
+      );
+
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal menambah user: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
+    _namaCtrl.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _tanggalCtrl.dispose();
+    _noTelpCtrl.dispose();
+    _domisiliCtrl.dispose();
     super.dispose();
-  }
-  // --- PERBAIKI LOGIKA FUNGSI INI ---
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      // Logika untuk menyimpan user baru
-      // Di aplikasi nyata, Anda akan memanggil API di sini
-
-      // Contoh: Tambahkan ke list mock data jika bukan mode edit
-      if (!_isEditMode) {
-        if (_selectedRole == 'Volunteer') {
-          final newId = (mockVolunteers.map((v) => v.id).reduce((a, b) => a > b ? a : b)) + 1;
-          mockVolunteers.add(Volunteer(
-            id: newId,
-            name: _nameController.text,
-            email: _emailController.text,
-          ));
-        } else if (_selectedRole == 'Organisasi') {
-          final newId = (mockOrganizations.map((o) => o.id).reduce((a, b) => a > b ? a : b)) + 1;
-          mockOrganizations.add(Organization(
-            id: newId,
-            name: _nameController.text,
-            email: _emailController.text,
-          ));
-        }
-        // TODO: Tambahkan logika untuk role Admin jika perlu
-      }
-      // TODO: Tambahkan logika untuk mode Edit
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                '${_isEditMode ? 'Memperbarui' : 'Menyimpan'} $_selectedRole: ${_nameController.text}'),
-            backgroundColor: Colors.green),
-      );
-
-      // Kembali ke halaman list (dan kirim 'true' untuk refresh)
-      Navigator.of(context).pop(true);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // ... (sisa kode build method tidak berubah)
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _isEditMode ? 'Edit User' : 'Tambah User Baru',
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: primaryColor,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama Lengkap',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                      validator: (value) => (value == null || value.isEmpty)
-                          ? 'Nama tidak boleh kosong'
-                          : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.email_outlined),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) => (value == null || !value.contains('@'))
-                          ? 'Email tidak valid'
-                          : null,
-                    ),
-                    const SizedBox(height: 16),
-                    // Sembunyikan field password jika mode edit
-                    if (!_isEditMode)
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.lock_outline),
-                        ),
-                        obscureText: true,
-                        validator: (value) => (value == null || value.length < 6)
-                            ? 'Password minimal 6 karakter'
-                            : null,
-                      ),
-                    const SizedBox(height: 20),
-                    DropdownButtonFormField<String>(
-                      value: _selectedRole,
-                      decoration: const InputDecoration(
-                        labelText: 'Role Pengguna',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.shield_outlined),
-                      ),
-                      // Nonaktifkan ganti role jika mode edit
-                      onChanged: _isEditMode
-                          ? null
-                          : (newValue) {
-                              setState(() {
-                                _selectedRole = newValue!;
-                              });
-                            },
-                      items:
-                          ['Volunteer', 'Organisasi', 'Admin'].map((String role) {
-                        return DropdownMenuItem<String>(
-                          value: role,
-                          child: Text(role),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 32),
-                  ],
+      appBar: AppBar(title: const Text('Tambah User Baru')),
+      body: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _namaCtrl,
+                decoration: const InputDecoration(labelText: 'Nama'),
+                validator: (v) => v!.isEmpty ? 'Nama wajib' : null,
+              ),
+              TextFormField(
+                controller: _emailCtrl,
+                decoration: const InputDecoration(labelText: 'Email'),
+                validator: (v) => v!.isEmpty ? 'Email wajib' : null,
+              ),
+              TextFormField(
+                controller: _passwordCtrl,
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true,
+                validator: (v) => v!.length < 6 ? 'Min 6 karakter' : null,
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _selectedRole,
+                items: const [
+                  DropdownMenuItem(
+                    value: 'Volunteer',
+                    child: Text('Volunteer'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Organizer',
+                    child: Text('Organizer'),
+                  ),
+                  DropdownMenuItem(value: 'Admin', child: Text('Admin')),
+                ],
+                onChanged: (v) => setState(() => _selectedRole = v!),
+                decoration: const InputDecoration(labelText: 'Role'),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _tanggalCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Tanggal Lahir (YYYY-MM-DD)',
                 ),
               ),
-            ),
-          ),
-
-          // --- TOMBOL INI SEKARANG MENEMPEL DI BAWAH ---
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: ElevatedButton.icon(
-              onPressed: _submitForm,
-              icon: const Icon(Icons.save, color: Colors.white),
-              label: Text(_isEditMode ? 'Simpan Perubahan' : 'Simpan User Baru'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 50), // Buat tombol lebar
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _selectedGender,
+                items: const [
+                  DropdownMenuItem(
+                    value: 'Laki-Laki',
+                    child: Text('Laki-Laki'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Perempuan',
+                    child: Text('Perempuan'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Tidak Ingin Memberi Tahu',
+                    child: Text('Tidak Ingin Memberi Tahu'),
+                  ),
+                ],
+                onChanged: (v) => setState(() => _selectedGender = v!),
+                decoration: const InputDecoration(labelText: 'Jenis Kelamin'),
               ),
-            ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _noTelpCtrl,
+                decoration: const InputDecoration(labelText: 'No. Telepon'),
+              ),
+              TextFormField(
+                controller: _domisiliCtrl,
+                decoration: const InputDecoration(labelText: 'Domisili'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? const CircularProgressIndicator()
+                    : const Text('Tambah User'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

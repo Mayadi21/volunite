@@ -3,7 +3,7 @@ import 'package:volunite/pages/Authentication/forgot_password.dart';
 import 'package:volunite/pages/Authentication/register.dart';
 import 'package:volunite/pages/Volunteer/navbar.dart';
 import 'package:volunite/pages/Organizer/navbar.dart';
-import 'package:volunite/pages/Admin/admin_main_page.dart';
+import 'package:volunite/pages/Admin/navbar.dart';
 import 'package:volunite/color_pallete.dart';
 
 // tambahkan ini:
@@ -77,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
       } else if (role == 'Admin') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const AdminMainPage()),
+          MaterialPageRoute(builder: (_) => const AdminLandingPage()),
         );
       } else {
         ScaffoldMessenger.of(
@@ -124,7 +124,7 @@ class _LoginPageState extends State<LoginPage> {
       } else if (role == 'Admin') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const AdminMainPage()),
+          MaterialPageRoute(builder: (_) => const AdminLandingPage()),
         );
       } else {
         ScaffoldMessenger.of(
