@@ -7,6 +7,7 @@ import 'package:volunite/models/kegiatan_model.dart';
 import 'package:volunite/services/pendaftaran_service.dart';
 import 'package:volunite/services/auth/auth_service.dart';
 import 'package:volunite/services/report_kegiatan_service.dart';
+import 'package:share_plus/share_plus.dart';
 
 class DetailActivitiesPage extends StatefulWidget {
   final Kegiatan? kegiatan;
@@ -96,6 +97,54 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
       return ['Syarat dan ketentuan belum ditetapkan.'];
     }
     return reqString.split('\n').where((s) => s.trim().isNotEmpty).toList();
+  }
+
+  void _shareActivity() async {
+    final kegiatan = widget.kegiatan;
+    
+    String shareText = "Yuk, gabung di kegiatan relawan ini!";
+    
+    if (kegiatan != null) {
+      final title = kegiatan.judul;
+      final location = kegiatan.lokasi ?? "Lokasi tidak tercantum";
+      final date = widget.date;
+      final time = widget.time;
+      
+      // final kegiatanId = kegiatan.id;
+
+      // final String baseUrl = "http://volunite.app/activities/";
+      final activityLink = "Cek detail kegiatan di aplikasi Volunite sekarang !";
+      // final activityLink = "$baseUrl$kegiatanId";
+      // final activityLink = "Cek detail kegiatan di aplikasi Volunite sekarang!"; 
+
+      shareText = """
+📢 **Kesempatan Relawan: ${title}**
+
+🗓️ Tanggal: ${date}
+⏰ Waktu: ${time}
+📍 Lokasi: ${location}
+
+Gabung sekarang dan buat perubahan!
+${activityLink}
+""";
+    }
+
+    try {
+      await Share.share(
+        shareText, 
+        subject: 'Ajakan Bergabung Kegiatan Relawan: ${widget.title}',
+      );
+    } catch (e) {
+      print('Error sharing: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal membagikan. Silakan coba lagi.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // =========================================================
@@ -627,7 +676,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                       backgroundColor: Colors.black.withOpacity(0.35),
                       child: IconButton(
                         icon: const Icon(Icons.share, color: Colors.white),
-                        onPressed: () {},
+                        onPressed: () {_shareActivity();},
                       ),
                     ),
                   ),
