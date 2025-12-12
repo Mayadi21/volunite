@@ -1,9 +1,12 @@
+// lib/pages/Volunteer/Activity/detail_activities_page.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/models/kegiatan_model.dart';
 import 'package:volunite/services/pendaftaran_service.dart';
 import 'package:volunite/services/auth/auth_service.dart';
+import 'package:volunite/services/report_kegiatan_service.dart';
 
 class DetailActivitiesPage extends StatefulWidget {
   final Kegiatan? kegiatan;
@@ -31,33 +34,34 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   // 🔥 State untuk status pendaftaran
   bool _isRegistered = false;
 
-  // State untuk status loading di dalam modal
-  bool _isLoading = false;
+  // State untuk status loading di modal pendaftaran
+  bool _isRegistrationLoading = false; 
+  
+  // State untuk status loading di modal laporan
+  bool _isReportLoading = false; // 👈 BARU: State loading untuk laporan
 
   // Inisialisasi Service (Dibuat final)
-  // Gunakan instansiasi dari State class
   final PendaftaranService _pendaftaranService = PendaftaranService();
   final AuthService _authService = AuthService();
+  final ReportService _reportService = ReportService(); // 👈 Service Laporan
 
   @override
   void initState() {
     super.initState();
-    _checkRegistrationStatus(); // 🔥 Panggil fungsi pemeriksaan status
+    _checkRegistrationStatus(); 
   }
 
   // =========================================================
-  // 🔥 PERBAIKAN LOGIC: Fungsi untuk memeriksa status pendaftaran
+  // 🔥 FUNGSI: Memeriksa status pendaftaran
   // =========================================================
   Future<void> _checkRegistrationStatus() async {
     final kegiatanId = widget.kegiatan?.id;
     final user = await _authService.getCurrentUser();
 
-    // Cek apakah user login dan ID kegiatan tersedia
     if (kegiatanId != null && user != null) {
       try {
-        // 🔥 PANGGILAN SERVICE BARU: Hapus parameter userId
         final isRegistered = await _pendaftaranService.isUserRegistered(
-          kegiatanId as int, // Kirim ID Kegiatan (sudah dicek null)
+          kegiatanId as int,
         );
 
         if (mounted) {
@@ -66,7 +70,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
           });
         }
       } catch (e) {
-        // Log error jika diperlukan
         print('Error checking registration status: $e');
         if (mounted) {
           setState(() {
@@ -75,7 +78,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
         }
       }
     } else {
-      // Jika user null (belum login), set ke false
       if (mounted) {
         setState(() {
           _isRegistered = false;
@@ -84,23 +86,20 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     }
   }
 
-  // Mendapatkan deskripsi dinamis dari model, atau fallback ke string kosong
   String get _dynamicDescription {
     return widget.kegiatan?.deskripsi ?? 'Deskripsi tidak tersedia.';
   }
 
-  // Mendapatkan syarat & ketentuan dari model (diparsing per baris)
   List<String> get _dynamicRequirements {
     final reqString = widget.kegiatan?.syaratKetentuan;
     if (reqString == null || reqString.trim().isEmpty) {
       return ['Syarat dan ketentuan belum ditetapkan.'];
     }
-    // Asumsi syarat dipisahkan oleh baris baru (\n)
     return reqString.split('\n').where((s) => s.trim().isNotEmpty).toList();
   }
 
   // =========================================================
-  // FUNGSI UNTUK MENAMPILKAN FORM PENDAFTARAN KEGIATAN
+  // FUNGSI: Menampilkan form pendaftaran
   // =========================================================
   void _showRegistrationForm(BuildContext context) {
     final formKey = GlobalKey<FormState>();
@@ -122,18 +121,17 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
             // LOGIKA SUBMIT FORM
             void _submitForm() async {
               if (formKey.currentState!.validate()) {
-                setModalState(() => _isLoading = true); // Tampilkan loading
-
+                setModalState(() => _isRegistrationLoading = true); // 🔥 Gunakan state loading modal
+                
                 final user = await _authService.getCurrentUser();
 
-                // Pastikan user dan ID kegiatan tersedia
                 if (user == null || widget.kegiatan?.id == null) {
-                  setModalState(() => _isLoading = false);
+                  setModalState(() => _isRegistrationLoading = false);
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        "⚠️ Anda harus login atau ID kegiatan tidak valid.",
+                        "⚠ Anda harus login atau ID kegiatan tidak valid.",
                       ),
                       backgroundColor: Colors.orange,
                     ),
@@ -141,10 +139,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   return;
                 }
 
-                // 🔥 PERBAIKAN UTAMA: Hapus userId dari panggilan daftarKegiatan
-                // karena backend mengambilnya dari token.
                 final success = await _pendaftaranService.daftarKegiatan(
-                  // userId: user.id as int, // Dihapus
                   kegiatanId: widget.kegiatan!.id as int,
                   nomorTelepon: noHpController.text,
                   domisili: domisiliController.text,
@@ -152,12 +147,11 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   keterampilan: keterampilanController.text,
                 );
 
-                setModalState(() => _isLoading = false); // Sembunyikan loading
-                Navigator.pop(context); // Tutup modal
+                setModalState(() => _isRegistrationLoading = false);
+                Navigator.pop(context);
 
                 if (success) {
-                  // 🔥 Perbarui state _isRegistered
-                  setState(() {
+                  setState(() { // Perbarui state _isRegistered di halaman utama
                     _isRegistered = true;
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -252,8 +246,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        // Menonaktifkan tombol saat loading
-                        onPressed: _isLoading ? null : _submitForm,
+                        onPressed: _isRegistrationLoading ? null : _submitForm, // Gunakan state loading
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kSkyBlue,
                           foregroundColor: Colors.white,
@@ -262,8 +255,8 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
+                        child: _isRegistrationLoading
+                            ? const SizedBox( // Tampilkan loading
                                 width: 24,
                                 height: 24,
                                 child: CircularProgressIndicator(
@@ -290,70 +283,22 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     );
   }
 
-  // Widget pembantu untuk label form
-  Widget _buildFormLabel(String label) {
-    return Text(
-      label,
-      style: const TextStyle(fontWeight: FontWeight.w600, color: kDarkBlueGray),
-    );
-  }
-
-  // Widget pembantu untuk TextFormField
-  Widget _buildTextFormField({
-    required TextEditingController controller,
-    required String hintText,
-    required String validatorText,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(color: kBlueGray),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: kSoftBlue),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: kSoftBlue),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: kSkyBlue, width: 1.3),
-        ),
-        contentPadding: const EdgeInsets.all(16),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return validatorText;
-        }
-        return null;
-      },
-    );
-  }
-
-  // --- Fungsi _showReportForm tidak diubah ---
+  // =========================================================
+  // FUNGSI: Menampilkan form laporan (Sudah Direvisi)
+  // =========================================================
   void _showReportForm(BuildContext context) {
-    // ... (Fungsi _showReportForm yang sudah ada)
     final formKey = GlobalKey<FormState>();
     final descriptionController = TextEditingController();
     String? selectedComplaintType;
 
     final List<String> complaintOptions = [
-      'Informasi Palsu (Hoax)',
-      'Penipuan',
-      'Ujaran Kebencian',
-      'Konten Tidak Pantas',
-      'Spam',
-      'Lainnya',
+      'Ilegal/Penipuan',
+      'Informasi Palsu',
+      'Tidak Relevan',
+      'Pelanggaran S&K', 
+      'Diskriminasi/Pelanggaran Etika', 
+      'Kegiatan Fiktif', 
+      'lainnya'
     ];
 
     showModalBottomSheet(
@@ -366,6 +311,89 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
+            
+            // 🔥 LOGIKA SUBMIT LAPORAN (BARU) 🔥
+            void _submitReportForm() async {
+              if (formKey.currentState!.validate()) {
+                final kegiatanId = widget.kegiatan?.id;
+
+                if (kegiatanId == null) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("⚠ ID Kegiatan tidak valid. Gagal melaporkan."),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
+                setModalState(() => _isReportLoading = true); // Tampilkan loading
+                
+                try {
+                  // NOTE: submitReport sekarang mengembalikan http.Response
+                  final response = await _reportService.submitReport(
+                    kegiatanId: kegiatanId,
+                    keluhan: selectedComplaintType ?? '',
+                    detailKeluhan: descriptionController.text,
+                    status: 'Diproses',
+                  );
+
+                  setModalState(() => _isReportLoading = false); // Sembunyikan loading
+                  Navigator.pop(context); // Tutup modal
+
+                  if (response.statusCode >= 200 && response.statusCode < 300) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('✅ Laporan kegiatan berhasil dikirim!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    // Coba parsing body untuk mendapatkan pesan error jika backend mengirim JSON
+                    String serverMessage = '';
+                    try {
+                      final body = response.body;
+                      if (body.isNotEmpty) {
+                        final decoded = jsonDecode(body);
+                        if (decoded is Map && decoded.containsKey('message')) {
+                          serverMessage = decoded['message'].toString();
+                        } else if (decoded is Map && decoded.containsKey('error')) {
+                          serverMessage = decoded['error'].toString();
+                        } else {
+                          serverMessage = body;
+                        }
+                      }
+                    } catch (e) {
+                      serverMessage = response.body;
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '❌ Gagal mengirim laporan. Status: ${response.statusCode}\n${serverMessage.isNotEmpty ? serverMessage : "Silakan coba lagi."}',
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Network error / exception dari ApiClient
+                  setModalState(() => _isReportLoading = false); // Sembunyikan loading
+                  Navigator.pop(context); // Tutup modal
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ Terjadi kesalahan jaringan: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            }
+            // 🔥 AKHIR LOGIKA SUBMIT LAPORAN 🔥
+
             return Padding(
               padding: EdgeInsets.only(
                 top: 24,
@@ -399,6 +427,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                     ),
                     const SizedBox(height: 16),
 
+                    // Dropdown Jenis Keluhan
                     const Text(
                       "Jenis Keluhan",
                       style: TextStyle(
@@ -417,7 +446,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: kSoftBlue),
+                          borderSide: const BorderSide(color: kSoftBlue),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -459,6 +488,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
 
                     const SizedBox(height: 16),
 
+                    // Input Deskripsi Keluhan
                     const Text(
                       "Deskripsi Keluhan",
                       style: TextStyle(
@@ -502,19 +532,11 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                     ),
                     const SizedBox(height: 24),
 
+                    // Tombol Kirim Laporan
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (formKey.currentState!.validate()) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Laporan berhasil dikirim'),
-                              ),
-                            );
-                          }
-                        },
+                        onPressed: _isReportLoading ? null : _submitReportForm, // Gunakan state loading dan fungsi baru
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kDarkBlueGray,
                           foregroundColor: Colors.white,
@@ -523,13 +545,22 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          'Kirim Laporan',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: _isReportLoading
+                            ? const SizedBox( // Tampilkan loading
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                ),
+                              )
+                            : const Text(
+                                'Kirim Laporan',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -541,6 +572,10 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
       },
     );
   }
+
+  // =========================================================
+  // WIDGET BUILDER UTAMA & WIDGET PEMBANTU (Tidak diubah)
+  // =========================================================
 
   @override
   Widget build(BuildContext context) {
@@ -771,7 +806,56 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     );
   }
 
-  // Widget Lokasi (Diubah untuk menggunakan data backend)
+  // Widget pembantu untuk label form
+  Widget _buildFormLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(fontWeight: FontWeight.w600, color: kDarkBlueGray),
+    );
+  }
+
+  // Widget pembantu untuk TextFormField
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String hintText,
+    required String validatorText,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(color: kBlueGray),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: kSoftBlue),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: kSoftBlue),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: kSkyBlue, width: 1.3),
+        ),
+        contentPadding: const EdgeInsets.all(16),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return validatorText;
+        }
+        return null;
+      },
+    );
+  }
+
   Widget _buildLocationCard() {
     final locationText = widget.kegiatan?.lokasi ?? 'Lokasi tidak diketahui';
     final locationTitle =
@@ -824,8 +908,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
                   ElevatedButton.icon(
                     onPressed: () {
                       // Logic navigasi peta (misalnya menggunakan url_launcher)
-                      // final url = 'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(locationText)}';
-                      // launchUrl(Uri.parse(url));
                     },
                     icon: const Icon(Icons.location_on_outlined, size: 16),
                     label: const Text('Dapatkan Lokasi'),
@@ -851,7 +933,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 
   Widget _buildParticipantsInfo() {
-    // ... (kode _buildParticipantsInfo tidak diubah, namun data kuota bisa diganti dengan widget.kegiatan?.kuota)
     Widget buildAvatar(String url) {
       return CircleAvatar(radius: 15, backgroundImage: NetworkImage(url));
     }
@@ -887,13 +968,13 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
         const SizedBox(width: 8),
         Text(
           kuotaText, // MENGGUNAKAN KUOTA DINAMIS
-          style: TextStyle(fontWeight: FontWeight.bold, color: kDarkBlueGray),
+          style: const TextStyle(fontWeight: FontWeight.bold, color: kDarkBlueGray),
         ),
       ],
     );
   }
 
-  // 🔥 FUNGSI _buildBottomBar yang sudah dimodifikasi
+  // FUNGSI _buildBottomBar
   Widget _buildBottomBar() {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -938,7 +1019,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
               ),
             ],
           ),
-          // 🔥 LOGIC KONDISIONAL TOMBOL
+          // LOGIC KONDISIONAL TOMBOL
           _isRegistered
               ? Container(
                   padding: const EdgeInsets.symmetric(
@@ -994,7 +1075,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     );
   }
 
-  // Widget Item Persyaratan (Dipanggil di ExpansionTile)
+  // Widget Item Persyaratan
   Widget _buildRequirementItem(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -1019,7 +1100,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 
   Widget _buildDocumentCard() {
-    // ... (kode _buildDocumentCard tidak diubah)
     return InkWell(
       onTap: () {},
       child: Container(
@@ -1061,7 +1141,6 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   }
 
   Widget _buildOrganizersList() {
-    // ... (kode _buildOrganizersList tidak diubah)
     final List<String> logoPaths = [
       'assets/images/event1.jpg',
       'assets/images/event2.jpg',
@@ -1204,5 +1283,5 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
     return title != oldDelegate.title ||
         date != oldDelegate.date ||
         time != oldDelegate.time;
-  }
+}
 }

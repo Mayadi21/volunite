@@ -9,6 +9,8 @@ import 'package:volunite/color_pallete.dart';
 // Import model dan service Anda
 import 'package:volunite/models/kegiatan_model.dart'; // Sesuaikan path jika perlu
 import 'package:volunite/services/kegiatan_service.dart'; // Sesuaikan path jika perlu
+import 'package:volunite/services/auth/auth_service.dart';
+import 'package:volunite/models/user_model.dart';
 
 // UBAH DARI StatelessWidget MENJADI StatefulWidget
 class HomeTab extends StatefulWidget {
@@ -20,15 +22,25 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   // Inisialisasi Future untuk memuat data
+  User? currentUser;
+  bool isLoadingUser = true;
   late Future<List<Kegiatan>> _kegiatanFuture;
 
   @override
   void initState() {
     super.initState();
+    loadUser();
     // Memuat data kegiatan saat widget pertama kali dibuat
     _kegiatanFuture = KegiatanService.fetchKegiatan();
   }
+  void loadUser() async {
+      final user = await AuthService().getCurrentUser();
 
+      setState(() {
+        currentUser = user;
+        isLoadingUser = false;
+      });
+    }
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
@@ -55,7 +67,7 @@ class _HomeTabState extends State<HomeTab> {
                     const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           "Hi, Selamat Datang 👋",
                           style: TextStyle(
@@ -65,7 +77,9 @@ class _HomeTabState extends State<HomeTab> {
                           ),
                         ),
                         Text(
-                          "Evan Arga",
+                          isLoadingUser 
+                          ? "Memuat..."
+                          : currentUser?.nama ?? 'User',
                           style: TextStyle(fontSize: 14, color: kBlueGray),
                         ),
                       ],
@@ -242,7 +256,7 @@ class _HomeTabState extends State<HomeTab> {
 
             // ✅ BAGIAN PENTING: FutureBuilder untuk memuat dan memfilter kegiatan
             SizedBox(
-              height: 230,
+              height:245,
               child: FutureBuilder<List<Kegiatan>>(
                 future: _kegiatanFuture,
                 builder: (context, snapshot) {
