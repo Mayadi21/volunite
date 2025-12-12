@@ -1,19 +1,125 @@
+// lib/pages/Admin/dashboard/dashboard_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:volunite/color_pallete.dart';
 import 'dashboard_widgets.dart';
+import 'package:volunite/services/core/api_client.dart';
+import 'dart:convert';
+import 'package:volunite/pages/Admin/activities/activity_management_page.dart';
 
-class DashboardPage extends StatelessWidget {
+/// Model sederhana untuk activity (dideklarasikan di atas agar selalu dikenali)
+class ActivityItem {
+  final String title;
+  final String timeAgo;
+
+  ActivityItem({required this.title, required this.timeAgo});
+
+  factory ActivityItem.fromJson(Map<String, dynamic> json) {
+    return ActivityItem(
+      title: json['judul'] ?? json['title'] ?? 'Tidak ada judul',
+      timeAgo: json['time_ago'] ?? json['created_at'] ?? '',
+    );
+  }
+}
+
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
   @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  bool _loading = true;
+  String? _error;
+
+  // Statistik default (sementara)
+  int totalVolunteer = 0;
+  int organisasi = 0;
+  int eventAktif = 0;
+  int eventMenungguPersetujuan = 0;
+
+  // Aktivitas terkini (maks 3)
+  List<ActivityItem> activities = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDashboardData();
+  }
+
+  Future<void> _fetchDashboardData() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final statsResp = await ApiClient.get('/admin/dashboard-stats');
+      if (statsResp.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(statsResp.body);
+        setState(() {
+          totalVolunteer = data['total_volunteer'] ?? 0;
+          organisasi = data['organisasi'] ?? 0;
+          eventAktif = data['event_aktif'] ?? 0;
+          eventMenungguPersetujuan = data['event_menunggu_persetujuan'] ?? 0;
+        });
+      } else {
+        throw Exception('Gagal ambil statistik (${statsResp.statusCode})');
+      }
+
+      final actResp = await ApiClient.get('/admin/activities/recent?limit=3');
+      if (actResp.statusCode == 200) {
+        final List<dynamic> list = jsonDecode(actResp.body);
+        setState(() {
+          activities = list.map((e) => ActivityItem.fromJson(e)).toList();
+        });
+      } else {
+        // debug: print body
+        // ignore: avoid_print
+        print('ACT RESP BODY: ${actResp.body}');
+        throw Exception('Gagal ambil aktivitas (${actResp.statusCode})');
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Terjadi kesalahan: $_error'),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _fetchDashboardData,
+              child: const Text('Coba lagi'),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: kBackground, // Menggunakan warna background dari palet
+      backgroundColor: kBackground,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20.0),
           children: [
-            // Header Section
+            // Header
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -37,8 +143,7 @@ class DashboardPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Grid Statistik
-            // Menggunakan childAspectRatio agar kartu tidak terlalu kotak (sedikit landscape)
+            // Grid Statistik (gunakan nilai dari API)
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -46,37 +151,37 @@ class DashboardPage extends StatelessWidget {
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               childAspectRatio: 1.1,
-              children: const [
+              children: [
                 StatCard(
                   title: 'Total Volunteer',
-                  value: '1,280',
+                  value: totalVolunteer.toString(),
                   icon: Icons.group_outlined,
-                  color: kSkyBlue, // Menggunakan kSkyBlue
+                  color: kSkyBlue,
                 ),
                 StatCard(
                   title: 'Organisasi',
-                  value: '76',
+                  value: organisasi.toString(),
                   icon: Icons.business_outlined,
-                  color: kDarkBlueGray, // Menggunakan kDarkBlueGray
+                  color: kDarkBlueGray,
                 ),
                 StatCard(
                   title: 'Event Aktif',
-                  value: '32',
+                  value: eventAktif.toString(),
                   icon: Icons.event_available_outlined,
-                  color: kBlueGray, // Menggunakan kBlueGray
+                  color: kBlueGray,
                 ),
                 StatCard(
-                  title: 'Laporan Baru',
-                  value: '4',
-                  icon: Icons.description_outlined,
-                  color: kSkyBlue, // Mengulang kSkyBlue untuk aksen
+                  title: 'Event Menunggu Persetujuan',
+                  value: eventMenungguPersetujuan.toString(),
+                  icon: Icons.pending_actions_outlined,
+                  color: kSkyBlue,
                 ),
               ],
             ),
 
             const SizedBox(height: 32),
 
-            // Section Header Aktivitas
+            // Aktivitas Terkini
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -89,7 +194,14 @@ class DashboardPage extends StatelessWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ActivityManagementPage(),
+                      ),
+                    );
+                  },
                   child: const Text(
                     'Lihat Semua',
                     style: TextStyle(
@@ -102,21 +214,13 @@ class DashboardPage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // List Aktivitas
-            const ActivityCard(
-              icon: Icons.person_add_alt_1,
-              title: 'Volunteer baru Budi Santoso mendaftar.',
-              time: '2 menit lalu',
-            ),
-            const ActivityCard(
-              icon: Icons.event_note,
-              title: 'Yayasan Peduli Anak menambahkan event baru.',
-              time: '1 jam lalu',
-            ),
-            const ActivityCard(
-              icon: Icons.check_circle_outline,
-              title: 'Laporan kegiatan pantai bersih disetujui.',
-              time: '3 jam lalu',
+            // Render activities (maks 3)
+            ...activities.map(
+              (a) => ActivityCard(
+                icon: Icons.event_note,
+                title: a.title,
+                time: a.timeAgo,
+              ),
             ),
           ],
         ),
