@@ -2,78 +2,156 @@ import 'package:flutter/material.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
 
-// Import model dan service Anda
-import 'package:volunite/models/kegiatan_model.dart'; 
-import 'package:volunite/services/kegiatan_service.dart'; 
+// Model & Service
+import 'package:volunite/models/kegiatan_model.dart';
+import 'package:volunite/services/kegiatan_service.dart';
 
-// -----------------------------------------------------------------------------
-// 1. HALAMAN UTAMA (STATEFUL WIDGET)
-// -----------------------------------------------------------------------------
+
+// ============================================================================
+// 1. HALAMAN UTAMA
+// ============================================================================
 class CategoryActivitiesPage extends StatefulWidget {
   final String categoryName;
 
-  const CategoryActivitiesPage({super.key, required this.categoryName});
+  const CategoryActivitiesPage({
+    super.key,
+    required this.categoryName,
+  });
 
   @override
   State<CategoryActivitiesPage> createState() => _CategoryActivitiesPageState();
 }
 
 class _CategoryActivitiesPageState extends State<CategoryActivitiesPage> {
-  // Future untuk menyimpan hasil pemanggilan API
   late Future<List<Kegiatan>> _kegiatanFuture;
+
+  // 🔍 SEARCH STATE
+  List<Kegiatan> _allKegiatan = [];
+  String _searchText = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Memuat semua data kegiatan saat widget dibuat
-    _kegiatanFuture = KegiatanService.fetchKegiatan();
+    _kegiatanFuture = _fetchAndStoreKegiatan();
+    _searchController.addListener(_onSearchChanged);
   }
 
-  // --- Utility Functions untuk format tanggal/waktu (Disalin dari home.dart) ---
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // --------------------------------------------------------------------------
+  // FETCH & SEARCH LOGIC
+  // --------------------------------------------------------------------------
+
+  Future<List<Kegiatan>> _fetchAndStoreKegiatan() async {
+    final kegiatan = await KegiatanService.fetchKegiatan();
+    if (mounted) {
+      setState(() {
+        _allKegiatan = kegiatan;
+      });
+    }
+    return kegiatan;
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchText = _searchController.text.toLowerCase();
+    });
+  }
+
+  List<Kegiatan> _getFilteredKegiatan() {
+    // 1️⃣ Filter kategori
+    final byCategory = _allKegiatan.where((k) {
+      return k.kategori.any(
+        (cat) =>
+            cat.namaKategori.toLowerCase() ==
+            widget.categoryName.toLowerCase(),
+      );
+    }).toList();
+
+    // 2️⃣ Jika search kosong
+    if (_searchText.isEmpty) return byCategory;
+
+    // 3️⃣ Filter search
+    return byCategory.where((k) {
+      final titleMatch = k.judul.toLowerCase().contains(_searchText);
+      final descMatch =
+          (k.deskripsi ?? '').toLowerCase().contains(_searchText);
+      final categoryMatch = k.kategori.any(
+        (cat) => cat.namaKategori.toLowerCase().contains(_searchText),
+      );
+
+      return titleMatch || descMatch || categoryMatch;
+    }).toList();
+  }
+
+  // --------------------------------------------------------------------------
+  // FORMAT TANGGAL & WAKTU
+  // --------------------------------------------------------------------------
 
   String _formatDate(DateTime? date) {
     if (date == null) return 'Tanggal N/A';
-    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const monthNames = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    
-    // Penyesuaian indexing untuk dayNames: DateTime.weekday mengembalikan 1 (Senin) hingga 7 (Minggu)
-    final int weekdayIndex = date.weekday % 7; 
-    final dayName = dayNames[weekdayIndex];
-    
-    final day = date.day;
-    final month = monthNames[date.month];
-    final year = date.year;
 
-    return '$dayName, $day $month $year';
+    const days = [
+      'Minggu',
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu'
+    ];
+    const months = [
+      '',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember'
+    ];
+
+    return '${days[date.weekday % 7]}, ${date.day} ${months[date.month]} ${date.year}';
   }
 
   String _formatTimeRange(DateTime? start, DateTime? end) {
     if (start == null) return 'Waktu N/A';
 
-    final startTime = '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
-    
+    final startTime =
+        '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
+
     if (end != null) {
-      final endTime = '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
+      final endTime =
+          '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
       return '$startTime - $endTime';
     }
-    
+
     return startTime;
   }
-  
-  // -----------------------------------------------------------------------------
-  // WIDGET UTAMA
-  // -----------------------------------------------------------------------------
+
+  // --------------------------------------------------------------------------
+  // UI
+  // --------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -94,113 +172,126 @@ class _CategoryActivitiesPageState extends State<CategoryActivitiesPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
       ),
-      // MENGGUNAKAN FUTUREBUILDER UNTUK MEMUAT DATA DARI BACKEND
-      body: FutureBuilder<List<Kegiatan>>(
-        future: _kegiatanFuture,
-        builder: (context, snapshot) {
-          // State Loading
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          // 🔍 SEARCH BAR
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Cari kegiatan...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: kSoftBlue.withOpacity(0.4),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
 
-          // State Error
-          if (snapshot.hasError) {
-            return Center(
-                child: Text('Gagal memuat data: ${snapshot.error}'));
-          }
+          // 📋 LIST
+          Expanded(
+            child: FutureBuilder<List<Kegiatan>>(
+              future: _kegiatanFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          // State Data Tersedia
-          if (snapshot.hasData) {
-            final allKegiatan = snapshot.data!;
-            
-            // LOGIKA FILTER BERDASARKAN categoryName (case-insensitive)
-            // Asumsi properti model Kegiatan untuk kategori adalah 'kategori' (String)
-            final List<Kegiatan> filteredKegiatan = allKegiatan
-        .where((k) => k.kategori.any((kategoriItem) => 
-            kategoriItem.namaKategori.toLowerCase() == widget.categoryName.toLowerCase())
-        )
-        .toList();
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Error: ${snapshot.error}'),
+                  );
+                }
 
-            // State Data Kosong Setelah Filter
-            if (filteredKegiatan.isEmpty) {
-              return Center(
-                  child: Text(
-                      'Tidak ada kegiatan yang ditemukan untuk kategori ${widget.categoryName}.'));
-            }
+                final filtered = _getFilteredKegiatan();
 
-            // Tampilkan data yang sudah difilter
-            return ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: filteredKegiatan.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 20),
-              itemBuilder: (context, index) {
-                final kegiatan = filteredKegiatan[index];
-                
-                // Format tanggal dan waktu
-                final formattedDate = _formatDate(kegiatan.tanggalMulai);
-                final formattedTime = _formatTimeRange(kegiatan.tanggalMulai, kegiatan.tanggalBerakhir);
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Text(
+                      _searchText.isEmpty
+                          ? 'Tidak ada kegiatan di kategori ini.'
+                          : 'Tidak ada hasil untuk "$_searchText"',
+                      style: const TextStyle(color: kBlueGray),
+                    ),
+                  );
+                }
 
-                return GestureDetector(
-                  onTap: () {
-                    // Navigasi ke DetailActivitiesPage
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetailActivitiesPage(
-                          kegiatan: kegiatan, // Kirim objek Kegiatan nyata
-                          title: kegiatan.judul,
-                          date: formattedDate,
-                          time: formattedTime,
-                          imagePath: kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg',
+                return ListView.separated(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: 20),
+                  itemBuilder: (context, index) {
+                    final kegiatan = filtered[index];
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DetailActivitiesPage(
+                              kegiatan: kegiatan,
+                              title: kegiatan.judul,
+                              date: _formatDate(kegiatan.tanggalMulai),
+                              time: _formatTimeRange(
+                                kegiatan.tanggalMulai,
+                                kegiatan.tanggalBerakhir,
+                              ),
+                              imagePath: kegiatan.thumbnail ??
+                                  'assets/images/event_placeholder.jpg',
+                            ),
+                          ),
+                        );
+                      },
+                      child: KegiatanCard(
+                        kegiatan: kegiatan,
+                        date: _formatDate(kegiatan.tanggalMulai),
+                        timeRange: _formatTimeRange(
+                          kegiatan.tanggalMulai,
+                          kegiatan.tanggalBerakhir,
                         ),
                       ),
                     );
                   },
-                  // Menggunakan Widget Card yang baru (KegiatanCard)
-                  child: KegiatanCard(
-                    kegiatan: kegiatan,
-                    date: formattedDate,
-                    timeRange: formattedTime,
-                  ),
                 );
               },
-            );
-          }
-
-          // Fallback
-          return const Center(child: Text('Tidak ada data kegiatan.'));
-        },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// -----------------------------------------------------------------------------
-// 2. WIDGET CARD BARU (KEGIATANCARD)
-// Widget ini menampilkan data menggunakan model Kegiatan dari backend.
-// -----------------------------------------------------------------------------
+
+// ============================================================================
+// 2. KARTU KEGIATAN (WAJIB DI LUAR STATE)
+// ============================================================================
 class KegiatanCard extends StatelessWidget {
   final Kegiatan kegiatan;
   final String date;
   final String timeRange;
-  
+
   const KegiatanCard({
-    super.key, 
+    super.key,
     required this.kegiatan,
     required this.date,
     required this.timeRange,
   });
 
-  // Logika untuk menentukan apakah kegiatan sudah selesai
-  bool get isFinished => kegiatan.status.toLowerCase() == 'completed' || kegiatan.status.toLowerCase() == 'finished';
+  bool get isFinished =>
+      kegiatan.status.toLowerCase() == 'completed' ||
+      kegiatan.status.toLowerCase() == 'finished';
 
   @override
   Widget build(BuildContext context) {
     final image = kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg';
-    // Cek apakah thumbnail berupa URL atau Asset
-    final bool isUrl = image.startsWith("http"); 
+    final isUrl = image.startsWith('http');
 
     return Container(
       decoration: BoxDecoration(
@@ -208,7 +299,7 @@ class KegiatanCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: kBlueGray.withOpacity(0.20),
+            color: kBlueGray.withOpacity(0.2),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -218,39 +309,28 @@ class KegiatanCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-            // Menampilkan gambar dari URL (Network) atau Asset
-            child: isUrl 
-              ? Image.network(
-                  image,
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(18)),
+            child: isUrl
+                ? Image.network(
+                    image,
                     height: 160,
-                    color: Colors.grey[300],
-                    child: const Center(child: Icon(Icons.image_not_supported)),
-                  ),
-                )
-              : Image.asset(
-                  image,
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  )
+                : Image.asset(
+                    image,
                     height: 160,
-                    color: Colors.grey[300],
-                    child: const Center(child: Icon(Icons.image_not_supported)),
+                    width: double.infinity,
+                    fit: BoxFit.cover,
                   ),
-                ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
@@ -262,17 +342,11 @@ class KegiatanCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (isFinished) ...[
-                      const SizedBox(width: 8),
-                      const _FinishedChip(),
-                    ],
+                    if (isFinished) const _FinishedChip(),
                   ],
                 ),
                 const SizedBox(height: 8),
-                _InfoRow(
-                  icon: Icons.calendar_today,
-                  text: date,
-                ),
+                _InfoRow(icon: Icons.calendar_today, text: date),
                 const SizedBox(height: 4),
                 _InfoRow(icon: Icons.access_time, text: timeRange),
               ],
@@ -285,13 +359,13 @@ class KegiatanCard extends StatelessWidget {
 }
 
 
-// -----------------------------------------------------------------------------
-// 3. KOMPONEN PEMBANTU (Tidak diubah dari file sebelumnya)
-// -----------------------------------------------------------------------------
-
+// ============================================================================
+// 3. KOMPONEN PENDUKUNG
+// ============================================================================
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;
+
   const _InfoRow({required this.icon, required this.text});
 
   @override
@@ -300,7 +374,10 @@ class _InfoRow extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: kBlueGray),
         const SizedBox(width: 6),
-        Text(text, style: const TextStyle(fontSize: 12, color: kBlueGray)),
+        Text(
+          text,
+          style: const TextStyle(fontSize: 12, color: kBlueGray),
+        ),
       ],
     );
   }
@@ -312,7 +389,8 @@ class _FinishedChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFFE3F1FF),
         borderRadius: BorderRadius.circular(12),
@@ -320,7 +398,8 @@ class _FinishedChip extends StatelessWidget {
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_circle, size: 12, color: kDarkBlueGray),
+          Icon(Icons.check_circle,
+              size: 12, color: kDarkBlueGray),
           SizedBox(width: 4),
           Text(
             'Selesai',

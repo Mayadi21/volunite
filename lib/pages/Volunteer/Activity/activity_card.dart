@@ -1,46 +1,74 @@
-// lib/pages/kegiatan/activity_card.dart
+// lib/pages/Volunteer/Activity/activity_card.dart
 import 'package:flutter/material.dart';
-import 'package:volunite/color_pallete.dart'; // Impor color palette
+import 'package:volunite/color_pallete.dart';
+import 'package:volunite/models/kegiatan_model.dart';
+import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
+import 'package:volunite/services/pendaftaran_service.dart';
+import 'package:volunite/services/auth/auth_service.dart';
 
-// Anda perlu mendefinisikan kBadgeBgFinished di color_pallete.dart, contoh:
-// const Color kBadgeBgFinished = Color(0xFFE3F1FF); // soft blue
+class ActivityCard extends StatefulWidget {
+  final Kegiatan kegiatan;
 
-enum ActivityStatus { upcoming, finished }
-
-class Activity {
-  final String title;
-  final DateTime date;
-  final TimeOfDay start;
-  final TimeOfDay end;
-  // Ubah tipe data untuk mencocokkan penggunaan Image.asset
-  final String bannerUrl;
-  final ActivityStatus status;
-
-  Activity({
-    required this.title,
-    required this.date,
-    required this.start,
-    required this.end,
-    required this.bannerUrl,
-    required this.status,
+  const ActivityCard({
+    super.key,
+    required this.kegiatan,
   });
+
+  @override
+  State<ActivityCard> createState() => _ActivityCardState();
 }
 
-class ActivityCard extends StatelessWidget {
-  final Activity activity;
-  const ActivityCard({super.key, required this.activity});
+class _ActivityCardState extends State<ActivityCard> {
+  final PendaftaranService _pendaftaranService = PendaftaranService();
+  final AuthService _authService = AuthService();
 
-  // Helper untuk memformat tanggal
+  bool _isRegistered = false;
+  bool _isChecking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRegistrationStatus();
+  }
+
+  // =========================================================
+  // 🔥 LOGIC SAMA PERSIS DENGAN DetailActivitiesPage
+  // =========================================================
+  Future<void> _checkRegistrationStatus() async {
+    final kegiatanId = widget.kegiatan.id;
+    final user = await _authService.getCurrentUser();
+
+    if (user == null) {
+      setState(() {
+        _isRegistered = false;
+        _isChecking = false;
+      });
+      return;
+    }
+
+    try {
+      final isRegistered =
+          await _pendaftaranService.isUserRegistered(kegiatanId);
+
+      if (mounted) {
+        setState(() {
+          _isRegistered = isRegistered;
+          _isChecking = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking registration status: $e');
+      if (mounted) {
+        setState(() {
+          _isRegistered = false;
+          _isChecking = false;
+        });
+      }
+    }
+  }
+
   String _formatDate(DateTime d) {
-    const hari = [
-      'Minggu',
-      'Senin',
-      'Selasa',
-      'Rabu',
-      'Kamis',
-      'Jumat',
-      'Sabtu',
-    ];
+    const hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const bulan = [
       'Januari',
       'Februari',
@@ -53,86 +81,163 @@ class ActivityCard extends StatelessWidget {
       'September',
       'Oktober',
       'November',
-      'Desember',
+      'Desember'
     ];
-    // Perbaikan indexing hari: d.weekday mengembalikan 1 (Senin) hingga 7 (Minggu).
-    // Untuk list hari di atas (diawali Minggu di index 0), gunakan [d.weekday % 7].
     return '${hari[d.weekday % 7]}, ${d.day} ${bulan[d.month - 1]} ${d.year}';
   }
 
-  // Helper untuk memformat waktu
-  String _formatTime(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}.${t.minute.toString().padLeft(2, '0')}';
+  String _formatTimeRange(DateTime? start, DateTime? end) {
+    if (start == null) return 'Waktu tidak tersedia';
+
+    final s =
+        '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
+    if (end == null) return s;
+
+    final e =
+        '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
+    return '$s - $e';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isFinished = activity.status == ActivityStatus.finished;
-    final timeRange =
-        '${_formatTime(activity.start)} - ${_formatTime(activity.end)} WIB';
+    final isFinished =
+        widget.kegiatan.status.toLowerCase() == 'finished' ||
+            widget.kegiatan.status.toLowerCase() == 'completed';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
+    final date = _formatDate(
+      widget.kegiatan.tanggalMulai ?? DateTime.now(),
+    );
+    final time = _formatTimeRange(
+      widget.kegiatan.tanggalMulai,
+      widget.kegiatan.tanggalBerakhir,
+    );
+
+    final imagePath =
+        widget.kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg';
+    final isUrl = imagePath.startsWith('http');
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: kBlueGray.withOpacity(0.20),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Banner
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-            child: Image.network(
-              activity.bannerUrl,
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
+        onTap: () async {
+          final bool? result = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DetailActivitiesPage(
+              kegiatan: widget.kegiatan,
+              title: widget.kegiatan.judul,
+              date: date,
+              time: time,
+              imagePath: imagePath,
             ),
           ),
-          // Konten Detail
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title & Chip
-                Row(
+        );
+
+        if (result == true && mounted) {
+          _checkRegistrationStatus();
+        }
+      },
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: kBlueGray.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(18)),
+                child: isUrl
+                    ? Image.network(
+                        imagePath,
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.asset(
+                        imagePath,
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        activity.title,
-                        style: const TextStyle(
-                          fontSize: 15, // Disesuaikan sedikit lebih besar
-                          fontWeight: FontWeight.w700,
-                          color: kDarkBlueGray,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.kegiatan.judul,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: kDarkBlueGray,
+                            ),
+                          ),
                         ),
-                      ),
+
+                        // 🔥 Badge Terdaftar
+                        if (!_isChecking && _isRegistered)
+                          const _RegisteredChip(),
+
+                        // Badge Selesai
+                        if (isFinished) const _FinishedChip(),
+                      ],
                     ),
-                    if (isFinished) ...[
-                      const SizedBox(width: 8),
-                      const _FinishedChip(),
-                    ],
+                    const SizedBox(height: 8),
+                    _InfoRow(icon: Icons.calendar_today, text: date),
+                    const SizedBox(height: 4),
+                    _InfoRow(icon: Icons.access_time, text: time),
                   ],
                 ),
-                const SizedBox(height: 8),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-                // Info Tanggal
-                _InfoRow(
-                  icon: Icons.calendar_today,
-                  text: _formatDate(activity.date),
-                ),
-                const SizedBox(height: 4),
+// =========================================================
+// BADGE WIDGET
+// =========================================================
 
-                // Info Waktu
-                _InfoRow(icon: Icons.access_time, text: timeRange),
-              ],
+class _RegisteredChip extends StatelessWidget {
+  const _RegisteredChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.check_circle, size: 12, color: Colors.green),
+          SizedBox(width: 4),
+          Text(
+            'Terdaftar',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.green,
             ),
           ),
         ],
@@ -141,16 +246,38 @@ class ActivityCard extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// KOMPONEN PEMBANTU
-// -----------------------------------------------------------------------------
+class _FinishedChip extends StatelessWidget {
+  const _FinishedChip();
 
-// Row icon + text
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F1FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Text(
+        'Selesai',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: kDarkBlueGray,
+        ),
+      ),
+    );
+  }
+}
+
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const _InfoRow({required this.icon, required this.text});
+  const _InfoRow({
+    required this.icon,
+    required this.text,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -158,39 +285,11 @@ class _InfoRow extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: kBlueGray),
         const SizedBox(width: 6),
-        Text(text, style: const TextStyle(fontSize: 12, color: kBlueGray)),
+        Text(
+          text,
+          style: const TextStyle(fontSize: 12, color: kBlueGray),
+        ),
       ],
-    );
-  }
-}
-
-// Chip status selesai
-class _FinishedChip extends StatelessWidget {
-  const _FinishedChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE3F1FF), // soft blue (as kBadgeBgFinished)
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.check_circle, size: 12, color: kDarkBlueGray),
-          SizedBox(width: 4),
-          Text(
-            'Selesai',
-            style: TextStyle(
-              color: kDarkBlueGray,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

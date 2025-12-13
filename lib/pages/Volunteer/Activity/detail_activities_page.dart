@@ -203,6 +203,9 @@ ${activityLink}
                   setState(() { // Perbarui state _isRegistered di halaman utama
                     _isRegistered = true;
                   });
+
+                  Navigator.pop(context, true); // Tutup modal
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('✅ Pendaftaran kegiatan berhasil dikirim!'),

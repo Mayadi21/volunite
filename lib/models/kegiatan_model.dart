@@ -19,6 +19,8 @@ class Kegiatan {
   final String status;
   final int pendaftarCount; 
   
+  final bool isRegistered;
+
   final User? organizer;
   final List<Kategori> kategori;
 
@@ -37,6 +39,7 @@ class Kegiatan {
     this.tanggalBerakhir,
     required this.status,
     this.pendaftarCount = 0, 
+    this.isRegistered = false,
     this.organizer,
     this.kategori = const [],
   });
