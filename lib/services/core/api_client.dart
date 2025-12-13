@@ -110,7 +110,6 @@ class ApiClient {
         );
         request.files.add(pic);
       } else {
-        // KHUSUS MOBILE: Kirim lewat Path (Disk)
         final pic = await http.MultipartFile.fromPath(
           fileKey, 
           file.path
