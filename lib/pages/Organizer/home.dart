@@ -22,12 +22,21 @@ class _OrganizerHomeTabState extends State<OrganizerHomeTab> {
   void initState() {
     super.initState();
     _refreshData();
+    KegiatanService.shouldRefresh.addListener(_refreshData);
+  }
+
+  @override
+  void dispose() {
+    KegiatanService.shouldRefresh.removeListener(_refreshData);
+    super.dispose();
   }
 
   void _refreshData() {
-    setState(() {
-      _futureKegiatan = KegiatanService.fetchOrganizerKegiatan();
-    });
+     if (mounted) { 
+        setState(() {
+          _futureKegiatan = KegiatanService.fetchOrganizerKegiatan();
+        });
+     }
   }
 
   @override

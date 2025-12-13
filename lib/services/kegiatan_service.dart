@@ -1,18 +1,27 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart'; // Untuk ValueNotifier
 import 'package:image_picker/image_picker.dart';
 import 'package:volunite/models/kegiatan_model.dart';
 import 'package:volunite/services/core/api_client.dart';
 
 class KegiatanService {
+  
+  // --- [1] FITUR AUTO REFRESH (ALARM GLOBAL) ---
+  // Variabel ini akan didengarkan oleh halaman Activities & Home
+  static final ValueNotifier<bool> shouldRefresh = ValueNotifier(false);
+
+  // Fungsi untuk membunyikan alarm
+  static void triggerRefresh() {
+    shouldRefresh.value = !shouldRefresh.value;
+  }
+  // ---------------------------------------------
+
   // 1. GET PUBLIC (Volunteer)
   static Future<List<Kegiatan>> fetchKegiatan() async {
     final response = await ApiClient.get('/kegiatan');
-
-    if (response.statusCode == 200) {
-      // PERUBAHAN: Langsung terima sebagai List, bukan Map
-      final List<dynamic> jsonList = jsonDecode(response.body);
-
-      // Langsung mapping, tidak perlu jsonResponse['data']
+     if (response.statusCode == 200) {
+      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+      final List<dynamic> jsonList = jsonResponse['data'];
       return jsonList.map((e) => Kegiatan.fromJson(e)).toList();
     } else {
       throw Exception('Gagal fetch: ${response.statusCode}');
@@ -23,10 +32,11 @@ class KegiatanService {
   static Future<bool> createKegiatan({
     required String judul,
     required String deskripsi,
-    required String? linkGrup, // Param Link WA
+    required String? linkGrup,
     required String lokasi,
     required String syaratKetentuan,
     required String kuota,
+    required String metodePenerimaan,
     required String tanggalMulai,
     required String tanggalBerakhir,
     required List<int> kategoriIds,
@@ -38,6 +48,7 @@ class KegiatanService {
       'lokasi': lokasi,
       'syarat_ketentuan': syaratKetentuan,
       'kuota': kuota,
+      'metode_penerimaan': metodePenerimaan,
       'tanggal_mulai': tanggalMulai,
       'tanggal_berakhir': tanggalBerakhir,
     };
@@ -62,12 +73,12 @@ class KegiatanService {
 
   // 3. GET LIST ORGANIZER (Dashboard)
   static Future<List<Kegiatan>> fetchOrganizerKegiatan() async {
-    final response = await ApiClient.get('/organizer/kegiatan');
+    final response = await ApiClient.get('/organizer/kegiatan'); 
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-      final List<dynamic> jsonList = jsonResponse['data'];
-
+      final List<dynamic> jsonList = jsonResponse['data']; 
+      
       return jsonList
           .map((e) => Kegiatan.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -81,21 +92,24 @@ class KegiatanService {
     required int id,
     required String judul,
     required String deskripsi,
-    required String? linkGrup, // Param Link WA
+    required String? linkGrup,
     required String lokasi,
     required String syaratKetentuan,
     required String kuota,
+    required String metodePenerimaan,
     required String tanggalMulai,
     required String tanggalBerakhir,
     required List<int> kategoriIds,
-    XFile? imageFile,
+    XFile? imageFile, 
   }) async {
+    
     Map<String, String> fields = {
       'judul': judul,
       'deskripsi': deskripsi,
       'lokasi': lokasi,
       'syarat_ketentuan': syaratKetentuan,
       'kuota': kuota,
+      'metode_penerimaan': metodePenerimaan,
       'tanggal_mulai': tanggalMulai,
       'tanggal_berakhir': tanggalBerakhir,
     };
@@ -109,7 +123,7 @@ class KegiatanService {
     }
 
     final response = await ApiClient.postMultipart(
-      '/organizer/kegiatan/$id',
+      '/organizer/kegiatan/$id', 
       fields: fields,
       file: imageFile,
       fileKey: 'thumbnail',
