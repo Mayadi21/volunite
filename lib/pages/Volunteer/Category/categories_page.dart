@@ -1,59 +1,75 @@
-// lib/pages/Volunteer/Category/categories_page.dart
-
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:volunite/color_pallete.dart';
-import 'package:volunite/pages/Volunteer/Category/detail_category.dart'; // Pastikan impor halaman detail
+// Import model dan service kategori Anda
+import 'package:volunite/models/kategori_model.dart';
+// Asumsi service kategori ada di path berikut:
+import 'package:volunite/services/kategori_service.dart'; 
 
-// Model Sederhana untuk Data Kategori (Tetap Sama)
-class ActivityCategory {
-  final String name;
-  final IconData icon;
-  final Color color;
+// Import halaman tujuan (asumsi DetailCategoryPage menerima Kategori atau nama)
+import 'package:volunite/pages/Volunteer/Category/category_activities_page.dart'; 
+// Asumsi 'detail_category.dart' adalah CategoryActivitiesPage (diberikan sebelumnya)
+// Jika Anda memiliki DetailCategoryPage terpisah, sesuaikan impor di atas dan navigasi di bawah.
 
-  const ActivityCategory({
-    required this.name,
-    required this.icon,
-    required this.color,
-  });
-}
 
-class CategoriesPage extends StatelessWidget {
+// 🔥 UBAH DARI StatelessWidget MENJADI StatefulWidget
+class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
 
-  // Daftar Dummy Kategori (Tetap Sama)
-  final List<ActivityCategory> categories = const [
-    ActivityCategory(
-      name: 'Pendidikan',
-      icon: FontAwesomeIcons.bookOpen,
-      color: Color(0xFF4CAF50),
-    ),
-    ActivityCategory(
-      name: 'Lingkungan',
-      icon: FontAwesomeIcons.leaf,
-      color: Color(0xFF2196F3),
-    ),
-    ActivityCategory(
-      name: 'Kesehatan',
-      icon: FontAwesomeIcons.heartPulse,
-      color: Color(0xFFF44336),
-    ),
-    ActivityCategory(
-      name: 'Sosial',
-      icon: FontAwesomeIcons.handsHoldingChild,
-      color: Color(0xFFFF9800),
-    ),
-    ActivityCategory(
-      name: 'Budaya',
-      icon: FontAwesomeIcons.palette,
-      color: Color(0xFF9C27B0),
-    ),
-    ActivityCategory(
-      name: 'Teknologi',
-      icon: FontAwesomeIcons.laptopCode,
-      color: Color(0xFF00BCD4),
-    ),
-  ];
+  @override
+  State<CategoriesPage> createState() => _CategoriesPageState();
+}
+
+class _CategoriesPageState extends State<CategoriesPage> {
+  late Future<List<Kategori>> _kategoriFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // 🔥 Memuat data kategori saat inisialisasi
+    _kategoriFuture = KategoriService.fetchKategori();
+  }
+  
+  // 🔥 FUNGSI PEMBANTU UNTUK MENGAMBIL IKON BERDASARKAN NAMA
+  IconData _getIconForCategory(String categoryName) {
+    // Anda bisa menentukan map ikon statis di sini 
+    switch (categoryName.toLowerCase()) {
+      case 'pendidikan':
+        return Icons.school;
+      case 'lingkungan':
+        return Icons.nature;
+      case 'kesehatan':
+        return Icons.health_and_safety;
+      case 'sosial':
+        return Icons.people;
+      case 'budaya':
+        return Icons.palette;
+      case 'teknologi':
+        return Icons.laptop_mac; // Menggunakan Icons default Flutter
+      default:
+        return Icons.category;
+    }
+  }
+
+  // 🔥 FUNGSI PEMBANTU UNTUK MENENTUKAN WARNA BERDASARKAN NAMA (Opsional)
+  Color _getColorForCategory(String categoryName) {
+    switch (categoryName.toLowerCase()) {
+      case 'pendidikan':
+        return const Color(0xFF4CAF50);
+      case 'lingkungan':
+        return const Color(0xFF2196F3);
+      case 'kesehatan':
+        return const Color(0xFFF44336);
+      case 'sosial':
+        return const Color(0xFFFF9800);
+      case 'budaya':
+        return const Color(0xFF9C27B0);
+      case 'teknologi':
+        return const Color(0xFF00BCD4);
+      default:
+        return kSkyBlue; // Fallback
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -81,43 +97,89 @@ class CategoriesPage extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 1.2,
-          ),
-          itemCount: categories.length,
-          itemBuilder: (context, index) {
-            final category = categories[index];
-            // KIRIM DATA KATEGORI ke _CategoryCard
-            return _CategoryCard(category: category);
-          },
-        ),
+      // 🔥 Mengganti GridView statis dengan FutureBuilder
+      body: FutureBuilder<List<Kategori>>(
+        future: _kategoriFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Gagal memuat kategori: ${snapshot.error}'));
+          }
+
+          if (snapshot.hasData) {
+            final categories = snapshot.data!;
+
+            if (categories.isEmpty) {
+              return const Center(child: Text('Tidak ada kategori yang tersedia saat ini.'));
+            }
+
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.2,
+                ),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final category = categories[index];
+                  
+                  // 🔥 KIRIM DATA DARI MODEL KATEGORI BACKEND ke _CategoryCard
+                  return _CategoryCard(
+                    category: category,
+                    icon: _getIconForCategory(category.namaKategori), // Ambil ikon statis
+                    color: _getColorForCategory(category.namaKategori), // Ambil warna statis
+                  );
+                },
+              ),
+            );
+          }
+
+          return const Center(child: Text('Tidak ada data.'));
+        },
       ),
     );
   }
 }
 
-// Widget untuk Tampilan Kartu Kategori
+// -----------------------------------------------------------------------------
+// 3. WIDGET CARD (DIUBAH UNTUK MENGAMBIL MODEL KATEGORI)
+// -----------------------------------------------------------------------------
 class _CategoryCard extends StatelessWidget {
-  final ActivityCategory category;
+  // Sekarang menerima model Kategori dari backend, dan ikon/warna statis
+  final Kategori category;
+  final IconData icon;
+  final Color color;
 
-  // Hapus parameter index dari konstruktor
-  const _CategoryCard({required this.category});
+  const _CategoryCard({
+    required this.category,
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Logic untuk menentukan apakah thumbnail adalah URL atau Asset
+    final String imagePath = category.thumbnail ?? 'assets/images/category_placeholder.png';
+    final bool isUrl = imagePath.startsWith("http") || imagePath.startsWith("https");
+
+    // Jika Anda ingin menggunakan thumbnail sebagai latar belakang kartu/ikon,
+    // Anda bisa mengganti ikon dengan gambar di sini, tapi untuk saat ini
+    // kita gunakan ikon dan warna yang sudah ditentukan.
+    
     return InkWell(
-      // PERBAIKAN: Semua kartu sekarang memiliki aksi navigasi yang sama
+      // Navigasi ke CategoryActivitiesPage, mengirim nama kategori
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => DetailCategoryPage(category: category),
+            // Asumsi CategoryActivitiesPage menerima categoryName (String)
+            builder: (context) => CategoryActivitiesPage(categoryName: category.namaKategori), 
           ),
         );
       },
@@ -142,15 +204,16 @@ class _CategoryCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: category.color.withOpacity(0.15),
+                // Menggunakan warna yang didapat dari fungsi helper
+                color: color.withOpacity(0.15), 
                 shape: BoxShape.circle,
               ),
-              child: Icon(category.icon, size: 24, color: category.color),
+              child: Icon(icon, size: 24, color: color), // Menggunakan ikon yang didapat dari fungsi helper
             ),
             const SizedBox(height: 12),
-            // Nama Kategori
+            // Nama Kategori dari Database
             Text(
-              category.name,
+              category.namaKategori, // 🔥 Menggunakan namaKategori dari model
               style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 16,
@@ -160,10 +223,10 @@ class _CategoryCard extends StatelessWidget {
             const SizedBox(height: 4),
             // Teks Tambahan
             Text(
-              'Lihat daftar kegiatan', // Teks statis untuk semua kartu
+              'Lihat daftar kegiatan', 
               style: TextStyle(
                 fontSize: 12,
-                color: kSkyBlue, // Warna cerah agar menarik
+                color: kSkyBlue, 
                 fontWeight: FontWeight.w600,
               ),
             ),

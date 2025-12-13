@@ -5,12 +5,14 @@ import 'package:volunite/pages/Volunteer/Notification/notification.dart';
 import 'package:volunite/pages/Volunteer/Category/categories_page.dart';
 import 'package:volunite/pages/Volunteer/Category/category_activities_page.dart';
 import 'package:volunite/color_pallete.dart';
+import 'package:volunite/services/pendaftaran_service.dart';
+
 
 // Import model dan service Anda
 import 'package:volunite/models/kegiatan_model.dart'; 
 import 'package:volunite/services/kegiatan_service.dart'; 
 import 'package:volunite/services/auth/auth_service.dart';
-import 'package:volunite/models/user_model.dart'; // Pastikan model ini punya pathProfil
+import 'package:volunite/models/user_model.dart'; 
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -24,32 +26,98 @@ class _HomeTabState extends State<HomeTab> {
   bool isLoadingUser = true;
   late Future<List<Kegiatan>> _kegiatanFuture;
 
+  // 🔥 STATE BARU UNTUK PENCARIAN
+  List<Kegiatan> _allKegiatan = []; // Menyimpan semua kegiatan yang dimuat
+  String _searchText = ''; // Teks yang dimasukkan pengguna
+  final TextEditingController _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     loadUser();
-    _kegiatanFuture = KegiatanService.fetchKegiatan();
+    // Memuat kegiatan dan menyimpannya di _allKegiatan
+    _kegiatanFuture = _fetchAndStoreKegiatan();
+    
+    // Mendaftarkan listener untuk Search Bar
+    _searchController.addListener(_onSearchChanged);
   }
-  
-  void loadUser() async {
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // FUNGSI UTILITY BARU
+
+  Future<void> loadUser() async {
     final user = await AuthService().getCurrentUser();
 
+    if (mounted) {
+      setState(() {
+        currentUser = user;
+        isLoadingUser = false;
+      });
+    }
+  }
+  
+  // 🔥 FUNGSI BARU: Memuat dan menyimpan semua data kegiatan
+  Future<List<Kegiatan>> _fetchAndStoreKegiatan() async {
+    final kegiatanList = await KegiatanService.fetchKegiatan();
+    if (mounted) {
+      setState(() {
+        _allKegiatan = kegiatanList;
+      });
+    }
+    return kegiatanList;
+  }
+  
+  // 🔥 FUNGSI BARU: Dipanggil setiap kali teks pencarian berubah
+  void _onSearchChanged() {
     setState(() {
-      currentUser = user;
-      isLoadingUser = false;
+      _searchText = _searchController.text;
+      // setState akan memicu FutureBuilder untuk melakukan filter ulang
     });
   }
 
+  // 🔥 FUNGSI BARU: Melakukan pemfilteran data kegiatan
+  List<Kegiatan> _getFilteredKegiatan(List<Kegiatan> allKegiatan) {
+    
+    // Tahap 1: Filter berdasarkan status 'scheduled'
+    final List<Kegiatan> scheduledKegiatan = allKegiatan
+        .where((k) => k.status.toLowerCase() == 'scheduled')
+        .toList();
+
+    if (_searchText.isEmpty) {
+      // Jika kolom search kosong, kembalikan hanya kegiatan yang dijadwalkan
+      return scheduledKegiatan;
+    }
+    
+    final query = _searchText.toLowerCase();
+    
+    // Tahap 2: Filter berdasarkan teks pencarian
+    return scheduledKegiatan.where((k) {
+      // Cek kecocokan di Judul
+      final titleMatch = k.judul.toLowerCase().contains(query);
+      
+      // Cek kecocokan di Deskripsi
+      final descriptionMatch = (k.deskripsi ?? '').toLowerCase().contains(query);
+      
+      // Cek kecocokan di Kategori (jika ada)
+      final categoryMatch = k.kategori.any((cat) => 
+          cat.namaKategori.toLowerCase().contains(query)
+      );
+
+      return titleMatch || descriptionMatch || categoryMatch;
+    }).toList();
+  }
+  
+
   // 🔥 FUNGSI PEMBANTU UNTUK MENAMPILKAN GAMBAR PROFIL
   Widget _buildProfileImage(String path) {
-    // Ukuran yang sesuai dengan radius 24 * 2
     const double size = 48.0; 
-    
-    // Periksa apakah path adalah URL jaringan (http/https)
     final bool isNetworkImage = path.startsWith("http") || path.startsWith("https");
-    
-    // Jika path adalah asset, pastikan path lengkapnya benar.
-    // Asumsi: Path database 'images/profile/...' mengacu pada folder 'assets/images/profile/...'
     final String finalPath = path.startsWith('assets/') ? path : 'assets/$path';
     
     return ClipOval(
@@ -71,7 +139,6 @@ class _HomeTabState extends State<HomeTab> {
                 );
               },
               errorBuilder: (context, error, stackTrace) {
-                // Placeholder jika URL gagal dimuat
                 return Container(
                   width: size,
                   height: size,
@@ -81,12 +148,11 @@ class _HomeTabState extends State<HomeTab> {
               },
             )
           : Image.asset(
-              finalPath, // Gunakan path asset yang sudah dikoreksi
+              finalPath, 
               width: size,
               height: size,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                // Placeholder jika asset lokal tidak ditemukan
                 return Container(
                   width: size,
                   height: size,
@@ -98,14 +164,44 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  // --- Utility Functions (format tanggal/waktu) ---
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Tanggal N/A';
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const monthNames = [
+      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    
+    final int weekdayIndex = date.weekday % 7; 
+    final dayName = dayNames[weekdayIndex];
+    final day = date.day;
+    final month = monthNames[date.month];
+    final year = date.year;
+
+    return '$dayName, $day $month $year';
+  }
+
+  String _formatTimeRange(DateTime? start, DateTime? end) {
+    if (start == null) return 'Waktu N/A';
+
+    final startTime = '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
+    
+    if (end != null) {
+      final endTime = '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
+      return '$startTime - $endTime';
+    }
+    
+    return startTime;
+  }
+  
+  // ------------------- WIDGET BUILD -------------------
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-
-    // Tentukan path profil yang akan digunakan, jika null gunakan placeholder asset
     final String profilePath = currentUser?.pathProfil ?? 'assets/images/profile_placeholder.jpeg';
-
 
     return Container(
       color: kBackground,
@@ -120,10 +216,10 @@ class _HomeTabState extends State<HomeTab> {
               children: [
                 Row(
                   children: [
-                    // 🔥 MODIFIKASI CIRCLE AVATAR UNTUK MEMANGGIL GAMBAR DINAMIS
+                    // CIRCLE AVATAR DENGAN FOTO PROFIL DINAMIS
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: kSoftBlue, // Background saat loading
+                      backgroundColor: kSoftBlue,
                       child: isLoadingUser
                           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
                           : _buildProfileImage(profilePath),
@@ -174,8 +270,9 @@ class _HomeTabState extends State<HomeTab> {
 
             const SizedBox(height: 25),
 
-            // 🔍 Search Bar (Tidak Berubah)
+            // 🔍 Search Bar (DENGAN CONTROLLER)
             TextField(
+              controller: _searchController, // 🔥 Controller terpasang
               decoration: InputDecoration(
                 hintText: "Cari kegiatan relawan...",
                 hintStyle: const TextStyle(color: kBlueGray),
@@ -333,38 +430,38 @@ class _HomeTabState extends State<HomeTab> {
                   if (snapshot.hasError) {
                     return Center(
                         child: Text(
-                            'Gagal memuat data. Periksa koneksi atau baseUrl Anda. Error: ${snapshot.error}'));
+                            'Gagal memuat data. Error: ${snapshot.error}'));
                   }
 
                   // State Data Tersedia
                   if (snapshot.hasData) {
-                    // ** FILTER DATA DI SINI **
-                    final List<Kegiatan> allKegiatan = snapshot.data!;
-                    final List<Kegiatan> scheduledKegiatan = allKegiatan
-                        .where((k) => k.status.toLowerCase() == 'scheduled')
-                        .toList();
+                    final allKegiatan = snapshot.data!;
+                    
+                    // 🔥 GUNAKAN FUNGSI FILTER BARU
+                    final List<Kegiatan> scheduledAndFilteredKegiatan = 
+                        _getFilteredKegiatan(allKegiatan); 
 
                     // State Data Kosong Setelah Filter
-                    if (scheduledKegiatan.isEmpty) {
-                      return const Center(
-                        child: Text('Tidak ada kegiatan yang dijadwalkan saat ini.'),
+                    if (scheduledAndFilteredKegiatan.isEmpty) {
+                      return Center(
+                        child: Text(
+                          _searchText.isEmpty
+                            ? 'Tidak ada kegiatan yang dijadwalkan saat ini.'
+                            : 'Tidak ada kegiatan yang cocok dengan "${_searchText}"',
+                        ),
                       );
                     }
 
                     // Tampilkan data yang sudah difilter
                     return ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      itemCount: scheduledKegiatan.length,
+                      itemCount: scheduledAndFilteredKegiatan.length,
                       itemBuilder: (context, index) {
-                        final kegiatan = scheduledKegiatan[index];
-                        // Menggunakan eventCard yang sudah Anda buat, 
-                        // tetapi dengan data dinamis
+                        final kegiatan = scheduledAndFilteredKegiatan[index];
                         return eventCard(
                           context,
-                          // Jika thumbnail null, gunakan placeholder
                           kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg', 
                           kegiatan.judul,
-                          // Format tanggal sesuai kebutuhan
                           _formatDate(kegiatan.tanggalMulai), 
                           _formatTimeRange(
                             kegiatan.tanggalMulai, 
@@ -388,41 +485,6 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // --- Utility Functions (ditambahkan untuk memformat tanggal) ---
-
-  String _formatDate(DateTime? date) {
-    if (date == null) return 'Tanggal N/A';
-    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const monthNames = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    
-    // Perbaikan indexing untuk dayNames: DateTime.weekday mengembalikan 1 (Senin) hingga 7 (Minggu)
-    // List dayNames dimulai dari Minggu (index 0)
-    final int weekdayIndex = date.weekday % 7; 
-    final dayName = dayNames[weekdayIndex];
-    
-    final day = date.day;
-    final month = monthNames[date.month];
-    final year = date.year;
-
-    return '$dayName, $day $month $year';
-  }
-
-  String _formatTimeRange(DateTime? start, DateTime? end) {
-    if (start == null) return 'Waktu N/A';
-
-    final startTime = '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
-    
-    if (end != null) {
-      final endTime = '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
-      return '$startTime - $endTime';
-    }
-    
-    return startTime;
-  }
-  
   // --- Static Widgets (dipertahankan) ---
 
   // 🔹 Kategori item (Tidak Berubah)
@@ -444,7 +506,7 @@ class _HomeTabState extends State<HomeTab> {
           right: 15,
           top: 5,
           bottom: 5,
-        ), // Margin disesuaikan untuk shadow
+        ),
         child: Column(
           children: [
             Container(
@@ -479,7 +541,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // 🔸 Event card (DIUBAH untuk menerima objek Kegiatan dan handle gambar Network/Asset)
+  // 🔸 Event card (Dipertahankan)
   static Widget eventCard(
     BuildContext context,
     String image,
