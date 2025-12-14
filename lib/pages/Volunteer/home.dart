@@ -554,6 +554,10 @@ class _HomeTabState extends State<HomeTab> {
     final bool isUrl = image.startsWith("http");
     const double imageHeight = 130.0;
 
+    String displayStatus = kegiatan.status.isNotEmpty
+    ? '${kegiatan.status[0].toUpperCase()}${kegiatan.status.substring(1).toLowerCase()}'
+        : 'Status N/A';
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -641,7 +645,7 @@ class _HomeTabState extends State<HomeTab> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      kegiatan.status,
+                      displayStatus,
                       style: TextStyle(
                         color: primary,
                         fontSize: 11,
