@@ -26,21 +26,15 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
     });
   }
 
-  // Logic Klik Item: Mark Read + Show Pop-up
   Future<void> _handleTap(NotifikasiModel item) async {
-    // 1. Tampilkan Pop-up Detail
     showDialog(
       context: context,
       builder: (context) => _NotifikasiDialog(item: item),
     );
-
-    // 2. Jika belum dibaca, tandai sbg read (API & UI)
     if (!item.isRead) {
-      // Update UI lokal instan (biar user gak nunggu loading)
       setState(() {
         item.isRead = true;
       });
-      // Panggil API di background
       try {
         await NotifikasiService.markAsRead(item.id);
       } catch (e) {
@@ -83,13 +77,11 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
 
           final allData = snapshot.data ?? [];
 
-          // --- LOGIC FILTER 7 HARI / UNREAD ---
           final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
           
           final filteredData = allData.where((item) {
             final isRecent = item.createdAt.isAfter(sevenDaysAgo);
             final isUnread = !item.isRead;
-            // Tampilkan jika: (Baru 7 hari terakhir) ATAU (Belum dibaca meskipun lama)
             return isRecent || isUnread;
           }).toList();
           // ------------------------------------
@@ -124,7 +116,6 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
   }
 }
 
-// --- WIDGET LIST TILE (TAMPILAN LIST) ---
 class _NotifTile extends StatelessWidget {
   final NotifikasiModel item;
   final VoidCallback onTap;
@@ -133,7 +124,6 @@ class _NotifTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Tentukan Icon berdasarkan judul (Simple Logic)
     IconData iconData = Icons.notifications;
     Color iconColor = kSkyBlue;
 
@@ -149,7 +139,7 @@ class _NotifTile extends StatelessWidget {
     }
 
     return ListTile(
-      tileColor: item.isRead ? Colors.white : kSkyBlue.withOpacity(0.05), // Highlight jika unread
+      tileColor: item.isRead ? Colors.white : kSkyBlue.withOpacity(0.05), 
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       onTap: onTap,
       leading: Stack(
@@ -213,7 +203,6 @@ class _NotifTile extends StatelessWidget {
   }
 }
 
-// --- WIDGET POP-UP DIALOG (DETAIL) ---
 class _NotifikasiDialog extends StatelessWidget {
   final NotifikasiModel item;
   const _NotifikasiDialog({required this.item});
@@ -227,7 +216,6 @@ class _NotifikasiDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icon Besar
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(color: kSkyBlue.withOpacity(0.1), shape: BoxShape.circle),
@@ -235,7 +223,6 @@ class _NotifikasiDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             
-            // Judul
             Text(
               item.judul,
               textAlign: TextAlign.center,
@@ -243,7 +230,6 @@ class _NotifikasiDialog extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             
-            // Waktu
             Text(
               DateFormat('EEEE, dd MMM yyyy • HH:mm', 'id_ID').format(item.createdAt),
               style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -252,7 +238,6 @@ class _NotifikasiDialog extends StatelessWidget {
             const Divider(),
             const SizedBox(height: 16),
             
-            // Isi Pesan
             Text(
               item.subjudul,
               textAlign: TextAlign.center,
@@ -261,7 +246,6 @@ class _NotifikasiDialog extends StatelessWidget {
             
             const SizedBox(height: 24),
             
-            // Tombol Tutup
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

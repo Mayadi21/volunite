@@ -16,6 +16,16 @@ class KegiatanService {
   }
   // ---------------------------------------------
 
+  static Future<Map<String, dynamic>> fetchDashboard() async {
+    final response = await ApiClient.get('/organizer/dashboard');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['data'];
+    } else {
+      throw Exception('Gagal load dashboard');
+    }
+  }
+
   // 1. GET PUBLIC (Volunteer)
   static Future<List<Kegiatan>> fetchKegiatan() async {
     final response = await ApiClient.get('/kegiatan');
