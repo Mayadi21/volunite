@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/models/kegiatan_model.dart';
+import 'package:flutter/foundation.dart';
+import 'package:volunite/models/kategori_model.dart'; // Import model Kategori
 import 'package:volunite/services/pendaftaran_service.dart';
 import 'package:volunite/services/auth/auth_service.dart';
 import 'package:volunite/services/report_kegiatan_service.dart';
@@ -36,20 +38,21 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   bool _isRegistered = false;
 
   // State untuk status loading di modal pendaftaran
-  bool _isRegistrationLoading = false; 
+  bool _isRegistrationLoading = false;
   
+
   // State untuk status loading di modal laporan
-  bool _isReportLoading = false; // 👈 BARU: State loading untuk laporan
+  bool _isReportLoading = false; 
 
   // Inisialisasi Service (Dibuat final)
   final PendaftaranService _pendaftaranService = PendaftaranService();
   final AuthService _authService = AuthService();
-  final ReportService _reportService = ReportService(); // 👈 Service Laporan
+  final ReportService _reportService = ReportService(); 
 
   @override
   void initState() {
     super.initState();
-    _checkRegistrationStatus(); 
+    _checkRegistrationStatus();
   }
 
   // =========================================================
@@ -101,21 +104,21 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
 
   void _shareActivity() async {
     final kegiatan = widget.kegiatan;
-    
+
     String shareText = "Yuk, gabung di kegiatan relawan ini!";
-    
+
     if (kegiatan != null) {
       final title = kegiatan.judul;
       final location = kegiatan.lokasi ?? "Lokasi tidak tercantum";
       final date = widget.date;
       final time = widget.time;
-      
+
       // final kegiatanId = kegiatan.id;
 
       // final String baseUrl = "http://volunite.app/activities/";
       final activityLink = "Cek detail kegiatan di aplikasi Volunite sekarang !";
       // final activityLink = "$baseUrl$kegiatanId";
-      // final activityLink = "Cek detail kegiatan di aplikasi Volunite sekarang!"; 
+      // final activityLink = "Cek detail kegiatan di aplikasi Volunite sekarang!";
 
       shareText = """
 📢 **Kesempatan Relawan: ${title}**
@@ -131,7 +134,7 @@ ${activityLink}
 
     try {
       await Share.share(
-        shareText, 
+        shareText,
         subject: 'Ajakan Bergabung Kegiatan Relawan: ${widget.title}',
       );
     } catch (e) {
@@ -171,7 +174,7 @@ ${activityLink}
             void _submitForm() async {
               if (formKey.currentState!.validate()) {
                 setModalState(() => _isRegistrationLoading = true); // 🔥 Gunakan state loading modal
-                
+
                 final user = await _authService.getCurrentUser();
 
                 if (user == null || widget.kegiatan?.id == null) {
@@ -203,8 +206,6 @@ ${activityLink}
                   setState(() { // Perbarui state _isRegistered di halaman utama
                     _isRegistered = true;
                   });
-
-                  Navigator.pop(context, true); // Tutup modal
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -336,7 +337,7 @@ ${activityLink}
   }
 
   // =========================================================
-  // FUNGSI: Menampilkan form laporan (Sudah Direvisi)
+  // FUNGSI: Menampilkan form laporan
   // =========================================================
   void _showReportForm(BuildContext context) {
     final formKey = GlobalKey<FormState>();
@@ -347,9 +348,9 @@ ${activityLink}
       'Ilegal/Penipuan',
       'Informasi Palsu',
       'Tidak Relevan',
-      'Pelanggaran S&K', 
-      'Diskriminasi/Pelanggaran Etika', 
-      'Kegiatan Fiktif', 
+      'Pelanggaran S&K',
+      'Diskriminasi/Pelanggaran Etika',
+      'Kegiatan Fiktif',
       'lainnya'
     ];
 
@@ -363,8 +364,8 @@ ${activityLink}
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            
-            // 🔥 LOGIKA SUBMIT LAPORAN (BARU) 🔥
+
+            // 🔥 LOGIKA SUBMIT LAPORAN 🔥
             void _submitReportForm() async {
               if (formKey.currentState!.validate()) {
                 final kegiatanId = widget.kegiatan?.id;
@@ -381,7 +382,7 @@ ${activityLink}
                 }
 
                 setModalState(() => _isReportLoading = true); // Tampilkan loading
-                
+
                 try {
                   // NOTE: submitReport sekarang mengembalikan http.Response
                   final response = await _reportService.submitReport(
@@ -626,13 +627,16 @@ ${activityLink}
   }
 
   // =========================================================
-  // WIDGET BUILDER UTAMA & WIDGET PEMBANTU (Tidak diubah)
+  // WIDGET BUILDER UTAMA & WIDGET PEMBANTU (Diubah)
   // =========================================================
 
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    // Ambil data kategori untuk dikirim ke header
+    final List<Kategori> categories = widget.kegiatan?.kategori ?? []; // Mengambil List<Kategori>
 
     return Scaffold(
       backgroundColor: kBackground,
@@ -723,6 +727,7 @@ ${activityLink}
                   title: widget.title,
                   date: widget.date,
                   time: widget.time,
+                  categories: categories, // ✨ Meneruskan List<Kategori>
                 ),
               ),
 
@@ -816,31 +821,6 @@ ${activityLink}
                           ),
                         ),
                         const SizedBox(height: 24),
-
-                        // Dokumen Pendukung
-                        const Text(
-                          'Dokumen Pendukung',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: kDarkBlueGray,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDocumentCard(),
-                        const SizedBox(height: 24),
-
-                        // Pihak Penyelenggara
-                        const Text(
-                          'Pihak Penyelenggara',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: kDarkBlueGray,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildOrganizersList(),
 
                         SizedBox(height: bottomPadding + 120),
                       ],
@@ -1026,7 +1006,7 @@ ${activityLink}
     );
   }
 
-  // FUNGSI _buildBottomBar
+  // FUNGSI _buildBottomBar (Tombol Daftar dibuat full width)
   Widget _buildBottomBar() {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -1048,80 +1028,59 @@ ${activityLink}
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center, // Pusatkan jika hanya ada satu elemen
         children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.favorite_border,
-                  color: kSkyBlue,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Text(
-                '0 suka',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: kBlueGray,
-                ),
-              ),
-            ],
-          ),
-          // LOGIC KONDISIONAL TOMBOL
-          _isRegistered
-              ? Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green[50], // Warna latar belakang ringan
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: Colors.green, width: 1.5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.check_circle_outline,
-                        color: Colors.green,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Sudah Mendaftar',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.green[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : ElevatedButton(
-                  // Tombol daftar ditampilkan jika _isRegistered == false
-                  onPressed: () => _showRegistrationForm(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kSkyBlue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
+          Expanded( // ✨ MEMBUAT TOMBOL MEMENUHI LEBAR
+            child: _isRegistered
+                ? Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
+                      horizontal: 20,
                       vertical: 16,
                     ),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50], // Warna latar belakang ringan
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: Colors.green, width: 1.5),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center, // Pusatkan teks di dalam container
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Sudah Mendaftar',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ElevatedButton(
+                    // Tombol daftar ditampilkan jika _isRegistered == false
+                    onPressed: () => _showRegistrationForm(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kSkyBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                      ),
+                    ),
+                    child: const Text(
+                      'Daftar Kegiatan',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
                   ),
-                  child: const Text(
-                    'Daftar Kegiatan',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ),
+          ),
         ],
       ),
     );
@@ -1150,81 +1109,6 @@ ${activityLink}
       ),
     );
   }
-
-  Widget _buildDocumentCard() {
-    return InkWell(
-      onTap: () {},
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: kBackground,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: kSoftBlue.withOpacity(0.9), width: 1),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.picture_as_pdf, size: 40, color: kDarkBlueGray),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Dokumen Pedoman Volunteer.pdf',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: kDarkBlueGray,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Klik untuk melihat',
-                    style: TextStyle(fontSize: 12, color: kBlueGray),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.download_for_offline_outlined, color: kSkyBlue),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrganizersList() {
-    final List<String> logoPaths = [
-      'assets/images/event1.jpg',
-      'assets/images/event2.jpg',
-      'assets/images/event1.jpg',
-    ];
-
-    return SizedBox(
-      height: 60,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: logoPaths.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: kSoftBlue.withOpacity(0.9), width: 1),
-                image: DecorationImage(
-                  image: AssetImage(logoPaths[index]),
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 }
 
 // --- DELEGATE UNTUK HEADER YANG PINNED ---
@@ -1232,6 +1116,7 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
   final String date;
   final String time;
+  final List<Kategori> categories; // ✨ BARU: Menerima List<Kategori>
 
   final double _minHeight = 170;
   final double _maxHeight = 170;
@@ -1240,7 +1125,24 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.title,
     required this.date,
     required this.time,
+    this.categories = const [], // Default kosong jika null
   });
+
+  // Helper untuk menentukan ikon berdasarkan nama kategori
+  IconData _getCategoryIcon(String categoryName) {
+    switch (categoryName.toLowerCase()) {
+      case 'pendidikan':
+        return Icons.school_outlined;
+      case 'lingkungan':
+        return Icons.eco_outlined;
+      case 'kesehatan':
+        return Icons.medical_services_outlined;
+      case 'sosial':
+        return Icons.people_outline;
+      default:
+        return Icons.star_border; 
+    }
+  }
 
   @override
   Widget build(
@@ -1275,13 +1177,24 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildTag('Pendidikan', Icons.school_outlined),
-                const SizedBox(width: 8),
-                _buildTag('Sosial', Icons.people_outline),
-              ],
+            
+            // ✨ MENAMPILKAN SEMUA KATEGORI DENGAN WRAP/ROW
+            Wrap(
+              spacing: 8.0, // jarak horizontal antar chip
+              runSpacing: 4.0, // jarak vertikal antar baris chip
+              children: categories.isNotEmpty
+                  ? categories.map((kategori) {
+                      return _buildTag(
+                        kategori.namaKategori, 
+                        _getCategoryIcon(kategori.namaKategori),
+                      );
+                    }).toList()
+                  : [
+                      // Fallback jika tidak ada kategori
+                      _buildTag('Kategori Umum', Icons.star_border),
+                    ],
             ),
+            
             const SizedBox(height: 8),
             Row(
               children: [
@@ -1332,8 +1245,14 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _MyPinnedHeaderDelegate oldDelegate) {
+    // Membandingkan categories secara sederhana (cukup membandingkan judul dan tanggal)
+    // Untuk performa, biasanya tidak perlu membandingkan seluruh list, tapi kita tambahkan agar aman.
+    final oldCategoryNames = oldDelegate.categories.map((k) => k.namaKategori).toList();
+    final newCategoryNames = categories.map((k) => k.namaKategori).toList();
+    
     return title != oldDelegate.title ||
         date != oldDelegate.date ||
-        time != oldDelegate.time;
-}
+        time != oldDelegate.time ||
+        !listEquals(oldCategoryNames, newCategoryNames);
+  }
 }
