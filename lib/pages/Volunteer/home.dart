@@ -1,7 +1,7 @@
 // lib/pages/Volunteer/home.dart
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
-import 'package:volunite/pages/Volunteer/Notification/notification.dart';
+import 'package:volunite/pages/shared/notification.dart';
 import 'package:volunite/pages/Volunteer/Category/categories_page.dart';
 import 'package:volunite/pages/Volunteer/Category/category_activities_page.dart';
 import 'package:volunite/color_pallete.dart';

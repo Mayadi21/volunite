@@ -4,7 +4,7 @@ import 'package:volunite/color_pallete.dart'; // Pastikan path ini benar
 import 'package:volunite/models/kegiatan_model.dart';
 import 'package:volunite/pages/Organizer/Activity/create_activity_page.dart';
 import 'package:volunite/pages/Organizer/Activity/detail_activities_page.dart';
-import 'package:volunite/pages/Organizer/Notification/notification.dart'; // Pastikan path benar
+import 'package:volunite/pages/shared/notification.dart'; // Pastikan path benar
 import 'package:volunite/services/kegiatan_service.dart';
 import 'package:volunite/pages/Organizer/Activity/activity_card.dart'; // Import Card Baru
 
