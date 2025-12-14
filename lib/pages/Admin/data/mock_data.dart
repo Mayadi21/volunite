@@ -38,14 +38,7 @@ List<Organization> mockOrganizations = [
       status: 'Pending'),
 ];
 
-List<Achievement> mockAchievements = [
-  Achievement(
-      id: 1, name: 'Relawan Emas', description: 'Menyelesaikan 50 jam volunteer'),
-  Achievement(
-      id: 2,
-      name: 'Penggerak Komunitas',
-      description: 'Mengajak 10 teman bergabung'),
-];
+
 
 // --- DATA BARU UNTUK MANAJEMEN KEGIATAN ---
 // Saya ambil path image dari file Anda (assets/images/event1.jpg, dll.)

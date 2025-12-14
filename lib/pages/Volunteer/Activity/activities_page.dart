@@ -81,8 +81,6 @@ class _ActivitiesPageState extends State<ActivitiesPage>
         .toList();
 
     // Untuk tab Riwayat, kita asumsikan semua kegiatan 'finished' adalah riwayat.
-    // Catatan: Jika riwayat harus difilter berdasarkan Pendaftaran, 
-    // logika ini perlu disesuaikan dengan `_registeredIds`.
     historyActivities = kegiatan
         .where((k) =>
             k.status.toLowerCase() == 'finished' ||
@@ -103,7 +101,6 @@ class _ActivitiesPageState extends State<ActivitiesPage>
   void _handleTabSelection() {
     // 🔥 Reset search dan filter saat beralih ke tab Riwayat atau sebaliknya
     if (_currentIndex == 0 && _tabController.index == 1) {
-      // Dari Mendatang ke Riwayat: Reset search/filter jika diperlukan
       _searchController.clear();
       _registerFilter = RegisterFilter.all;
     }
@@ -117,9 +114,6 @@ class _ActivitiesPageState extends State<ActivitiesPage>
   List<Kegiatan> _applyFilters(List<Kegiatan> list, {required bool isHistoryTab}) {
     // Riwayat tidak memiliki filter tambahan (hanya menampilkan historyActivities)
     if (isHistoryTab) {
-      // Jika Riwayat harus difilter berdasarkan pendaftaran user:
-      // return list.where((k) => _registeredIds.contains(k.id)).toList();
-      // Saat ini, tidak ada filter search/pendaftaran di Riwayat
       return list; 
     }
 
@@ -152,29 +146,33 @@ class _ActivitiesPageState extends State<ActivitiesPage>
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
+        // Set elevation ke 0 dan tambahkan shadowColor transparan untuk menghilangkan bayangan AppBar
         elevation: 0,
         centerTitle: true,
-        backgroundColor: Colors.transparent,
-        flexibleSpace: Container(
+        backgroundColor: Colors.transparent, 
+        shadowColor: Colors.transparent, 
+        
+        flexibleSpace: Container( 
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [kBlueGray, kSkyBlue],
+             gradient: LinearGradient(
+              colors: [kSkyBlue, kBlueGray],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
         ),
+        
         title: const Text(
           'Kegiatan',
           style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
         ),
+        
+        // Pinned TabBar dan Search/Filter
         bottom: PreferredSize(
-          // Tinggi AppBar disesuaikan: TabBar (40) + Search/Filter (45) + Padding
           preferredSize: Size.fromHeight(_currentIndex == 0 ? 100 : 56), 
           child: Column(
             children: [
-              _buildTabBar(),
-              // 🔥 Tampilkan Search & Filter hanya di tab Mendatang (index 0)
+              _buildTabBar(), 
               if (_currentIndex == 0) _buildSearchAndFilterMinimal(),
             ],
           ),
@@ -198,28 +196,52 @@ class _ActivitiesPageState extends State<ActivitiesPage>
     );
   }
 
+  // ✨ REVISI FUNGSI _buildTabBar untuk tampilan yang bersih tanpa shadow/garis
   Widget _buildTabBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         height: 40,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withOpacity(0.2), 
           borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5), 
+          // 🔥 HAPUS box shadow di sini (Ini yang mungkin menyebabkan garis tipis)
         ),
         child: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.transparent,
+          
+          // Custom Indicator (Pill-Shaped White Indicator)
           indicator: BoxDecoration(
-            color: Colors.white,
+            color: Colors.white, 
             borderRadius: BorderRadius.circular(24),
+            // 🔥 HAPUS box shadow pada indikator agar lebih ringan
+            /*
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+            */
           ),
-          labelColor: kDarkBlueGray,
-          unselectedLabelColor: Colors.white.withOpacity(0.85),
+          
+          indicatorSize: TabBarIndicatorSize.tab, 
+          
+          // Warna Label
+          labelColor: kDarkBlueGray, 
+          unselectedLabelColor: Colors.white, 
+          
           labelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
+            fontSize: 14, 
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
             fontSize: 13,
           ),
+          
           tabs: const [
             Tab(text: 'Mendatang'),
             Tab(text: 'Riwayat'),
@@ -229,7 +251,7 @@ class _ActivitiesPageState extends State<ActivitiesPage>
     );
   }
 
-  // 🔥 WIDGET SEARCH & FILTER MINIMALIS BARU
+  // 🔥 WIDGET SEARCH & FILTER MINIMALIS BARU (Tidak berubah)
   Widget _buildSearchAndFilterMinimal() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
