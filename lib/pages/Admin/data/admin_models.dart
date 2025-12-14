@@ -34,11 +34,27 @@ class Organization {
       this.status = 'Pending'});
 }
 
-class Achievement {
-  int id;
-  String name;
-  String description;
-  Achievement({required this.id, required this.name, required this.description});
+class PencapaianModel {
+  final int id;
+  final String nama;
+  final String description;
+  final String? thumbnailUrl; // URL lengkap dari Laravel
+
+  PencapaianModel({
+    required this.id,
+    required this.nama,
+    required this.description,
+    this.thumbnailUrl,
+  });
+
+  factory PencapaianModel.fromJson(Map<String, dynamic> json) {
+    return PencapaianModel(
+      id: json['id'],
+      nama: json['nama'],
+      description: json['deskripsi'] ?? '',
+      thumbnailUrl: json['thumbnail_url'], // Ambil dari Accessor Laravel
+    );
+  }
 }
 
 // --- MODEL BARU UNTUK MANAJEMEN KEGIATAN ---
