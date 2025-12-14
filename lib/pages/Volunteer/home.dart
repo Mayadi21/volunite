@@ -1,16 +1,19 @@
 // lib/pages/Volunteer/home.dart
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
-import 'package:volunite/pages/Volunteer/Notification/notification.dart';
+import 'package:volunite/pages/shared/notification.dart';
 import 'package:volunite/pages/Volunteer/Category/categories_page.dart';
 import 'package:volunite/pages/Volunteer/Category/category_activities_page.dart';
 import 'package:volunite/color_pallete.dart';
+import 'package:volunite/services/pendaftaran_service.dart';
+
 
 // Import model dan service Anda
-import 'package:volunite/models/kegiatan_model.dart'; // Sesuaikan path jika perlu
-import 'package:volunite/services/kegiatan_service.dart'; // Sesuaikan path jika perlu
+import 'package:volunite/models/kegiatan_model.dart'; 
+import 'package:volunite/services/kegiatan_service.dart'; 
+import 'package:volunite/services/auth/auth_service.dart';
+import 'package:volunite/models/user_model.dart'; 
 
-// UBAH DARI StatelessWidget MENJADI StatefulWidget
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
 
@@ -19,19 +22,186 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  // Inisialisasi Future untuk memuat data
+  User? currentUser;
+  bool isLoadingUser = true;
   late Future<List<Kegiatan>> _kegiatanFuture;
+
+  // 🔥 STATE BARU UNTUK PENCARIAN
+  List<Kegiatan> _allKegiatan = []; // Menyimpan semua kegiatan yang dimuat
+  String _searchText = ''; // Teks yang dimasukkan pengguna
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Memuat data kegiatan saat widget pertama kali dibuat
-    _kegiatanFuture = KegiatanService.fetchKegiatan();
+    loadUser();
+    // Memuat kegiatan dan menyimpannya di _allKegiatan
+    _kegiatanFuture = _fetchAndStoreKegiatan();
+    
+    // Mendaftarkan listener untuk Search Bar
+    _searchController.addListener(_onSearchChanged);
   }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // FUNGSI UTILITY BARU
+
+  Future<void> loadUser() async {
+    final user = await AuthService().getCurrentUser();
+
+    if (mounted) {
+      setState(() {
+        currentUser = user;
+        isLoadingUser = false;
+      });
+    }
+  }
+  
+  // 🔥 FUNGSI BARU: Memuat dan menyimpan semua data kegiatan
+  Future<List<Kegiatan>> _fetchAndStoreKegiatan() async {
+    final kegiatanList = await KegiatanService.fetchKegiatan();
+    if (mounted) {
+      setState(() {
+        _allKegiatan = kegiatanList;
+      });
+    }
+    return kegiatanList;
+  }
+  
+  // 🔥 FUNGSI BARU: Dipanggil setiap kali teks pencarian berubah
+  void _onSearchChanged() {
+    setState(() {
+      _searchText = _searchController.text;
+      // setState akan memicu FutureBuilder untuk melakukan filter ulang
+    });
+  }
+
+  // 🔥 FUNGSI BARU: Melakukan pemfilteran data kegiatan
+  List<Kegiatan> _getFilteredKegiatan(List<Kegiatan> allKegiatan) {
+    
+    // Tahap 1: Filter berdasarkan status 'scheduled'
+    final List<Kegiatan> scheduledKegiatan = allKegiatan
+        .where((k) => k.status.toLowerCase() == 'scheduled')
+        .toList();
+
+    if (_searchText.isEmpty) {
+      // Jika kolom search kosong, kembalikan hanya kegiatan yang dijadwalkan
+      return scheduledKegiatan;
+    }
+    
+    final query = _searchText.toLowerCase();
+    
+    // Tahap 2: Filter berdasarkan teks pencarian
+    return scheduledKegiatan.where((k) {
+      // Cek kecocokan di Judul
+      final titleMatch = k.judul.toLowerCase().contains(query);
+      
+      // Cek kecocokan di Deskripsi
+      final descriptionMatch = (k.deskripsi ?? '').toLowerCase().contains(query);
+      
+      // Cek kecocokan di Kategori (jika ada)
+      final categoryMatch = k.kategori.any((cat) => 
+          cat.namaKategori.toLowerCase().contains(query)
+      );
+
+      return titleMatch || descriptionMatch || categoryMatch;
+    }).toList();
+  }
+  
+
+  // 🔥 FUNGSI PEMBANTU UNTUK MENAMPILKAN GAMBAR PROFIL
+  Widget _buildProfileImage(String path) {
+    const double size = 48.0; 
+    final bool isNetworkImage = path.startsWith("http") || path.startsWith("https");
+    final String finalPath = path.startsWith('assets/') ? path : 'assets/$path';
+    
+    return ClipOval(
+      child: isNetworkImage
+          ? Image.network(
+              path,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  width: size,
+                  height: size,
+                  color: Colors.grey.shade200,
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: size,
+                  height: size,
+                  color: kSoftBlue,
+                  child: const Icon(Icons.person, size: 30, color: kDarkBlueGray),
+                );
+              },
+            )
+          : Image.asset(
+              finalPath, 
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: size,
+                  height: size,
+                  color: kSoftBlue,
+                  child: const Icon(Icons.person, size: 30, color: kDarkBlueGray),
+                );
+              },
+            ),
+    );
+  }
+
+  // --- Utility Functions (format tanggal/waktu) ---
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Tanggal N/A';
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const monthNames = [
+      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    
+    final int weekdayIndex = date.weekday % 7; 
+    final dayName = dayNames[weekdayIndex];
+    final day = date.day;
+    final month = monthNames[date.month];
+    final year = date.year;
+
+    return '$dayName, $day $month $year';
+  }
+
+  String _formatTimeRange(DateTime? start, DateTime? end) {
+    if (start == null) return 'Waktu N/A';
+
+    final startTime = '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
+    
+    if (end != null) {
+      final endTime = '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
+      return '$startTime - $endTime';
+    }
+    
+    return startTime;
+  }
+  
+  // ------------------- WIDGET BUILD -------------------
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+    final String profilePath = currentUser?.pathProfil ?? 'assets/images/profile_placeholder.jpeg';
 
     return Container(
       color: kBackground,
@@ -40,22 +210,24 @@ class _HomeTabState extends State<HomeTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 👋 Header (Tidak Berubah)
+            // 👋 Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(
+                    // CIRCLE AVATAR DENGAN FOTO PROFIL DINAMIS
+                    CircleAvatar(
                       radius: 24,
-                      backgroundImage: AssetImage(
-                        'assets/images/profile_placeholder.jpeg',
-                      ),
+                      backgroundColor: kSoftBlue,
+                      child: isLoadingUser
+                          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                          : _buildProfileImage(profilePath),
                     ),
                     const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           "Hi, Selamat Datang 👋",
                           style: TextStyle(
@@ -65,7 +237,9 @@ class _HomeTabState extends State<HomeTab> {
                           ),
                         ),
                         Text(
-                          "Evan Arga",
+                          isLoadingUser 
+                          ? "Memuat..."
+                          : currentUser?.nama ?? 'User',
                           style: TextStyle(fontSize: 14, color: kBlueGray),
                         ),
                       ],
@@ -96,8 +270,9 @@ class _HomeTabState extends State<HomeTab> {
 
             const SizedBox(height: 25),
 
-            // 🔍 Search Bar (Tidak Berubah)
+            // 🔍 Search Bar (DENGAN CONTROLLER)
             TextField(
+              controller: _searchController, // 🔥 Controller terpasang
               decoration: InputDecoration(
                 hintText: "Cari kegiatan relawan...",
                 hintStyle: const TextStyle(color: kBlueGray),
@@ -242,7 +417,7 @@ class _HomeTabState extends State<HomeTab> {
 
             // ✅ BAGIAN PENTING: FutureBuilder untuk memuat dan memfilter kegiatan
             SizedBox(
-              height: 230,
+              height:245,
               child: FutureBuilder<List<Kegiatan>>(
                 future: _kegiatanFuture,
                 builder: (context, snapshot) {
@@ -255,38 +430,38 @@ class _HomeTabState extends State<HomeTab> {
                   if (snapshot.hasError) {
                     return Center(
                         child: Text(
-                            'Gagal memuat data. Periksa koneksi atau baseUrl Anda. Error: ${snapshot.error}'));
+                            'Gagal memuat data. Error: ${snapshot.error}'));
                   }
 
                   // State Data Tersedia
                   if (snapshot.hasData) {
-                    // ** FILTER DATA DI SINI **
-                    final List<Kegiatan> allKegiatan = snapshot.data!;
-                    final List<Kegiatan> scheduledKegiatan = allKegiatan
-                        .where((k) => k.status.toLowerCase() == 'scheduled')
-                        .toList();
+                    final allKegiatan = snapshot.data!;
+                    
+                    // 🔥 GUNAKAN FUNGSI FILTER BARU
+                    final List<Kegiatan> scheduledAndFilteredKegiatan = 
+                        _getFilteredKegiatan(allKegiatan); 
 
                     // State Data Kosong Setelah Filter
-                    if (scheduledKegiatan.isEmpty) {
-                      return const Center(
-                        child: Text('Tidak ada kegiatan yang dijadwalkan saat ini.'),
+                    if (scheduledAndFilteredKegiatan.isEmpty) {
+                      return Center(
+                        child: Text(
+                          _searchText.isEmpty
+                            ? 'Tidak ada kegiatan yang dijadwalkan saat ini.'
+                            : 'Tidak ada kegiatan yang cocok dengan "${_searchText}"',
+                        ),
                       );
                     }
 
                     // Tampilkan data yang sudah difilter
                     return ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      itemCount: scheduledKegiatan.length,
+                      itemCount: scheduledAndFilteredKegiatan.length,
                       itemBuilder: (context, index) {
-                        final kegiatan = scheduledKegiatan[index];
-                        // Menggunakan eventCard yang sudah Anda buat, 
-                        // tetapi dengan data dinamis
+                        final kegiatan = scheduledAndFilteredKegiatan[index];
                         return eventCard(
                           context,
-                          // Jika thumbnail null, gunakan placeholder
                           kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg', 
                           kegiatan.judul,
-                          // Format tanggal sesuai kebutuhan
                           _formatDate(kegiatan.tanggalMulai), 
                           _formatTimeRange(
                             kegiatan.tanggalMulai, 
@@ -310,43 +485,11 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // --- Utility Functions (ditambahkan untuk memformat tanggal) ---
-
-  String _formatDate(DateTime? date) {
-    if (date == null) return 'Tanggal N/A';
-    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const monthNames = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    
-    final dayName = dayNames[date.weekday % 7];
-    final day = date.day;
-    final month = monthNames[date.month];
-    final year = date.year;
-
-    return '$dayName, $day $month $year';
-  }
-
-  String _formatTimeRange(DateTime? start, DateTime? end) {
-    if (start == null) return 'Waktu N/A';
-
-    final startTime = '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
-    
-    if (end != null) {
-      final endTime = '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
-      return '$startTime - $endTime';
-    }
-    
-    return startTime;
-  }
-  
-  // --- Static Widgets (diperbarui) ---
+  // --- Static Widgets (dipertahankan) ---
 
   // 🔹 Kategori item (Tidak Berubah)
   static Widget categoryItem(
       BuildContext context, IconData icon, String title, Color primary) {
-    // ... (kode categoryItem tidak berubah)
     return GestureDetector(
       onTap: () {
         // Navigasi ke halaman list kegiatan berdasarkan kategori
@@ -363,7 +506,7 @@ class _HomeTabState extends State<HomeTab> {
           right: 15,
           top: 5,
           bottom: 5,
-        ), // Margin disesuaikan untuk shadow
+        ),
         child: Column(
           children: [
             Container(
@@ -398,153 +541,162 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // 🔸 Event card (DIUBAH untuk menerima objek Kegiatan)
+  // 🔸 Event card (Dipertahankan)
   static Widget eventCard(
     BuildContext context,
-  String image,
-  String title,
-  String date,
-  String time,
-  Color primary,
-  Kegiatan kegiatan,
-) {
-  final bool isUrl = image.startsWith("http");
+    String image,
+    String title,
+    String date,
+    String time,
+    Color primary,
+    Kegiatan kegiatan,
+  ) {
+    final bool isUrl = image.startsWith("http");
+    const double imageHeight = 130.0;
 
-  return GestureDetector(
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DetailActivitiesPage(
-            kegiatan: kegiatan,
-            title: title,
-            date: date,
-            time: time,
-            imagePath: image,
-          ),
-        ),
-      );
-    },
-    child: Container(
-      width: 280,
-      margin: const EdgeInsets.only(right: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: kBlueGray.withOpacity(0.18),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    String displayStatus = kegiatan.status.isNotEmpty
+    ? '${kegiatan.status[0].toUpperCase()}${kegiatan.status.substring(1).toLowerCase()}'
+        : 'Status N/A';
 
-            // -------------- PERBAIKAN DI SINI --------------
-            child: isUrl
-                ? Image.network(
-                    image,
-                    height: 130,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return Container(
-                        height: 130,
-                        color: Colors.grey.shade200,
-                        child: const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 130,
-                        color: Colors.grey,
-                        child: const Icon(Icons.broken_image, size: 40),
-                      );
-                    },
-                  )
-                : Image.asset(
-                    image,
-                    height: 130,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-            // -------------------------------------------------
-          ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15)
-                .copyWith(top: 10, bottom: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: primary.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    kegiatan.status,
-                    style: TextStyle(
-                      color: primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: kDarkBlueGray,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today,
-                        size: 14, color: kBlueGray),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Text(
-                        date,
-                        style: const TextStyle(
-                            color: kBlueGray, fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Icons.access_time,
-                        size: 14, color: kBlueGray),
-                    const SizedBox(width: 5),
-                    Text(
-                      time,
-                      style:
-                          const TextStyle(color: kBlueGray, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailActivitiesPage(
+              kegiatan: kegiatan,
+              title: title,
+              date: date,
+              time: time,
+              imagePath: image,
             ),
           ),
-        ],
+        );
+      },
+      child: Container(
+        width: 280,
+        margin: const EdgeInsets.only(right: 15),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: kBlueGray.withOpacity(0.18),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              child: isUrl
+                  ? Image.network(
+                      image,
+                      height: imageHeight,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          height: imageHeight,
+                          color: Colors.grey.shade200,
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: imageHeight,
+                          color: Colors.grey,
+                          child: const Icon(Icons.broken_image, size: 40),
+                        );
+                      },
+                    )
+                  : Image.asset(
+                      image,
+                      height: imageHeight,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: imageHeight,
+                          color: Colors.grey,
+                          child: const Icon(Icons.error, size: 40),
+                        );
+                      },
+                    ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15)
+                  .copyWith(top: 10, bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: primary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      displayStatus,
+                      style: TextStyle(
+                        color: primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: kDarkBlueGray,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today,
+                          size: 14, color: kBlueGray),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          date,
+                          style: const TextStyle(
+                              color: kBlueGray, fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time,
+                          size: 14, color: kBlueGray),
+                      const SizedBox(width: 5),
+                      Text(
+                        time,
+                        style:
+                            const TextStyle(color: kBlueGray, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

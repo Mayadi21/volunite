@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:volunite/pages/Admin/users/edit_user_page.dart';
+import 'user_service.dart';
 import 'package:volunite/pages/Admin/data/admin_models.dart';
-import 'package:volunite/pages/Admin/data/mock_data.dart';
-import 'package:volunite/pages/Admin/users/add_new_user_page.dart';
+import 'add_new_user_page.dart';
 
 class VolunteerListPage extends StatefulWidget {
   const VolunteerListPage({super.key});
@@ -11,23 +12,60 @@ class VolunteerListPage extends StatefulWidget {
 }
 
 class _VolunteerListPageState extends State<VolunteerListPage> {
-  void _deleteVolunteer(Volunteer volunteer) {
+  bool _loading = true;
+  List<dynamic> _volunteers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchVolunteers();
+  }
+
+  Future<void> _fetchVolunteers() async {
+    setState(() {
+      _loading = true;
+    });
+    try {
+      final data = await UserService.fetchUsers(role: 'Volunteer');
+      setState(() {
+        _volunteers = data['data'] ?? [];
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal memuat: $e')));
+    }
+  }
+
+  void _confirmDelete(int id, String name) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus Volunteer'),
-        content: Text('Anda yakin ingin menghapus ${volunteer.name}?'),
+        content: Text('Anda yakin ingin menghapus $name ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Batal'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                mockVolunteers.removeWhere((v) => v.id == volunteer.id);
-              });
+            onPressed: () async {
               Navigator.of(ctx).pop();
+              try {
+                await UserService.deleteUser(id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Berhasil dihapus')),
+                );
+                _fetchVolunteers();
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Gagal hapus: $e')));
+              }
             },
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
@@ -36,74 +74,78 @@ class _VolunteerListPageState extends State<VolunteerListPage> {
     );
   }
 
-  void _showVolunteerForm([Volunteer? volunteer]) {
-    // Navigasi ke halaman AddNewUserPage
-    Navigator.push(
+  void _openEditPage(int id) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddNewUserPage(
-          // Kita bisa kirim data jika ini mode 'Edit'
-          // Jika tidak, kirim null untuk mode 'Tambah'
-          volunteerToEdit: volunteer,
-        ),
+        builder: (_) => EditUserPage(userId: id, title: 'Edit Volunteer'),
       ),
-    ).then((berhasilDitambahkan) {
-      // Jika halaman ditutup dan mengembalikan nilai 'true' (berhasil)
-      if (berhasilDitambahkan == true) {
-        setState(() {
-          // Refresh list untuk menampilkan data baru
-          // (Di aplikasi nyata, Anda akan memuat ulang data dari database)
-        });
-      }
-    });
+    );
+    if (result == true) {
+      _fetchVolunteers();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: ListView.builder(
-        itemCount: mockVolunteers.length,
-        itemBuilder: (context, index) {
-          final volunteer = mockVolunteers[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: primaryColor.withOpacity(0.2),
-                child: Text(
-                  volunteer.name[0],
-                  style: const TextStyle(color: primaryColor),
-                ),
+      body: RefreshIndicator(
+        onRefresh: _fetchVolunteers,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                itemCount: _volunteers.length,
+                itemBuilder: (context, index) {
+                  final v = _volunteers[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: primaryColor.withOpacity(0.2),
+                        child: Text(
+                          (v['nama'] ?? 'U')[0],
+                          style: TextStyle(color: primaryColor),
+                        ),
+                      ),
+                      title: Text(v['nama'] ?? ''),
+                      subtitle: Text(v['email'] ?? ''),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () => _openEditPage(v['id']),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () =>
+                                _confirmDelete(v['id'], v['nama'] ?? ''),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-              title: Text(
-                volunteer.name,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(volunteer.email),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.blue),
-                    onPressed: () => _showVolunteerForm(volunteer),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _deleteVolunteer(volunteer),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+              
       ),
       floatingActionButton: FloatingActionButton(
-        // --- 3. PASTIKAN ONPRESSED SEPERTI INI ---
-        onPressed: () =>
-            _showVolunteerForm(), // Panggil fungsi tanpa parameter (mode Tambah)
         backgroundColor: primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+        child: const Icon(Icons.add),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddUserPage()),
+          );
+          if (result == true) {
+            _fetchVolunteers(); // refresh list
+          }
+        },
+      )
+
     );
   }
 }

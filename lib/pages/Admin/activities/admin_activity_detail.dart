@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Admin/data/admin_models.dart';
+import 'activity_service.dart';
+import 'package:volunite/color_pallete.dart';
 
 class AdminActivityDetailPage extends StatefulWidget {
   final Activity activity;
@@ -12,170 +14,217 @@ class AdminActivityDetailPage extends StatefulWidget {
 
 class _AdminActivityDetailPageState extends State<AdminActivityDetailPage> {
   late Activity _activity;
+  bool _loading = false;
 
   @override
   void initState() {
     super.initState();
     _activity = widget.activity;
+    debugPrint('DEBUG AdminActivityDetail - activity: ${_activity.toJson()}');
+    debugPrint('DEBUG organizerName: ${_activity.organizerName}');
   }
 
-  void _approveActivity() {
-    // Di aplikasi nyata, ini akan memanggil API PATCH/PUT
-    // Di sini kita ubah data di mock_data
-    setState(() {
-      _activity.status = 'Disetujui';
-    });
-    _showFeedbackAndPop('Kegiatan telah disetujui.');
+  Future<void> _approveActivity() async {
+    await _updateStatus('scheduled'); // status untuk ACC
   }
 
-  void _rejectActivity() {
-    // Di aplikasi nyata, ini akan memanggil API PATCH/PUT
-    setState(() {
-      _activity.status = 'Ditolak';
-    });
-    _showFeedbackAndPop('Kegiatan telah ditolak.');
+  Future<void> _rejectActivity() async {
+    await _updateStatus('Rejected');
   }
 
-  void _showFeedbackAndPop(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-      ),
-    );
-    Navigator.of(context).pop();
+  Future<void> _updateStatus(String newStatus) async {
+    setState(() => _loading = true);
+
+    try {
+      final updated = await ActivityService.updateStatus(
+        _activity.id,
+        newStatus,
+      );
+
+      setState(() => _activity = updated);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newStatus == 'Rejected'
+                ? 'Kegiatan telah ditolak.'
+                : 'Kegiatan telah disetujui.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal memperbarui status: $e')));
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final img = _activity.thumbnail; // URL thumbnail dari API
+    final organizer = _activity.organizerName ?? 'Penyelenggara tidak tersedia';
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // 1. AppBar dengan Gambar (Mirip halaman detail volunteer)
           SliverAppBar(
-            expandedHeight: 250.0,
-            floating: false,
+            expandedHeight: 250,
             pinned: true,
-            iconTheme: const IconThemeData(color: Colors.white),
             backgroundColor: primaryColor,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                _activity.name,
+                _activity.judul,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16.0,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
-                textAlign: TextAlign.start,
               ),
-              background: Image.asset(
-                _activity.imageAsset,
-                fit: BoxFit.cover,
-                // Tambahkan overlay gelap agar judul terbaca
-                color: Colors.black.withOpacity(0.4),
-                colorBlendMode: BlendMode.darken,
-                // Error handling jika aset tidak ditemukan
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey,
-                    child: const Center(
-                      child: Icon(Icons.image_not_supported, color: Colors.white)
-                    ),
-                  );
-                },
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  img != null
+                      ? Image.network(
+                          img,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: Colors.grey,
+                            child: const Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: Colors.grey,
+                          child: const Center(
+                            child: Icon(
+                              Icons.image_not_supported,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                  Container(color: Colors.black.withOpacity(0.4)),
+                ],
               ),
             ),
           ),
-          // 2. Isi Konten
+
+          // DETAIL INFO
           SliverList(
             delegate: SliverChildListDelegate([
-              // Info Penyelenggara
               ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.business)),
-                title: Text(_activity.organizerName),
+                leading: const CircleAvatar(child: Icon(Icons.person)),
+                title: Text(organizer),
                 subtitle: const Text('Penyelenggara'),
               ),
-              // Info Waktu
               ListTile(
-                leading:
-                    const Icon(Icons.calendar_today, color: primaryColor),
-                title: Text(_activity.date),
-                subtitle: Text(_activity.time),
+                leading: const Icon(Icons.calendar_today, color: primaryColor),
+                title: Text(_activity.tanggalMulai?.toString() ?? '-'),
+                subtitle: Text(_activity.tanggalBerakhir?.toString() ?? '-'),
               ),
-              // Info Lokasi
               ListTile(
                 leading: const Icon(Icons.location_on, color: primaryColor),
-                title: Text(_activity.location),
+                title: Text(_activity.lokasi ?? '-'),
                 subtitle: const Text('Lokasi'),
               ),
+
               // Deskripsi
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Deskripsi Kegiatan',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _activity.description,
+                      _activity.deskripsi ?? '-',
                       style: const TextStyle(fontSize: 15, height: 1.5),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 100), // Beri ruang untuk tombol
+
+              const SizedBox(height: 100),
             ]),
           ),
         ],
       ),
-      // 3. Tombol Aksi (ACC/Tolak)
-      // Hanya tampilkan jika status masih Pending
-      bottomSheet: _activity.status == 'Pending'
-          ? Container(
-              padding: const EdgeInsets.all(16.0).copyWith(bottom: 24.0), // Beri padding bawah
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black12, blurRadius: 10, spreadRadius: 2)
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.close_rounded),
-                      label: const Text('Tolak'),
-                      onPressed: _rejectActivity,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                      ),
+
+      // Tombol ACC / Tolak (hanya tampil jika Waiting)
+      bottomSheet: _activity.status == 'Waiting'
+          ? _loading
+                ? Container(
+                    height: 80,
+                    alignment: Alignment.center,
+                    child: const CircularProgressIndicator(),
+                  )
+                : Container(
+                    padding: const EdgeInsets.all(16).copyWith(bottom: 24),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.check_rounded, color: Colors.white),
-                      label: const Text('Setujui'),
-                      onPressed: _approveActivity,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                      ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.close_rounded),
+                            label: const Text('Tolak'),
+                            onPressed: _rejectActivity,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            icon: const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                            ),
+                            label: const Text('Setujui'),
+                            onPressed: _approveActivity,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            )
+                  )
           : null,
     );
   }

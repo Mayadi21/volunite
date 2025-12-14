@@ -1,151 +1,113 @@
-// lib/pages/Volunteer/Category/category_activities_page.dart
 import 'package:flutter/material.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
 
-// -----------------------------------------------------------------------------
-// 1. MODEL DATA
-// -----------------------------------------------------------------------------
-enum ActivityStatus { upcoming, finished }
+// Model & Service
+import 'package:volunite/models/kegiatan_model.dart';
+import 'package:volunite/services/kegiatan_service.dart';
 
-class Activity {
-  final String title;
-  final DateTime date;
-  final TimeOfDay start;
-  final TimeOfDay end;
-  final String bannerUrl;
-  final ActivityStatus status;
 
-  Activity({
-    required this.title,
-    required this.date,
-    required this.start,
-    required this.end,
-    required this.bannerUrl,
-    required this.status,
-  });
-}
-
-// -----------------------------------------------------------------------------
-// 2. HALAMAN UTAMA (CATEGORY PAGE)
-// -----------------------------------------------------------------------------
-class CategoryActivitiesPage extends StatelessWidget {
+// ============================================================================
+// 1. HALAMAN UTAMA
+// ============================================================================
+class CategoryActivitiesPage extends StatefulWidget {
   final String categoryName;
 
-  CategoryActivitiesPage({super.key, required this.categoryName});
-
-  final List<Activity> _dummyActivities = [
-    Activity(
-      title: "Pintar Bersama - KMB USU",
-      date: DateTime.now().add(const Duration(days: 2)),
-      start: const TimeOfDay(hour: 12, minute: 0),
-      end: const TimeOfDay(hour: 17, minute: 0),
-      bannerUrl: "assets/images/event1.jpg",
-      status: ActivityStatus.upcoming,
-    ),
-    Activity(
-      title: "Aksi Bersih Pantai Cermin",
-      date: DateTime.now().add(const Duration(days: 5)),
-      start: const TimeOfDay(hour: 9, minute: 0),
-      end: const TimeOfDay(hour: 12, minute: 0),
-      bannerUrl: "assets/images/event2.jpg",
-      status: ActivityStatus.upcoming,
-    ),
-    Activity(
-      title: "Workshop Digital Marketing",
-      date: DateTime.now().subtract(const Duration(days: 5)),
-      start: const TimeOfDay(hour: 10, minute: 0),
-      end: const TimeOfDay(hour: 15, minute: 0),
-      bannerUrl: "assets/images/event1.jpg",
-      status: ActivityStatus.finished,
-    ),
-  ];
+  const CategoryActivitiesPage({
+    super.key,
+    required this.categoryName,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBackground,
-      appBar: AppBar(
-        // 1. Background color dibuat transparan agar gradient terlihat
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-
-        // 2. Menggunakan flexibleSpace untuk Gradient
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [kBlueGray, kSkyBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-
-        // 3. Icon Back diubah jadi Putih agar terlihat jelas
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-
-        // 4. Judul diubah jadi Putih
-        title: Text(
-          categoryName,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(20),
-        itemCount: _dummyActivities.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 20),
-        itemBuilder: (context, index) {
-          final activity = _dummyActivities[index];
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DetailActivitiesPage(
-                    kegiatan: null,
-                    title: activity.title,
-                    date:
-                        "${activity.date.day}/${activity.date.month}/${activity.date.year}",
-                    time:
-                        "${activity.start.hour}:${activity.start.minute.toString().padLeft(2, '0')}",
-                    imagePath: activity.bannerUrl,
-                  ),
-                ),
-              );
-            },
-            child: ActivityCard(activity: activity),
-          );
-        },
-      ),
-    );
-  }
+  State<CategoryActivitiesPage> createState() => _CategoryActivitiesPageState();
 }
 
-// -----------------------------------------------------------------------------
-// 3. WIDGET CARD
-// -----------------------------------------------------------------------------
-class ActivityCard extends StatelessWidget {
-  final Activity activity;
-  const ActivityCard({super.key, required this.activity});
+class _CategoryActivitiesPageState extends State<CategoryActivitiesPage> {
+  late Future<List<Kegiatan>> _kegiatanFuture;
 
-  String _formatDate(DateTime d) {
-    const hari = [
+  // 🔍 SEARCH STATE
+  List<Kegiatan> _allKegiatan = [];
+  String _searchText = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _kegiatanFuture = _fetchAndStoreKegiatan();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // --------------------------------------------------------------------------
+  // FETCH & SEARCH LOGIC
+  // --------------------------------------------------------------------------
+
+  Future<List<Kegiatan>> _fetchAndStoreKegiatan() async {
+    final kegiatan = await KegiatanService.fetchKegiatan();
+    if (mounted) {
+      setState(() {
+        _allKegiatan = kegiatan;
+      });
+    }
+    return kegiatan;
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchText = _searchController.text.toLowerCase();
+    });
+  }
+
+  List<Kegiatan> _getFilteredKegiatan() {
+    // 1️⃣ Filter kategori
+    final byCategory = _allKegiatan.where((k) {
+      return k.kategori.any(
+        (cat) =>
+            cat.namaKategori.toLowerCase() ==
+            widget.categoryName.toLowerCase(),
+      );
+    }).toList();
+
+    // 2️⃣ Jika search kosong
+    if (_searchText.isEmpty) return byCategory;
+
+    // 3️⃣ Filter search
+    return byCategory.where((k) {
+      final titleMatch = k.judul.toLowerCase().contains(_searchText);
+      final descMatch =
+          (k.deskripsi ?? '').toLowerCase().contains(_searchText);
+      final categoryMatch = k.kategori.any(
+        (cat) => cat.namaKategori.toLowerCase().contains(_searchText),
+      );
+
+      return titleMatch || descMatch || categoryMatch;
+    }).toList();
+  }
+
+  // --------------------------------------------------------------------------
+  // FORMAT TANGGAL & WAKTU
+  // --------------------------------------------------------------------------
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Tanggal N/A';
+
+    const days = [
       'Minggu',
       'Senin',
       'Selasa',
       'Rabu',
       'Kamis',
       'Jumat',
-      'Sabtu',
+      'Sabtu'
     ];
-    const bulan = [
+    const months = [
+      '',
       'Januari',
       'Februari',
       'Maret',
@@ -157,19 +119,179 @@ class ActivityCard extends StatelessWidget {
       'September',
       'Oktober',
       'November',
-      'Desember',
+      'Desember'
     ];
-    return '${hari[d.weekday % 7]}, ${d.day} ${bulan[d.month - 1]} ${d.year}';
+
+    return '${days[date.weekday % 7]}, ${date.day} ${months[date.month]} ${date.year}';
   }
 
-  String _formatTime(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}.${t.minute.toString().padLeft(2, '0')}';
+  String _formatTimeRange(DateTime? start, DateTime? end) {
+    if (start == null) return 'Waktu N/A';
+
+    final startTime =
+        '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
+
+    if (end != null) {
+      final endTime =
+          '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
+      return '$startTime - $endTime';
+    }
+
+    return startTime;
+  }
+
+  // --------------------------------------------------------------------------
+  // UI
+  // --------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
-    final isFinished = activity.status == ActivityStatus.finished;
-    final timeRange =
-        '${_formatTime(activity.start)} - ${_formatTime(activity.end)} WIB';
+    return Scaffold(
+      backgroundColor: kBackground,
+      appBar: AppBar(
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [kBlueGray, kSkyBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          widget.categoryName,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          // 🔍 SEARCH BAR
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Cari kegiatan...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: kSoftBlue.withOpacity(0.4),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+
+          // 📋 LIST
+          Expanded(
+            child: FutureBuilder<List<Kegiatan>>(
+              future: _kegiatanFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Error: ${snapshot.error}'),
+                  );
+                }
+
+                final filtered = _getFilteredKegiatan();
+
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Text(
+                      _searchText.isEmpty
+                          ? 'Tidak ada kegiatan di kategori ini.'
+                          : 'Tidak ada hasil untuk "$_searchText"',
+                      style: const TextStyle(color: kBlueGray),
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: 20),
+                  itemBuilder: (context, index) {
+                    final kegiatan = filtered[index];
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DetailActivitiesPage(
+                              kegiatan: kegiatan,
+                              title: kegiatan.judul,
+                              date: _formatDate(kegiatan.tanggalMulai),
+                              time: _formatTimeRange(
+                                kegiatan.tanggalMulai,
+                                kegiatan.tanggalBerakhir,
+                              ),
+                              imagePath: kegiatan.thumbnail ??
+                                  'assets/images/event_placeholder.jpg',
+                            ),
+                          ),
+                        );
+                      },
+                      child: KegiatanCard(
+                        kegiatan: kegiatan,
+                        date: _formatDate(kegiatan.tanggalMulai),
+                        timeRange: _formatTimeRange(
+                          kegiatan.tanggalMulai,
+                          kegiatan.tanggalBerakhir,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// ============================================================================
+// 2. KARTU KEGIATAN (WAJIB DI LUAR STATE)
+// ============================================================================
+class KegiatanCard extends StatelessWidget {
+  final Kegiatan kegiatan;
+  final String date;
+  final String timeRange;
+
+  const KegiatanCard({
+    super.key,
+    required this.kegiatan,
+    required this.date,
+    required this.timeRange,
+  });
+
+  bool get isFinished =>
+      kegiatan.status.toLowerCase() == 'completed' ||
+      kegiatan.status.toLowerCase() == 'finished';
+
+  @override
+  Widget build(BuildContext context) {
+    final image = kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg';
+    final isUrl = image.startsWith('http');
 
     return Container(
       decoration: BoxDecoration(
@@ -177,7 +299,7 @@ class ActivityCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: kBlueGray.withOpacity(0.20),
+            color: kBlueGray.withOpacity(0.2),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -187,30 +309,32 @@ class ActivityCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-            child: Image.asset(
-              activity.bannerUrl,
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 160,
-                color: Colors.grey[300],
-                child: const Center(child: Icon(Icons.image_not_supported)),
-              ),
-            ),
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(18)),
+            child: isUrl
+                ? Image.network(
+                    image,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  )
+                : Image.asset(
+                    image,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
-                        activity.title,
+                        kegiatan.judul,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -218,17 +342,11 @@ class ActivityCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (isFinished) ...[
-                      const SizedBox(width: 8),
-                      const _FinishedChip(),
-                    ],
+                    if (isFinished) const _FinishedChip(),
                   ],
                 ),
                 const SizedBox(height: 8),
-                _InfoRow(
-                  icon: Icons.calendar_today,
-                  text: _formatDate(activity.date),
-                ),
+                _InfoRow(icon: Icons.calendar_today, text: date),
                 const SizedBox(height: 4),
                 _InfoRow(icon: Icons.access_time, text: timeRange),
               ],
@@ -240,12 +358,14 @@ class ActivityCard extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// KOMPONEN PEMBANTU
-// -----------------------------------------------------------------------------
+
+// ============================================================================
+// 3. KOMPONEN PENDUKUNG
+// ============================================================================
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;
+
   const _InfoRow({required this.icon, required this.text});
 
   @override
@@ -254,7 +374,10 @@ class _InfoRow extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: kBlueGray),
         const SizedBox(width: 6),
-        Text(text, style: const TextStyle(fontSize: 12, color: kBlueGray)),
+        Text(
+          text,
+          style: const TextStyle(fontSize: 12, color: kBlueGray),
+        ),
       ],
     );
   }
@@ -266,7 +389,8 @@ class _FinishedChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFFE3F1FF),
         borderRadius: BorderRadius.circular(12),
@@ -274,7 +398,8 @@ class _FinishedChip extends StatelessWidget {
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_circle, size: 12, color: kDarkBlueGray),
+          Icon(Icons.check_circle,
+              size: 12, color: kDarkBlueGray),
           SizedBox(width: 4),
           Text(
             'Selesai',

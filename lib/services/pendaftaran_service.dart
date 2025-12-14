@@ -40,28 +40,70 @@ class PendaftaranService {
       return false;
     }
   }
+
   Future<bool> isUserRegistered(int kegiatanId) async {
     try {
-        final response = await ApiClient.get(
-            // Endpoint API yang Anda buat di Laravel
-            '/volunteer/kegiatan/$kegiatanId/pendaftaran/status',
-            auth: true, // Pastikan ini mengirim token autentikasi
-        );
+      final response = await ApiClient.get(
+        // Endpoint API yang Anda buat di Laravel
+        '/volunteer/kegiatan/$kegiatanId/pendaftaran/status',
+        auth: true, // Pastikan ini mengirim token autentikasi
+      );
 
-        if (response.statusCode == 200) {
-            final body = json.decode(response.body);
-            // 🔥 PERBAIKAN LOGIC: Pastikan kita mendapatkan boolean dari 'is_registered'
-            if (body is Map && body.containsKey('is_registered')) {
-                 return body['is_registered'] == true;
-            }
-            return false; // Jika format respons tidak sesuai
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        // 🔥 PERBAIKAN LOGIC: Pastikan kita mendapatkan boolean dari 'is_registered'
+        if (body is Map && body.containsKey('is_registered')) {
+          return body['is_registered'] == true;
         }
+        return false; // Jika format respons tidak sesuai
+      }
 
-        // Jika status code bukan 200 (misal 401 Unauthorized atau 404 Not Found)
-        return false; 
+      // Jika status code bukan 200 (misal 401 Unauthorized atau 404 Not Found)
+      return false;
     } catch (e) {
-        print("Error cek status pendaftaran: $e");
-        return false;
+      print("Error cek status pendaftaran: $e");
+      return false;
     }
-}
+  }
+
+  static Future<List<Pendaftaran>> fetchPendaftarByKegiatan(
+    int kegiatanId,
+  ) async {
+    final response = await ApiClient.get(
+      '/organizer/kegiatan/$kegiatanId/pendaftar',
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+      final List<dynamic> data = jsonResponse['data'];
+      return data.map((e) => Pendaftaran.fromJson(e)).toList();
+    } else {
+      throw Exception("Gagal memuat pelamar");
+    }
+  }
+
+  // 2. Update Status (Terima / Tolak)
+  static Future<bool> updateStatusPendaftaran(
+    int pendaftaranId,
+    String status,
+  ) async {
+    final response = await ApiClient.post(
+      '/organizer/pendaftar/$pendaftaranId/update-status',
+      body: {'status': status}, // "Diterima" atau "Ditolak"
+    );
+
+    return response.statusCode == 200;
+  }
+
+  static Future<bool> updateKehadiran(
+    int pendaftaranId,
+    String statusKehadiran,
+  ) async {
+    final response = await ApiClient.post(
+      '/organizer/pendaftar/$pendaftaranId/update-kehadiran',
+      body: {'status_kehadiran': statusKehadiran},
+    );
+
+    return response.statusCode == 200;
+  }
 }
