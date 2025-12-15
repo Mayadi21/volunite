@@ -7,8 +7,8 @@ import 'package:volunite/services/pendaftaran_service.dart';
 import 'package:volunite/models/user_model.dart';
 import 'package:volunite/pages/Volunteer/Activity/activity_card.dart';
 
-// 🔥 PERBARUI ENUM: Tambahkan filter status spesifik
-enum RegisterFilter { all, registered, notRegistered, accepted, pending, rejected }
+// 🔥 REVISI ENUM: Menambahkan 'notRegistered' kembali, menghapus 'registered'
+enum RegisterFilter { all, notRegistered, accepted, pending, rejected }
 
 // =============================================================================
 // MAIN PAGE
@@ -36,8 +36,9 @@ class _ActivitiesPageState extends State<ActivitiesPage>
   String _searchText = '';
   RegisterFilter _registerFilter = RegisterFilter.all;
 
-  // 🔥 PERBARUI: Map untuk menyimpan status pendaftaran {kegiatanId: Status String}
+  // Map untuk menyimpan status pendaftaran {kegiatanId: Status String}
   final Map<int, String> _registrationStatuses = {};
+  final PendaftaranService _pendaftaranService = PendaftaranService();
 
   @override
   void initState() {
@@ -63,21 +64,17 @@ class _ActivitiesPageState extends State<ActivitiesPage>
   Future<void> _loadAll() async {
     final auth = AuthService();
     currentUser = await auth.getCurrentUser();
-    final pendaftaranService = PendaftaranService();
-
+    
     final kegiatan = await KegiatanService.fetchKegiatan();
-    _registrationStatuses.clear(); // Bersihkan map sebelum diisi
+    _registrationStatuses.clear();
 
-    for (final k in kegiatan) {
-      // 🔥 GANTI: Menggunakan getRegistrationStatus untuk mendapatkan status string
-      final status = await pendaftaranService.getRegistrationStatus(k.id); 
-      
-      // Hanya simpan status yang relevan (bukan 'Belum Mendaftar', 'Memuat', atau error)
-      if (status != 'Belum Mendaftar' && 
-          !status.contains('Kesalahan') &&
-          status != 'Memuat') 
-      {
-        _registrationStatuses[k.id] = status;
+    if (currentUser != null) {
+      for (final k in kegiatan) {
+        final status = await _pendaftaranService.getRegistrationStatus(k.id); 
+        
+        if (status != 'Memuat' && !status.contains('Kesalahan')) {
+          _registrationStatuses[k.id] = status;
+        }
       }
     }
 
@@ -105,7 +102,7 @@ class _ActivitiesPageState extends State<ActivitiesPage>
   }
 
   void _handleTabSelection() {
-    // 🔥 Reset search dan filter saat beralih ke tab Riwayat atau sebaliknya
+    // Reset search dan filter saat beralih ke tab Riwayat atau sebaliknya
     if (_currentIndex == 0 && _tabController.index == 1) {
       _searchController.clear();
       _registerFilter = RegisterFilter.all;
@@ -115,15 +112,13 @@ class _ActivitiesPageState extends State<ActivitiesPage>
   }
 
   // =============================================================================
-  // FILTER LOGIC
+  // 🔥 FILTER LOGIC (REVISI untuk notRegistered)
   // =============================================================================
   List<Kegiatan> _applyFilters(List<Kegiatan> list, {required bool isHistoryTab}) {
-    // Riwayat tidak memiliki filter tambahan
     if (isHistoryTab) {
       return list; 
     }
 
-    // Filter untuk tab Mendatang
     return list.where((k) {
       // 1. Filter Search (Judul/Deskripsi)
       final matchSearch = k.judul.toLowerCase().contains(_searchText) ||
@@ -131,25 +126,19 @@ class _ActivitiesPageState extends State<ActivitiesPage>
       
       if (!matchSearch) return false;
 
-      // 2. Filter Pendaftaran Status
-      final registrationStatus = _registrationStatuses[k.id];
-
-      // Cek apakah user sudah mendaftar (status apapun selain null)
-      final bool isRegistered = registrationStatus != null; 
+      // Ambil status pendaftaran (fallback ke 'Belum Mendaftar' jika tidak ada di Map)
+      final status = _registrationStatuses[k.id] ?? 'Belum Mendaftar';
 
       final matchRegister = switch (_registerFilter) {
         RegisterFilter.all => true,
         
-        // Filter Umum: Terdaftar (statusnya ada)
-        RegisterFilter.registered => isRegistered,
+        // 🔥 Filter: Belum Daftar (Belum Mendaftar ATAU Kuota Penuh)
+        RegisterFilter.notRegistered => status == 'Belum Mendaftar' || status == 'Kuota Penuh',
         
-        // Filter Umum: Belum Terdaftar (statusnya null)
-        RegisterFilter.notRegistered => !isRegistered,
-        
-        // Filter status spesifik (menggunakan nilai string)
-        RegisterFilter.accepted => registrationStatus == 'Diterima',
-        RegisterFilter.pending => registrationStatus == 'Mengajukan',
-        RegisterFilter.rejected => registrationStatus == 'Ditolak',
+        // Filter status spesifik
+        RegisterFilter.accepted => status == 'Diterima',
+        RegisterFilter.pending => status == 'Mengajukan',
+        RegisterFilter.rejected => status == 'Ditolak',
       };
 
       return matchRegister;
@@ -203,13 +192,11 @@ class _ActivitiesPageState extends State<ActivitiesPage>
                 // Tab Mendatang
                 ActivityList(
                   activities: _applyFilters(upcomingActivities, isHistoryTab: false),
-                  // 🔥 KIRIMKAN MAP STATUS BARU
                   registrationStatuses: _registrationStatuses, 
                 ),
                 // Tab Riwayat
                 ActivityList(
                   activities: _applyFilters(historyActivities, isHistoryTab: true),
-                  // 🔥 KIRIMKAN MAP STATUS BARU
                   registrationStatuses: _registrationStatuses, 
                 ),
               ],
@@ -258,7 +245,7 @@ class _ActivitiesPageState extends State<ActivitiesPage>
     );
   }
 
-  // 🔥 WIDGET SEARCH & FILTER MINIMALIS: Update Dropdown items
+  // 🔥 WIDGET SEARCH & FILTER MINIMALIS (REVISI DROP DOWN)
   Widget _buildSearchAndFilterMinimal() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -288,7 +275,7 @@ class _ActivitiesPageState extends State<ActivitiesPage>
           ),
           const SizedBox(width: 8),
           
-          // 🔥 Dropdown Filter Minimalis dengan status baru
+          // Dropdown Filter Minimalis
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
@@ -313,11 +300,7 @@ class _ActivitiesPageState extends State<ActivitiesPage>
                     child: Text('Semua', style: TextStyle(color: kDarkBlueGray)),
                   ),
                   DropdownMenuItem(
-                    // Filter gabungan: Terdaftar (status apapun)
-                    value: RegisterFilter.registered, 
-                    child: Text('Terdaftar', style: TextStyle(color: kDarkBlueGray)),
-                  ),
-                  DropdownMenuItem(
+                    // 🔥 Menambahkan "Belum Daftar"
                     value: RegisterFilter.notRegistered,
                     child: Text('Belum Daftar', style: TextStyle(color: kDarkBlueGray)),
                   ),
@@ -348,7 +331,6 @@ class _ActivitiesPageState extends State<ActivitiesPage>
 // =============================================================================
 class ActivityList extends StatelessWidget {
   final List<Kegiatan> activities;
-  // 🔥 TERIMA MAP STATUS
   final Map<int, String> registrationStatuses;
 
   const ActivityList({
@@ -374,12 +356,10 @@ class ActivityList extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 14),
       itemBuilder: (context, index) {
         final kegiatan = activities[index];
-        // Ambil status pendaftaran untuk kegiatan ini, null jika belum terdaftar
         final status = registrationStatuses[kegiatan.id]; 
         
         return ActivityCard(
           kegiatan: kegiatan,
-          // 🔥 TERUSKAN STATUS KE CARD
           initialRegistrationStatus: status, 
         );
       },

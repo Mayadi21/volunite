@@ -8,7 +8,7 @@ import 'package:volunite/services/auth/auth_service.dart';
 
 class ActivityCard extends StatefulWidget {
   final Kegiatan kegiatan;
-  // 🔥 BARU: Menerima status awal dari parent (ActivitiesPage)
+  // Menerima status awal dari parent
   final String? initialRegistrationStatus; 
 
   const ActivityCard({
@@ -24,27 +24,31 @@ class ActivityCard extends StatefulWidget {
 class _ActivityCardState extends State<ActivityCard> {
   final PendaftaranService _pendaftaranService = PendaftaranService();
 
-  // 🔥 Ganti _isRegistered & _isChecking menjadi String status
-  String _registrationStatus = 'Belum Mendaftar';
+  // State status pendaftaran. Nilai awal 'Memuat' akan lebih baik.
+  String _registrationStatus = 'Memuat'; 
 
   @override
   void initState() {
     super.initState();
-    // 🔥 INISIALISASI DENGAN DATA YANG DIKIRIM DARI PARENT
-    // Status bisa berupa 'Mengajukan', 'Diterima', 'Ditolak', atau null/undefined
-    _registrationStatus = widget.initialRegistrationStatus ?? 'Belum Mendaftar';
-  }
+    
+    // 1. Inisialisasi dengan status dari parent (jika ada) atau 'Memuat'
+    _registrationStatus = widget.initialRegistrationStatus ?? 'Memuat';
 
-  // 🔥 FUNGSI REFRESH MANUAL: Hanya dipanggil setelah kembali dari DetailPage
-  // Tujuannya agar ActivityCard tahu apakah statusnya berubah (misal dari 'Belum Mendaftar' ke 'Mengajukan')
-  Future<void> _refreshRegistrationStatus() async {
+    // 2. Panggil fungsi untuk mengambil status terbaru secara asynchronous
+    _fetchAndSetRegistrationStatus();
+  }
+  
+  // Mengambil status dari API saat widget diinisialisasi/refresh
+  Future<void> _fetchAndSetRegistrationStatus() async {
     final kegiatanId = widget.kegiatan.id;
     final user = await AuthService().getCurrentUser();
 
-    if (user == null || !mounted) {
-      setState(() {
-        _registrationStatus = 'Belum Mendaftar';
-      });
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _registrationStatus = 'Belum Mendaftar';
+        });
+      }
       return;
     }
 
@@ -53,11 +57,11 @@ class _ActivityCardState extends State<ActivityCard> {
 
       if (mounted) {
         setState(() {
-          _registrationStatus = status;
+          _registrationStatus = status; // Set status terbaru dari API
         });
       }
     } catch (e) {
-      debugPrint('Error refreshing registration status: $e');
+      debugPrint('Error fetching registration status in card: $e');
       if (mounted) {
         setState(() {
           _registrationStatus = 'Kesalahan Jaringan';
@@ -66,21 +70,12 @@ class _ActivityCardState extends State<ActivityCard> {
     }
   }
 
+
   String _formatDate(DateTime d) {
     const hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const bulan = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember'
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
     return '${hari[d.weekday % 7]}, ${d.day} ${bulan[d.month - 1]} ${d.year}';
   }
@@ -96,6 +91,16 @@ class _ActivityCardState extends State<ActivityCard> {
         '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
     return '$s - $e';
   }
+    
+  // Logika untuk menampilkan chip status pendaftaran
+  bool get showRegistrationChip {
+    final status = _registrationStatus;
+    return status == 'Diterima' || 
+           status == 'Mengajukan' || 
+           status == 'Ditolak' ||
+           status == 'Kuota Penuh'; 
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -115,11 +120,22 @@ class _ActivityCardState extends State<ActivityCard> {
         widget.kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg';
     final isUrl = imagePath.startsWith('http');
     
-    // 🔥 Tentukan apakah ada badge status pendaftaran yang harus ditampilkan
-    final showRegistrationChip = 
-        _registrationStatus == 'Diterima' || 
-        _registrationStatus == 'Mengajukan' || 
-        _registrationStatus == 'Ditolak';
+    // 🔥 WIDGET STATUS DARI TERNARY OPERATOR
+    Widget statusWidget;
+    if (showRegistrationChip) {
+      statusWidget = _RegistrationStatusChip(status: _registrationStatus);
+    } else if (_registrationStatus == 'Memuat') {
+      statusWidget = const Padding(
+        padding: EdgeInsets.only(left: 6),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2, color: kBlueGray),
+        ),
+      );
+    } else {
+      statusWidget = const SizedBox.shrink(); // Sembunyikan jika tidak ada status
+    }
 
 
     return Material(
@@ -128,7 +144,6 @@ class _ActivityCardState extends State<ActivityCard> {
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: () async {
-          // Mengirim sinyal true dari DetailActivitiesPage jika terjadi perubahan status
           final bool? needsRefresh = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
@@ -142,9 +157,9 @@ class _ActivityCardState extends State<ActivityCard> {
             ),
           );
 
-          // Panggil refresh manual di ActivityCard jika ada indikasi perubahan
+          // Panggil refresh jika ada indikasi perubahan dari halaman detail
           if (needsRefresh == true && mounted) {
-            _refreshRegistrationStatus();
+            _fetchAndSetRegistrationStatus();
           }
         },
         child: Container(
@@ -205,9 +220,8 @@ class _ActivityCardState extends State<ActivityCard> {
                           ),
                         ),
 
-                        // 🔥 Badge Status Pendaftaran
-                        if (showRegistrationChip)
-                          _RegistrationStatusChip(status: _registrationStatus),
+                        // 🔥 MASUKKAN WIDGET STATUS YANG SUDAH DITENTUKAN
+                        statusWidget,
 
                         // Badge Selesai
                         if (isFinished) const _FinishedChip(),
@@ -229,10 +243,9 @@ class _ActivityCardState extends State<ActivityCard> {
 }
 
 // =========================================================
-// BADGE WIDGETS (Disesuaikan dengan Status String)
+// BADGE WIDGETS
 // =========================================================
 
-// 🔥 CHIP STATUS PENGGANTI _RegisteredChip
 class _RegistrationStatusChip extends StatelessWidget {
   final String status;
 
@@ -264,8 +277,13 @@ class _RegistrationStatusChip extends StatelessWidget {
         icon = Icons.cancel;
         label = 'Ditolak';
         break;
+      case 'Kuota Penuh':
+        color = kDarkBlueGray;
+        bgColor = Colors.grey[300]!;
+        icon = Icons.block;
+        label = 'Penuh';
+        break;
       default:
-        // Jika status tidak terdefinisi atau 'Belum Mendaftar', sembunyikan
         return const SizedBox.shrink();
     }
 
@@ -278,6 +296,7 @@ class _RegistrationStatusChip extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
@@ -294,7 +313,6 @@ class _RegistrationStatusChip extends StatelessWidget {
     );
   }
 }
-
 
 class _FinishedChip extends StatelessWidget {
   const _FinishedChip();
