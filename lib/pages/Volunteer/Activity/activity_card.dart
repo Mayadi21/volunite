@@ -8,10 +8,13 @@ import 'package:volunite/services/auth/auth_service.dart';
 
 class ActivityCard extends StatefulWidget {
   final Kegiatan kegiatan;
+  // 🔥 BARU: Menerima status awal dari parent (ActivitiesPage)
+  final String? initialRegistrationStatus; 
 
   const ActivityCard({
     super.key,
     required this.kegiatan,
+    this.initialRegistrationStatus,
   });
 
   @override
@@ -20,48 +23,44 @@ class ActivityCard extends StatefulWidget {
 
 class _ActivityCardState extends State<ActivityCard> {
   final PendaftaranService _pendaftaranService = PendaftaranService();
-  final AuthService _authService = AuthService();
 
-  bool _isRegistered = false;
-  bool _isChecking = true;
+  // 🔥 Ganti _isRegistered & _isChecking menjadi String status
+  String _registrationStatus = 'Belum Mendaftar';
 
   @override
   void initState() {
     super.initState();
-    _checkRegistrationStatus();
+    // 🔥 INISIALISASI DENGAN DATA YANG DIKIRIM DARI PARENT
+    // Status bisa berupa 'Mengajukan', 'Diterima', 'Ditolak', atau null/undefined
+    _registrationStatus = widget.initialRegistrationStatus ?? 'Belum Mendaftar';
   }
 
-  // =========================================================
-  // 🔥 LOGIC SAMA PERSIS DENGAN DetailActivitiesPage
-  // =========================================================
-  Future<void> _checkRegistrationStatus() async {
+  // 🔥 FUNGSI REFRESH MANUAL: Hanya dipanggil setelah kembali dari DetailPage
+  // Tujuannya agar ActivityCard tahu apakah statusnya berubah (misal dari 'Belum Mendaftar' ke 'Mengajukan')
+  Future<void> _refreshRegistrationStatus() async {
     final kegiatanId = widget.kegiatan.id;
-    final user = await _authService.getCurrentUser();
+    final user = await AuthService().getCurrentUser();
 
-    if (user == null) {
+    if (user == null || !mounted) {
       setState(() {
-        _isRegistered = false;
-        _isChecking = false;
+        _registrationStatus = 'Belum Mendaftar';
       });
       return;
     }
 
     try {
-      final isRegistered =
-          await _pendaftaranService.isUserRegistered(kegiatanId);
+      final status = await _pendaftaranService.getRegistrationStatus(kegiatanId);
 
       if (mounted) {
         setState(() {
-          _isRegistered = isRegistered;
-          _isChecking = false;
+          _registrationStatus = status;
         });
       }
     } catch (e) {
-      debugPrint('Error checking registration status: $e');
+      debugPrint('Error refreshing registration status: $e');
       if (mounted) {
         setState(() {
-          _isRegistered = false;
-          _isChecking = false;
+          _registrationStatus = 'Kesalahan Jaringan';
         });
       }
     }
@@ -115,6 +114,13 @@ class _ActivityCardState extends State<ActivityCard> {
     final imagePath =
         widget.kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg';
     final isUrl = imagePath.startsWith('http');
+    
+    // 🔥 Tentukan apakah ada badge status pendaftaran yang harus ditampilkan
+    final showRegistrationChip = 
+        _registrationStatus == 'Diterima' || 
+        _registrationStatus == 'Mengajukan' || 
+        _registrationStatus == 'Ditolak';
+
 
     return Material(
       color: Colors.transparent,
@@ -122,23 +128,25 @@ class _ActivityCardState extends State<ActivityCard> {
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: () async {
-          final bool? result = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DetailActivitiesPage(
-              kegiatan: widget.kegiatan,
-              title: widget.kegiatan.judul,
-              date: date,
-              time: time,
-              imagePath: imagePath,
+          // Mengirim sinyal true dari DetailActivitiesPage jika terjadi perubahan status
+          final bool? needsRefresh = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DetailActivitiesPage(
+                kegiatan: widget.kegiatan,
+                title: widget.kegiatan.judul,
+                date: date,
+                time: time,
+                imagePath: imagePath,
+              ),
             ),
-          ),
-        );
+          );
 
-        if (result == true && mounted) {
-          _checkRegistrationStatus();
-        }
-      },
+          // Panggil refresh manual di ActivityCard jika ada indikasi perubahan
+          if (needsRefresh == true && mounted) {
+            _refreshRegistrationStatus();
+          }
+        },
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -163,6 +171,14 @@ class _ActivityCardState extends State<ActivityCard> {
                         height: 160,
                         width: double.infinity,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                                height: 160,
+                                width: double.infinity,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.broken_image, size: 40, color: kBlueGray),
+                            );
+                        },
                       )
                     : Image.asset(
                         imagePath,
@@ -189,9 +205,9 @@ class _ActivityCardState extends State<ActivityCard> {
                           ),
                         ),
 
-                        // 🔥 Badge Terdaftar
-                        if (!_isChecking && _isRegistered)
-                          const _RegisteredChip(),
+                        // 🔥 Badge Status Pendaftaran
+                        if (showRegistrationChip)
+                          _RegistrationStatusChip(status: _registrationStatus),
 
                         // Badge Selesai
                         if (isFinished) const _FinishedChip(),
@@ -213,31 +229,64 @@ class _ActivityCardState extends State<ActivityCard> {
 }
 
 // =========================================================
-// BADGE WIDGET
+// BADGE WIDGETS (Disesuaikan dengan Status String)
 // =========================================================
 
-class _RegisteredChip extends StatelessWidget {
-  const _RegisteredChip();
+// 🔥 CHIP STATUS PENGGANTI _RegisteredChip
+class _RegistrationStatusChip extends StatelessWidget {
+  final String status;
+
+  const _RegistrationStatusChip({required this.status});
 
   @override
   Widget build(BuildContext context) {
+    Color color;
+    Color bgColor;
+    IconData icon;
+    String label;
+
+    switch (status) {
+      case 'Diterima':
+        color = Colors.green[700]!;
+        bgColor = Colors.green[50]!;
+        icon = Icons.check_circle;
+        label = 'Diterima';
+        break;
+      case 'Mengajukan':
+        color = Colors.orange[700]!;
+        bgColor = Colors.orange[50]!;
+        icon = Icons.pending_actions;
+        label = 'Mengajukan';
+        break;
+      case 'Ditolak':
+        color = Colors.red[700]!;
+        bgColor = Colors.red[50]!;
+        icon = Icons.cancel;
+        label = 'Ditolak';
+        break;
+      default:
+        // Jika status tidak terdefinisi atau 'Belum Mendaftar', sembunyikan
+        return const SizedBox.shrink();
+    }
+
     return Container(
       margin: const EdgeInsets.only(left: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
+        color: bgColor,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.check_circle, size: 12, color: Colors.green),
-          SizedBox(width: 4),
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
           Text(
-            'Terdaftar',
+            label,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.green,
+              color: color,
             ),
           ),
         ],
@@ -245,6 +294,7 @@ class _RegisteredChip extends StatelessWidget {
     );
   }
 }
+
 
 class _FinishedChip extends StatelessWidget {
   const _FinishedChip();

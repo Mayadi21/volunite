@@ -7,7 +7,8 @@ import 'package:volunite/services/pendaftaran_service.dart';
 import 'package:volunite/models/user_model.dart';
 import 'package:volunite/pages/Volunteer/Activity/activity_card.dart';
 
-enum RegisterFilter { all, registered, notRegistered }
+// 🔥 PERBARUI ENUM: Tambahkan filter status spesifik
+enum RegisterFilter { all, registered, notRegistered, accepted, pending, rejected }
 
 // =============================================================================
 // MAIN PAGE
@@ -32,11 +33,11 @@ class _ActivitiesPageState extends State<ActivitiesPage>
 
   // 🔍 SEARCH & FILTER
   final TextEditingController _searchController = TextEditingController();
-  String _searchText = ''; // Sudah lowercased di _onSearchChanged
+  String _searchText = '';
   RegisterFilter _registerFilter = RegisterFilter.all;
 
-  // 🏷️ REGISTERED IDS
-  final Set<int> _registeredIds = {};
+  // 🔥 PERBARUI: Map untuk menyimpan status pendaftaran {kegiatanId: Status String}
+  final Map<int, String> _registrationStatuses = {};
 
   @override
   void initState() {
@@ -62,15 +63,21 @@ class _ActivitiesPageState extends State<ActivitiesPage>
   Future<void> _loadAll() async {
     final auth = AuthService();
     currentUser = await auth.getCurrentUser();
+    final pendaftaranService = PendaftaranService();
 
     final kegiatan = await KegiatanService.fetchKegiatan();
+    _registrationStatuses.clear(); // Bersihkan map sebelum diisi
 
     for (final k in kegiatan) {
-      // ASUMSI: Logika ini sudah benar untuk menandai pendaftaran
-      final isRegistered =
-          await PendaftaranService().isUserRegistered(k.id); 
-      if (isRegistered) {
-        _registeredIds.add(k.id);
+      // 🔥 GANTI: Menggunakan getRegistrationStatus untuk mendapatkan status string
+      final status = await pendaftaranService.getRegistrationStatus(k.id); 
+      
+      // Hanya simpan status yang relevan (bukan 'Belum Mendaftar', 'Memuat', atau error)
+      if (status != 'Belum Mendaftar' && 
+          !status.contains('Kesalahan') &&
+          status != 'Memuat') 
+      {
+        _registrationStatuses[k.id] = status;
       }
     }
 
@@ -80,7 +87,6 @@ class _ActivitiesPageState extends State<ActivitiesPage>
             k.status.toLowerCase() == 'upcoming')
         .toList();
 
-    // Untuk tab Riwayat, kita asumsikan semua kegiatan 'finished' adalah riwayat.
     historyActivities = kegiatan
         .where((k) =>
             k.status.toLowerCase() == 'finished' ||
@@ -112,12 +118,12 @@ class _ActivitiesPageState extends State<ActivitiesPage>
   // FILTER LOGIC
   // =============================================================================
   List<Kegiatan> _applyFilters(List<Kegiatan> list, {required bool isHistoryTab}) {
-    // Riwayat tidak memiliki filter tambahan (hanya menampilkan historyActivities)
+    // Riwayat tidak memiliki filter tambahan
     if (isHistoryTab) {
       return list; 
     }
 
-    // Filter untuk tab Mendatang (Mendatang memiliki Search dan Register Filter)
+    // Filter untuk tab Mendatang
     return list.where((k) {
       // 1. Filter Search (Judul/Deskripsi)
       final matchSearch = k.judul.toLowerCase().contains(_searchText) ||
@@ -125,13 +131,25 @@ class _ActivitiesPageState extends State<ActivitiesPage>
       
       if (!matchSearch) return false;
 
-      // 2. Filter Pendaftaran
-      final isRegistered = _registeredIds.contains(k.id);
+      // 2. Filter Pendaftaran Status
+      final registrationStatus = _registrationStatuses[k.id];
+
+      // Cek apakah user sudah mendaftar (status apapun selain null)
+      final bool isRegistered = registrationStatus != null; 
 
       final matchRegister = switch (_registerFilter) {
         RegisterFilter.all => true,
+        
+        // Filter Umum: Terdaftar (statusnya ada)
         RegisterFilter.registered => isRegistered,
+        
+        // Filter Umum: Belum Terdaftar (statusnya null)
         RegisterFilter.notRegistered => !isRegistered,
+        
+        // Filter status spesifik (menggunakan nilai string)
+        RegisterFilter.accepted => registrationStatus == 'Diterima',
+        RegisterFilter.pending => registrationStatus == 'Mengajukan',
+        RegisterFilter.rejected => registrationStatus == 'Ditolak',
       };
 
       return matchRegister;
@@ -146,7 +164,6 @@ class _ActivitiesPageState extends State<ActivitiesPage>
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
-        // Set elevation ke 0 dan tambahkan shadowColor transparan untuk menghilangkan bayangan AppBar
         elevation: 0,
         centerTitle: true,
         backgroundColor: Colors.transparent, 
@@ -154,7 +171,7 @@ class _ActivitiesPageState extends State<ActivitiesPage>
         
         flexibleSpace: Container( 
           decoration: const BoxDecoration(
-             gradient: LinearGradient(
+              gradient: LinearGradient(
               colors: [kSkyBlue, kBlueGray],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -186,17 +203,20 @@ class _ActivitiesPageState extends State<ActivitiesPage>
                 // Tab Mendatang
                 ActivityList(
                   activities: _applyFilters(upcomingActivities, isHistoryTab: false),
+                  // 🔥 KIRIMKAN MAP STATUS BARU
+                  registrationStatuses: _registrationStatuses, 
                 ),
                 // Tab Riwayat
                 ActivityList(
                   activities: _applyFilters(historyActivities, isHistoryTab: true),
+                  // 🔥 KIRIMKAN MAP STATUS BARU
+                  registrationStatuses: _registrationStatuses, 
                 ),
               ],
             ),
     );
   }
 
-  // ✨ REVISI FUNGSI _buildTabBar untuk tampilan yang bersih tanpa shadow/garis
   Widget _buildTabBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -206,30 +226,17 @@ class _ActivitiesPageState extends State<ActivitiesPage>
           color: Colors.white.withOpacity(0.2), 
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5), 
-          // 🔥 HAPUS box shadow di sini (Ini yang mungkin menyebabkan garis tipis)
         ),
         child: TabBar(
           controller: _tabController,
           
-          // Custom Indicator (Pill-Shaped White Indicator)
           indicator: BoxDecoration(
             color: Colors.white, 
             borderRadius: BorderRadius.circular(24),
-            // 🔥 HAPUS box shadow pada indikator agar lebih ringan
-            /*
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-            */
           ),
           
           indicatorSize: TabBarIndicatorSize.tab, 
           
-          // Warna Label
           labelColor: kDarkBlueGray, 
           unselectedLabelColor: Colors.white, 
           
@@ -251,7 +258,7 @@ class _ActivitiesPageState extends State<ActivitiesPage>
     );
   }
 
-  // 🔥 WIDGET SEARCH & FILTER MINIMALIS BARU (Tidak berubah)
+  // 🔥 WIDGET SEARCH & FILTER MINIMALIS: Update Dropdown items
   Widget _buildSearchAndFilterMinimal() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -269,7 +276,7 @@ class _ActivitiesPageState extends State<ActivitiesPage>
                 fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10), // Lebih minimalis
+                  borderRadius: BorderRadius.circular(10), 
                   borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
@@ -281,7 +288,7 @@ class _ActivitiesPageState extends State<ActivitiesPage>
           ),
           const SizedBox(width: 8),
           
-          // 🔥 Dropdown Filter Minimalis
+          // 🔥 Dropdown Filter Minimalis dengan status baru
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
@@ -306,12 +313,25 @@ class _ActivitiesPageState extends State<ActivitiesPage>
                     child: Text('Semua', style: TextStyle(color: kDarkBlueGray)),
                   ),
                   DropdownMenuItem(
-                    value: RegisterFilter.registered,
+                    // Filter gabungan: Terdaftar (status apapun)
+                    value: RegisterFilter.registered, 
                     child: Text('Terdaftar', style: TextStyle(color: kDarkBlueGray)),
                   ),
                   DropdownMenuItem(
                     value: RegisterFilter.notRegistered,
-                    child: Text('Belum Terdaftar', style: TextStyle(color: kDarkBlueGray)),
+                    child: Text('Belum Daftar', style: TextStyle(color: kDarkBlueGray)),
+                  ),
+                  DropdownMenuItem(
+                    value: RegisterFilter.accepted,
+                    child: Text('Diterima', style: TextStyle(color: kDarkBlueGray)),
+                  ),
+                  DropdownMenuItem(
+                    value: RegisterFilter.pending,
+                    child: Text('Mengajukan', style: TextStyle(color: kDarkBlueGray)),
+                  ),
+                  DropdownMenuItem(
+                    value: RegisterFilter.rejected,
+                    child: Text('Ditolak', style: TextStyle(color: kDarkBlueGray)),
                   ),
                 ],
               ),
@@ -328,8 +348,14 @@ class _ActivitiesPageState extends State<ActivitiesPage>
 // =============================================================================
 class ActivityList extends StatelessWidget {
   final List<Kegiatan> activities;
+  // 🔥 TERIMA MAP STATUS
+  final Map<int, String> registrationStatuses;
 
-  const ActivityList({super.key, required this.activities});
+  const ActivityList({
+    super.key, 
+    required this.activities,
+    required this.registrationStatuses,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -347,7 +373,15 @@ class ActivityList extends StatelessWidget {
       itemCount: activities.length,
       separatorBuilder: (_, __) => const SizedBox(height: 14),
       itemBuilder: (context, index) {
-        return ActivityCard(kegiatan: activities[index]);
+        final kegiatan = activities[index];
+        // Ambil status pendaftaran untuk kegiatan ini, null jika belum terdaftar
+        final status = registrationStatuses[kegiatan.id]; 
+        
+        return ActivityCard(
+          kegiatan: kegiatan,
+          // 🔥 TERUSKAN STATUS KE CARD
+          initialRegistrationStatus: status, 
+        );
       },
     );
   }
