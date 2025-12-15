@@ -7,12 +7,15 @@ import 'package:volunite/pages/Volunteer/Category/category_activities_page.dart'
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/services/pendaftaran_service.dart';
 
-
-// Import model dan service Anda
+// Import model dan service yang diperlukan
 import 'package:volunite/models/kegiatan_model.dart'; 
 import 'package:volunite/services/kegiatan_service.dart'; 
 import 'package:volunite/services/auth/auth_service.dart';
 import 'package:volunite/models/user_model.dart'; 
+// 🔥 Import Model dan Service Profil Relawan
+import 'package:volunite/models/pencapaian_model.dart'; // Jika VolunteerProfileData ada di sini, jika tidak, pastikan import yang benar
+import 'package:volunite/models/volunteer_pencapaian_model.dart'; // Kemungkinan VolunteerProfileData ada di sini
+import 'package:volunite/services/pencapaian_service.dart'; // Kemungkinan VolunteerService ada di sini
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -25,7 +28,11 @@ class _HomeTabState extends State<HomeTab> {
   User? currentUser;
   bool isLoadingUser = true;
   late Future<List<Kegiatan>> _kegiatanFuture;
+  // 🔥 STATE BARU UNTUK PROFIL
+  late Future<VolunteerProfileData> _futureProfile; // State untuk data profil/XP
 
+  // 🔥 STATE BARU UNTUK DOT NOTIFIKASI
+  bool _hasNewNotification = false; // Ganti dengan logika sesungguhnya
   // 🔥 STATE BARU UNTUK PENCARIAN
   List<Kegiatan> _allKegiatan = []; // Menyimpan semua kegiatan yang dimuat
   String _searchText = ''; // Teks yang dimasukkan pengguna
@@ -35,11 +42,16 @@ class _HomeTabState extends State<HomeTab> {
   void initState() {
     super.initState();
     loadUser();
+    // 🔥 Panggil fungsi untuk memuat profil
+    _refreshProfile();
     // Memuat kegiatan dan menyimpannya di _allKegiatan
     _kegiatanFuture = _fetchAndStoreKegiatan();
     
     // Mendaftarkan listener untuk Search Bar
     _searchController.addListener(_onSearchChanged);
+    
+    // 🔥 Panggil fungsi untuk memeriksa notifikasi saat init
+    _checkNewNotifications();
   }
 
   @override
@@ -47,6 +59,15 @@ class _HomeTabState extends State<HomeTab> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
+  }
+
+  // 🔥 FUNGSI BARU: Memuat data profil
+  void _refreshProfile() {
+    setState(() {
+      // Asumsi VolunteerService.fetchProfile() tersedia
+      // Ganti VolunteerService.fetchProfile() jika namanya berbeda
+      _futureProfile = VolunteerService.fetchProfile();
+    });
   }
 
   // FUNGSI UTILITY BARU
@@ -59,6 +80,29 @@ class _HomeTabState extends State<HomeTab> {
         currentUser = user;
         isLoadingUser = false;
       });
+    }
+  }
+  
+  // 🔥 FUNGSI BARU UNTUK NOTIFIKASI
+  Future<void> _checkNewNotifications() async {
+    // GANTI DENGAN LOGIKA ASLI UNTUK MEMERIKSA DARI BACKEND
+    await Future.delayed(const Duration(milliseconds: 500)); // Simulasi jeda API
+    bool hasNew = true; // Ganti dengan hasil API (e.g., NotificationService.countUnread() > 0)
+
+    if (mounted && hasNew != _hasNewNotification) {
+      setState(() {
+        _hasNewNotification = hasNew;
+      });
+    }
+  }
+
+  Future<void> _markNotificationsAsRead() async {
+    // GANTI DENGAN LOGIKA ASLI UNTUK MENANDAI SEBAGAI SUDAH DIBACA DI BACKEND
+    if (mounted && _hasNewNotification) {
+      setState(() {
+        _hasNewNotification = false;
+      });
+      // Panggil NotificationService().markAllAsRead();
     }
   }
   
@@ -164,6 +208,47 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  // 🔥 FUNGSI BARU: Widget XP Card yang disalin dari profile.dart
+  Widget _buildSimpleXPCard(VolunteerProfileData data) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(colors: [kSkyBlue, kBlueGray], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Total Volunteer XP',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                // Menggunakan totalXp dari data profil yang dimuat
+                '${data.totalXp} XP', 
+                style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.star_rounded, color: Colors.white, size: 32),
+          )
+        ],
+      ),
+    );
+  }
+
   // --- Utility Functions (format tanggal/waktu) ---
 
   String _formatDate(DateTime? date) {
@@ -228,7 +313,7 @@ class _HomeTabState extends State<HomeTab> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           "Hi, Selamat Datang 👋",
                           style: TextStyle(
                             fontSize: 16,
@@ -238,32 +323,57 @@ class _HomeTabState extends State<HomeTab> {
                         ),
                         Text(
                           isLoadingUser 
-                          ? "Memuat..."
-                          : currentUser?.nama ?? 'User',
-                          style: TextStyle(fontSize: 14, color: kBlueGray),
+                              ? "Memuat..."
+                              : currentUser?.nama ?? 'User',
+                          style: const TextStyle(fontSize: 14, color: kBlueGray),
                         ),
                       ],
                     ),
                   ],
                 ),
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: kSoftBlue,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.notifications_outlined,
-                      size: 20,
-                      color: kDarkBlueGray,
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NotifikasiPage(),
+                // 🔥 IKON NOTIFIKASI DENGAN BADGE
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: kSoftBlue,
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.notifications_outlined,
+                          size: 20,
+                          color: kDarkBlueGray,
                         ),
-                      );
-                    },
-                  ),
+                        onPressed: () {
+                          // 🔥 Set notifikasi sebagai sudah dibaca saat dinavigasi
+                          _markNotificationsAsRead();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotifikasiPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    // 🔥 DOT MERAH
+                    if (_hasNewNotification)
+                      Positioned(
+                        right: 5,
+                        top: 5,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.white, width: 1),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 8,
+                            minHeight: 8,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -347,58 +457,64 @@ class _HomeTabState extends State<HomeTab> {
 
             const SizedBox(height: 25),
 
-            // 💎 Exp Card (Tidak Berubah)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: const LinearGradient(
-                  colors: [kSkyBlue, kBlueGray],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: kBlueGray.withOpacity(0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    "Your Voluntree Exp",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                  SizedBox(height: 5),
-                  Text(
-                    "18,000",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
+            // 🔥💎 Exp Card BARU (Menggantikan yang lama dengan FutureBuilder)
+            FutureBuilder<VolunteerProfileData>(
+              future: _futureProfile,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  // Tampilkan card loading placeholder
+                  return Container(
+                    width: double.infinity,
+                    height: 90, // Sesuaikan tinggi dengan card aslinya
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: const LinearGradient(colors: [kSkyBlue, kBlueGray], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                      boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))],
                     ),
-                  ),
-                  SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
-                    child: LinearProgressIndicator(
-                      value: 0.8,
-                      minHeight: 8,
-                      backgroundColor: Colors.white24,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    child: const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
                     ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    "Your Coins: 10,000",
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ],
-              ),
+                  );
+                }
+                if (snapshot.hasError) {
+                  // Tampilkan card error atau default
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.red.shade400,
+                      boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))],
+                    ),
+                    child: const Text(
+                      'Gagal memuat XP. Silakan coba lagi.',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+                // Tampilkan card XP dengan data yang dimuat
+                if (snapshot.hasData) {
+                  return _buildSimpleXPCard(snapshot.data!);
+                }
+                
+                // Fallback (jika tidak ada data tapi juga tidak error/loading)
+                return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.grey.shade400,
+                      boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))],
+                    ),
+                    child: const Text(
+                      'XP tidak tersedia.',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+              },
             ),
 
             const SizedBox(height: 30),
