@@ -299,8 +299,13 @@ class _OrganizerHomeTabState extends State<OrganizerHomeTab> {
         return GestureDetector(
           onTap: () {
             if (kegiatan != null) {
-               Navigator.push(context, MaterialPageRoute(builder: (_) => ApplicantListPage(kegiatanId: kegiatan.id)));
-            }
+               Navigator.push(
+                 context, 
+                 MaterialPageRoute(builder: (_) => ApplicantListPage(kegiatanId: kegiatan.id))
+               ).then((_) {
+                 _loadDashboard(); 
+               });
+               }
           },
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),

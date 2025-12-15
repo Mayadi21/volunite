@@ -314,7 +314,7 @@ class _EditActivityPageState extends State<EditActivityPage> {
                   label: "Link Grup WhatsApp",
                   controller: _linkGrupCtrl,
                   icon: Icons.chat,
-                  isRequired: false,
+                  isRequired: true,
                 ),
                 const SizedBox(height: 16),
                 _CustomTextField(
