@@ -10,6 +10,7 @@ import 'package:volunite/pages/Authentication/login.dart';
 import 'package:volunite/pages/Volunteer/Profile/achievement_dialog.dart'; // Import Halaman Lihat Semua
 import 'package:volunite/pages/Volunteer/Profile/achievement_page.dart'; // Import Dialog
 import 'edit_profile.dart'; 
+// Asumsi import ini ada dan benar sesuai path project Anda
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -20,7 +21,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late Future<VolunteerProfileData> _futureProfile;
-  File? _imageFile;
+  File? _imageFile; // Digunakan untuk preview gambar lokal saat pick, jika fitur upload masih diinginkan
 
   @override
   void initState() {
@@ -28,10 +29,23 @@ class _ProfilePageState extends State<ProfilePage> {
     _refresh();
   }
 
+  // Fungsi untuk memuat ulang data profil dari server
   void _refresh() {
     setState(() {
       _futureProfile = VolunteerService.fetchProfile();
     });
+  }
+
+  // Fungsi navigasi ke EditProfilePage dan memanggil _refresh() setelah kembali
+  void _navigateToEditProfile() async {
+    // Menunggu hingga halaman EditProfilePage di-pop (ditutup)
+    await Navigator.push(
+      context, 
+      MaterialPageRoute(builder: (_) => const EditProfilePage())
+    );
+    
+    // Setelah kembali, muat ulang data untuk menampilkan perubahan nama/foto terbaru
+    _refresh(); 
   }
 
   // --- FUNGSI HELPER ---
@@ -54,7 +68,11 @@ class _ProfilePageState extends State<ProfilePage> {
     var status = source == ImageSource.camera ? await Permission.camera.request() : await Permission.photos.request();
     if (status.isGranted) {
       final picked = await ImagePicker().pickImage(source: source);
-      if (picked != null) setState(() => _imageFile = File(picked.path));
+      if (picked != null) {
+        setState(() => _imageFile = File(picked.path));
+        // Catatan: Di sini harus ada logika untuk mengunggah foto ke server 
+        // dan kemudian memanggil _refresh() jika berhasil.
+      }
     }
   }
 
@@ -92,7 +110,8 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit, color: Colors.white),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage())),
+            // Memicu navigasi dan refresh data
+            onPressed: _navigateToEditProfile,
           )
         ],
       ),
@@ -112,7 +131,7 @@ class _ProfilePageState extends State<ProfilePage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             child: Column(
               children: [
-                // 1. Header Profil
+                // 1. Header Profil (Sudah direvisi)
                 _buildProfileHeader(data),
                 const SizedBox(height: 24),
 
@@ -159,6 +178,7 @@ class _ProfilePageState extends State<ProfilePage> {
             CircleAvatar(
               radius: 60,
               backgroundColor: kLightGray,
+              // Tampilkan foto lokal jika ada, jika tidak, ambil dari network
               backgroundImage: _imageFile != null 
                   ? FileImage(_imageFile!) 
                   : (data.pathProfil != null ? NetworkImage(data.pathProfil!) : null) as ImageProvider?,
@@ -166,20 +186,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   ? const Icon(Icons.person, size: 70, color: Colors.white) 
                   : null,
             ),
-            Positioned(
-              bottom: 0, right: 0,
-              child: GestureDetector(
-                onTap: () => _showImageSourceDialog(context),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: kSkyBlue, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                ),
-              ),
-            ),
+            // BLOK KODE LOGO KAMERA DIHAPUS DARI SINI
           ],
         ),
         const SizedBox(height: 12),
+        // Nama diambil dari data.nama (yang sudah diperbarui via _refresh)
         Text(
           data.nama,
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kDarkBlueGray),
