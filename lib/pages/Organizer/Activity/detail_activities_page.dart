@@ -244,7 +244,7 @@ class OrganizerDetailActivityPage extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    ApplicantListPage(kegiatanId: kegiatan.id),
+                                    ApplicantListPage(kegiatanId: kegiatan.id, statusKegiatan: kegiatan.status,),
                               ),
                             );
                           },
@@ -293,7 +293,6 @@ class OrganizerDetailActivityPage extends StatelessWidget {
   Widget _buildStatusBadge(String status) {
     Color color;
     String text;
-    // Sesuaikan dengan Enum Backend
     switch (status) {
       case 'Waiting':
         color = Colors.orange;

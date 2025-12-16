@@ -16,7 +16,6 @@ class PendaftaranService {
   }) async {
     try {
       final response = await ApiClient.post(
-        // API client diasumsikan menangani baseURL dan headers
         '/volunteer/kegiatan/$kegiatanId/pendaftaran',
         body: {
           "nomor_telepon": nomorTelepon,
@@ -26,16 +25,13 @@ class PendaftaranService {
         },
       );
 
-      // Sukses: Status Code 201 Created atau 200 OK
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return true;
       } else {
-        // Log error jika diperlukan
         print("API Error: ${response.statusCode} - ${response.body}");
         return false;
       }
     } catch (e) {
-      // Menangani error jaringan
       print("Network Error during registration: $e");
       return false;
     }

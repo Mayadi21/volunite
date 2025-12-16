@@ -9,7 +9,7 @@ import 'package:volunite/services/pencapaian_service.dart';
 import 'package:volunite/pages/Authentication/login.dart';
 import 'package:volunite/pages/Volunteer/Profile/achievement_dialog.dart'; // Import Halaman Lihat Semua
 import 'package:volunite/pages/Volunteer/Profile/achievement_page.dart'; // Import Dialog
-import 'edit_profile.dart'; 
+import 'package:volunite/pages/shared/edit_profile.dart';
 // Asumsi import ini ada dan benar sesuai path project Anda
 
 class ProfilePage extends StatefulWidget {
