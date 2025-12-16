@@ -11,7 +11,8 @@ import 'package:volunite/services/pendaftaran_service.dart';
 import 'package:volunite/models/kegiatan_model.dart'; 
 import 'package:volunite/services/kegiatan_service.dart'; 
 import 'package:volunite/services/auth/auth_service.dart';
-import 'package:volunite/models/user_model.dart'; 
+import 'package:volunite/models/user_model.dart';
+import 'package:volunite/services/notifikasi_service.dart'; 
 // 🔥 Import Model dan Service Profil Relawan
 import 'package:volunite/models/pencapaian_model.dart'; // Jika VolunteerProfileData ada di sini, jika tidak, pastikan import yang benar
 import 'package:volunite/models/volunteer_pencapaian_model.dart'; // Kemungkinan VolunteerProfileData ada di sini
@@ -85,26 +86,39 @@ class _HomeTabState extends State<HomeTab> {
   
   // 🔥 FUNGSI BARU UNTUK NOTIFIKASI
   Future<void> _checkNewNotifications() async {
-    // GANTI DENGAN LOGIKA ASLI UNTUK MEMERIKSA DARI BACKEND
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulasi jeda API
-    bool hasNew = true; // Ganti dengan hasil API (e.g., NotificationService.countUnread() > 0)
+  try {
+    final unreadCount = await NotifikasiService.countUnread();
 
-    if (mounted && hasNew != _hasNewNotification) {
+    if (mounted) {
       setState(() {
-        _hasNewNotification = hasNew;
+        _hasNewNotification = unreadCount > 0;
       });
     }
+  } catch (e) {
+    debugPrint('Error check notification: $e');
   }
+}
 
   Future<void> _markNotificationsAsRead() async {
-    // GANTI DENGAN LOGIKA ASLI UNTUK MENANDAI SEBAGAI SUDAH DIBACA DI BACKEND
-    if (mounted && _hasNewNotification) {
+  try {
+    final notifications = await NotifikasiService.fetchNotifikasi();
+
+    for (final notif in notifications) {
+      if (!notif.isRead) {
+        await NotifikasiService.markAsRead(notif.id);
+        notif.isRead = true; // 🔥 update local state
+      }
+    }
+
+    if (mounted) {
       setState(() {
         _hasNewNotification = false;
       });
-      // Panggil NotificationService().markAllAsRead();
     }
+  } catch (e) {
+    debugPrint('Error mark notifications read: $e');
   }
+}
   
   // 🔥 FUNGSI BARU: Memuat dan menyimpan semua data kegiatan
   Future<List<Kegiatan>> _fetchAndStoreKegiatan() async {

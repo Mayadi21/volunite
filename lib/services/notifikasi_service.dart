@@ -19,4 +19,23 @@ class NotifikasiService {
   static Future<void> markAsRead(int id) async {
     await ApiClient.post('/notifikasi/$id/read');
   }
+
+  static Future<int> countUnread() async {
+  final response = await ApiClient.get('/notifikasi');
+
+  if (response.statusCode == 200) {
+    final body = jsonDecode(response.body);
+    final List data = body['data'];
+
+    final notifications =
+        data.map((e) => NotifikasiModel.fromJson(e)).toList();
+
+    final unreadCount =
+        notifications.where((n) => !n.isRead).length;
+
+    return unreadCount;
+  } else {
+    throw Exception('Gagal menghitung notifikasi belum dibaca');
+  }
+}
 }
