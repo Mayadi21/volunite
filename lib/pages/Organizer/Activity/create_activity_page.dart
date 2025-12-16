@@ -154,14 +154,7 @@ class _CreateActivityPageState extends State<CreateActivityPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ... (KODE UI SAMA PERSIS SEPERTI SEBELUMNYA)
-    // Untuk mempersingkat saya hanya tampilkan kerangka, tapi ANDA HARUS COPY UI LENGKAPNYA
-    // Pastikan Anda menggunakan kode UI yang sudah saya kirim sebelumnya untuk CreateActivityPage.
-    // Jika Anda copy paste file ini, pastikan bagian build() terisi penuh seperti kode sebelumnya.
-    // ...
-
-    // (Agar tidak kepanjangan, saya taruh UI intinya saja. Isinya SAMA dengan kode create yang terakhir kita bahas)
-    return Scaffold(
+   return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
         title: const Text(
@@ -280,10 +273,10 @@ class _CreateActivityPageState extends State<CreateActivityPage> {
                 const SizedBox(height: 30),
                 _sectionLabel("Detail Lengkap"),
                 _CustomTextField(
-                  label: "Link Grup WhatsApp (Opsional)",
+                  label: "Link Grup WhatsApp",
                   controller: _linkGrupCtrl,
                   icon: Icons.chat,
-                  isRequired: false,
+                  isRequired: true,
                 ),
                 const SizedBox(height: 16),
                 _CustomTextField(

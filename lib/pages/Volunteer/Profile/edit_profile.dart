@@ -27,26 +27,38 @@ class _EditProfilePageState extends State<EditProfilePage> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Controllers untuk field
+  // Controllers untuk field Profile
   late TextEditingController _namaController;
   late TextEditingController _jenisKelaminController;
   late TextEditingController _tglLahirController;
   late TextEditingController _emailController;
   late TextEditingController _teleponController;
   late TextEditingController _domisiliController;
+
+  // >>> BARU: Controllers untuk Change Password
+  late TextEditingController _currentPasswordController;
+  late TextEditingController _newPasswordController;
+  late TextEditingController _confirmNewPasswordController;
+  
+  final _passwordFormKey = GlobalKey<FormState>(); // Key untuk form password
   
 
   @override
   void initState() {
     super.initState();
     
-    // Inisialisasi controller
+    // Inisialisasi controller Profile
     _namaController = TextEditingController();
     _emailController = TextEditingController();
     _jenisKelaminController = TextEditingController();
     _teleponController = TextEditingController();
     _domisiliController = TextEditingController();
     _tglLahirController = TextEditingController();
+
+    // >>> BARU: Inisialisasi controller Password
+    _currentPasswordController = TextEditingController();
+    _newPasswordController = TextEditingController();
+    _confirmNewPasswordController = TextEditingController();
 
     _fetchUserData(); 
   }
@@ -59,6 +71,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _emailController.dispose();
     _teleponController.dispose();
     _domisiliController.dispose();
+
+    // >>> BARU: Dispose controller Password
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmNewPasswordController.dispose();
+
     super.dispose();
   }
 
@@ -254,7 +272,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   // ==========================================================
-  // ⬇ FUNGSI SIMPAN DATA (Update) - DENGAN NOTIFIKASI BARU ⬇
+  // ⬇ FUNGSI SIMPAN DATA PROFILE (Update) ⬇
   // ==========================================================
 
   void _saveData() async {
@@ -292,7 +310,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         // Tutup loading dialog
         Navigator.of(context).pop(); 
         
-        // === REVISI NOTIFIKASI SUKSES ===
+        // Notifikasi Sukses
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Row(
@@ -320,7 +338,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         // Tutup loading dialog
         Navigator.of(context).pop(); 
 
-        // === REVISI NOTIFIKASI GAGAL ===
+        // Notifikasi Gagal
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -341,6 +359,174 @@ class _EditProfilePageState extends State<EditProfilePage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
+      }
+    }
+  }
+
+  // ==========================================================
+  // ⬇ BARU: FUNGSI UBAH PASSWORD ⬇
+  // ==========================================================
+
+  void _showChangePasswordDialog() {
+    // Bersihkan controller saat dialog dibuka untuk input baru
+    _currentPasswordController.clear();
+    _newPasswordController.clear();
+    _confirmNewPasswordController.clear();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Ubah Kata Sandi'),
+          content: Form(
+            key: _passwordFormKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Password Lama
+                  _buildPasswordTextField(
+                    label: 'Kata Sandi Lama',
+                    controller: _currentPasswordController,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Kata Sandi Lama harus diisi';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Password Baru
+                  _buildPasswordTextField(
+                    label: 'Kata Sandi Baru',
+                    controller: _newPasswordController,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Kata Sandi Baru harus diisi';
+                      }
+                      if (value.length < 8) {
+                        return 'Kata Sandi minimal 8 karakter';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Konfirmasi Password Baru
+                  _buildPasswordTextField(
+                    label: 'Konfirmasi Kata Sandi Baru',
+                    controller: _confirmNewPasswordController,
+                    validator: (value) {
+                      if (value != _newPasswordController.text) {
+                        return 'Konfirmasi Kata Sandi tidak cocok';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Bersihkan controller setelah batal
+                _currentPasswordController.clear();
+                _newPasswordController.clear();
+                _confirmNewPasswordController.clear();
+              },
+              child: Text('Batal', style: TextStyle(color: kDarkBlueGray)),
+            ),
+            ElevatedButton(
+              onPressed: _changePassword,
+              style: ElevatedButton.styleFrom(backgroundColor: kSkyBlue),
+              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _changePassword() async {
+    if (!_passwordFormKey.currentState!.validate()) {
+      return; // Hentikan jika validasi gagal
+    }
+
+    // Tutup dialog ubah password sebelum menampilkan loading
+    // Hati-hati: Pastikan Anda hanya menutup dialog (AlertDialog), bukan seluruh layar
+    if (mounted) {
+      Navigator.of(context).pop(); 
+    }
+
+    // Tampilkan dialog loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await ProfileService.changePassword(
+        currentPassword: _currentPasswordController.text,
+        newPassword: _newPasswordController.text,
+        newPasswordConfirmation: _confirmNewPasswordController.text,
+      );
+
+      if (mounted) {
+        // Tutup loading dialog
+        Navigator.of(context).pop(); 
+        
+        // Notifikasi Sukses
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Kata sandi berhasil diubah!', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+
+        // Bersihkan controller setelah sukses
+        _currentPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmNewPasswordController.clear();
+      }
+    } catch (e) {
+      print('Change Password Error: $e');
+      if (mounted) {
+        // Tutup loading dialog
+        Navigator.of(context).pop(); 
+
+        // Notifikasi Gagal
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Gagal ubah kata sandi: ${e.toString()}',
+                    style: const TextStyle(color: Colors.white),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+
+        _showChangePasswordDialog(); 
       }
     }
   }
@@ -443,9 +629,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 controller: _emailController,
                 readOnly: true,
                 keyboardType: TextInputType.emailAddress,
-                onTap: () {
-                  print('Arahkan ke halaman Ubah Email');
-                },
+                onTap: () {},
               ),
               const SizedBox(height: 16),
               _buildTextField(
@@ -459,6 +643,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 controller: _domisiliController,
                 readOnly: false,
               ),
+
+              const SizedBox(height: 24),
+              
+              _buildSectionHeader('Keamanan Akun'),
+              const SizedBox(height: 16),
+              _buildPasswordField(), 
               const SizedBox(height: 24),
             ],
           ),
@@ -575,6 +765,64 @@ class _EditProfilePageState extends State<EditProfilePage> {
           field,
         ],
       ),
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kLightGray, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: kBlueGray.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: _showChangePasswordDialog,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Kata Sandi',
+                  style: TextStyle(color: kBlueGray, fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '**************',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: kDarkBlueGray),
+                ),
+              ],
+            ),
+            Icon(Icons.edit, size: 20, color: kSkyBlue),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordTextField({
+    required String label,
+    required TextEditingController controller,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: true,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      ),
+      validator: validator,
     );
   }
 }

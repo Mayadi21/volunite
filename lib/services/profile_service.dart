@@ -59,4 +59,38 @@ class ProfileService {
     throw Exception('Gagal update profile');
   }
 }
+
+static Future<void> changePassword({
+  required String currentPassword,
+  required String newPassword,
+  required String newPasswordConfirmation,
+}) async {
+  final body = {
+    'current_password': currentPassword,
+    'password': newPassword,
+    'password_confirmation': newPasswordConfirmation,
+  };
+
+  final response = await ApiClient.post('/profile/password', body: body);
+
+  if (response.statusCode == 200) {
+    return;
+  } else {
+    // Coba ambil pesan error dari body response
+    try {
+      final jsonResponse = jsonDecode(response.body);
+      final message = jsonResponse['message'] ?? 'Gagal ubah kata sandi.';
+      // Jika Laravel mengembalikan error validasi, tampilkan detailnya
+      if (jsonResponse['errors'] != null) {
+        final errors = (jsonResponse['errors'] as Map).values.expand((e) => e).join(', ');
+        throw Exception('$message Detail: $errors');
+      }
+      throw Exception(message);
+    } catch (_) {
+      throw Exception(
+        'Gagal ubah kata sandi. Status: ${response.statusCode}',
+      );
+    }
+  }
+}
 }
