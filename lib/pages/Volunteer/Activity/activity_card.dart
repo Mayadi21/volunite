@@ -8,10 +8,13 @@ import 'package:volunite/services/auth/auth_service.dart';
 
 class ActivityCard extends StatefulWidget {
   final Kegiatan kegiatan;
+  // Menerima status awal dari parent
+  final String? initialRegistrationStatus; 
 
   const ActivityCard({
     super.key,
     required this.kegiatan,
+    this.initialRegistrationStatus,
   });
 
   @override
@@ -20,68 +23,59 @@ class ActivityCard extends StatefulWidget {
 
 class _ActivityCardState extends State<ActivityCard> {
   final PendaftaranService _pendaftaranService = PendaftaranService();
-  final AuthService _authService = AuthService();
 
-  bool _isRegistered = false;
-  bool _isChecking = true;
+  // State status pendaftaran. Nilai awal 'Memuat' akan lebih baik.
+  String _registrationStatus = 'Memuat'; 
 
   @override
   void initState() {
     super.initState();
-    _checkRegistrationStatus();
-  }
+    
+    // 1. Inisialisasi dengan status dari parent (jika ada) atau 'Memuat'
+    _registrationStatus = widget.initialRegistrationStatus ?? 'Memuat';
 
-  // =========================================================
-  // 🔥 LOGIC SAMA PERSIS DENGAN DetailActivitiesPage
-  // =========================================================
-  Future<void> _checkRegistrationStatus() async {
+    // 2. Panggil fungsi untuk mengambil status terbaru secara asynchronous
+    _fetchAndSetRegistrationStatus();
+  }
+  
+  // Mengambil status dari API saat widget diinisialisasi/refresh
+  Future<void> _fetchAndSetRegistrationStatus() async {
     final kegiatanId = widget.kegiatan.id;
-    final user = await _authService.getCurrentUser();
+    final user = await AuthService().getCurrentUser();
 
     if (user == null) {
-      setState(() {
-        _isRegistered = false;
-        _isChecking = false;
-      });
+      if (mounted) {
+        setState(() {
+          _registrationStatus = 'Belum Mendaftar';
+        });
+      }
       return;
     }
 
     try {
-      final isRegistered =
-          await _pendaftaranService.isUserRegistered(kegiatanId);
+      final status = await _pendaftaranService.getRegistrationStatus(kegiatanId);
 
       if (mounted) {
         setState(() {
-          _isRegistered = isRegistered;
-          _isChecking = false;
+          _registrationStatus = status; // Set status terbaru dari API
         });
       }
     } catch (e) {
-      debugPrint('Error checking registration status: $e');
+      debugPrint('Error fetching registration status in card: $e');
       if (mounted) {
         setState(() {
-          _isRegistered = false;
-          _isChecking = false;
+          _registrationStatus = 'Kesalahan Jaringan';
         });
       }
     }
   }
 
+
   String _formatDate(DateTime d) {
     const hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const bulan = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember'
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
     return '${hari[d.weekday % 7]}, ${d.day} ${bulan[d.month - 1]} ${d.year}';
   }
@@ -97,6 +91,16 @@ class _ActivityCardState extends State<ActivityCard> {
         '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
     return '$s - $e';
   }
+    
+  // Logika untuk menampilkan chip status pendaftaran
+  bool get showRegistrationChip {
+    final status = _registrationStatus;
+    return status == 'Diterima' || 
+           status == 'Mengajukan' || 
+           status == 'Ditolak' ||
+           status == 'Kuota Penuh'; 
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +119,24 @@ class _ActivityCardState extends State<ActivityCard> {
     final imagePath =
         widget.kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg';
     final isUrl = imagePath.startsWith('http');
+    
+    // 🔥 WIDGET STATUS DARI TERNARY OPERATOR
+    Widget statusWidget;
+    if (showRegistrationChip) {
+      statusWidget = _RegistrationStatusChip(status: _registrationStatus);
+    } else if (_registrationStatus == 'Memuat') {
+      statusWidget = const Padding(
+        padding: EdgeInsets.only(left: 6),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2, color: kBlueGray),
+        ),
+      );
+    } else {
+      statusWidget = const SizedBox.shrink(); // Sembunyikan jika tidak ada status
+    }
+
 
     return Material(
       color: Colors.transparent,
@@ -122,23 +144,24 @@ class _ActivityCardState extends State<ActivityCard> {
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: () async {
-          final bool? result = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DetailActivitiesPage(
-              kegiatan: widget.kegiatan,
-              title: widget.kegiatan.judul,
-              date: date,
-              time: time,
-              imagePath: imagePath,
+          final bool? needsRefresh = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DetailActivitiesPage(
+                kegiatan: widget.kegiatan,
+                title: widget.kegiatan.judul,
+                date: date,
+                time: time,
+                imagePath: imagePath,
+              ),
             ),
-          ),
-        );
+          );
 
-        if (result == true && mounted) {
-          _checkRegistrationStatus();
-        }
-      },
+          // Panggil refresh jika ada indikasi perubahan dari halaman detail
+          if (needsRefresh == true && mounted) {
+            _fetchAndSetRegistrationStatus();
+          }
+        },
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -163,6 +186,14 @@ class _ActivityCardState extends State<ActivityCard> {
                         height: 160,
                         width: double.infinity,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                                height: 160,
+                                width: double.infinity,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.broken_image, size: 40, color: kBlueGray),
+                            );
+                        },
                       )
                     : Image.asset(
                         imagePath,
@@ -189,9 +220,8 @@ class _ActivityCardState extends State<ActivityCard> {
                           ),
                         ),
 
-                        // 🔥 Badge Terdaftar
-                        if (!_isChecking && _isRegistered)
-                          const _RegisteredChip(),
+                        // 🔥 MASUKKAN WIDGET STATUS YANG SUDAH DITENTUKAN
+                        statusWidget,
 
                         // Badge Selesai
                         if (isFinished) const _FinishedChip(),
@@ -213,31 +243,69 @@ class _ActivityCardState extends State<ActivityCard> {
 }
 
 // =========================================================
-// BADGE WIDGET
+// BADGE WIDGETS
 // =========================================================
 
-class _RegisteredChip extends StatelessWidget {
-  const _RegisteredChip();
+class _RegistrationStatusChip extends StatelessWidget {
+  final String status;
+
+  const _RegistrationStatusChip({required this.status});
 
   @override
   Widget build(BuildContext context) {
+    Color color;
+    Color bgColor;
+    IconData icon;
+    String label;
+
+    switch (status) {
+      case 'Diterima':
+        color = Colors.green[700]!;
+        bgColor = Colors.green[50]!;
+        icon = Icons.check_circle;
+        label = 'Diterima';
+        break;
+      case 'Mengajukan':
+        color = Colors.orange[700]!;
+        bgColor = Colors.orange[50]!;
+        icon = Icons.pending_actions;
+        label = 'Mengajukan';
+        break;
+      case 'Ditolak':
+        color = Colors.red[700]!;
+        bgColor = Colors.red[50]!;
+        icon = Icons.cancel;
+        label = 'Ditolak';
+        break;
+      case 'Kuota Penuh':
+        color = kDarkBlueGray;
+        bgColor = Colors.grey[300]!;
+        icon = Icons.block;
+        label = 'Penuh';
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+
     return Container(
       margin: const EdgeInsets.only(left: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
+        color: bgColor,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: const Row(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_circle, size: 12, color: Colors.green),
-          SizedBox(width: 4),
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
           Text(
-            'Terdaftar',
+            label,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.green,
+              color: color,
             ),
           ),
         ],

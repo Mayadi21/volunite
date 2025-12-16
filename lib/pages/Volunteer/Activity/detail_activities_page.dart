@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/models/kegiatan_model.dart';
 import 'package:flutter/foundation.dart';
-import 'package:volunite/models/kategori_model.dart'; // Import model Kategori
+import 'package:volunite/models/kategori_model.dart'; 
 import 'package:volunite/services/pendaftaran_service.dart';
 import 'package:volunite/services/auth/auth_service.dart';
 import 'package:volunite/services/report_kegiatan_service.dart';
 import 'package:share_plus/share_plus.dart';
+// 🔥 Tambahkan url_launcher untuk membuka link grup
+import 'package:url_launcher/url_launcher.dart'; 
 
 class DetailActivitiesPage extends StatefulWidget {
   final Kegiatan? kegiatan;
@@ -35,25 +37,47 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
   bool _isDescriptionExpanded = false;
 
   // 🔥 State untuk status pendaftaran
-  bool _isRegistered = false;
+  String _registrationStatus = 'Memuat';
+  // Nilai mungkin: 'Memuat', 'Belum Mendaftar', 'Mengajukan', 'Diterima', 'Ditolak', 'Kesalahan...'
 
   // State untuk status loading di modal pendaftaran
   bool _isRegistrationLoading = false;
   
-
   // State untuk status loading di modal laporan
-  bool _isReportLoading = false; 
+  bool _isReportLoading = false;  
 
   // Inisialisasi Service (Dibuat final)
   final PendaftaranService _pendaftaranService = PendaftaranService();
   final AuthService _authService = AuthService();
-  final ReportService _reportService = ReportService(); 
+  final ReportService _reportService = ReportService();  
 
   @override
   void initState() {
     super.initState();
     _checkRegistrationStatus();
   }
+  
+  // 🔥 Getter untuk mengambil data kegiatan yang sering digunakan
+  String get _metodePenerimaan => widget.kegiatan?.metodePenerimaan?.toLowerCase() ?? 'manual';
+  String? get _linkGrup => widget.kegiatan?.linkGrup;
+
+  // =========================================================
+  // FUNGSI UTILITY
+  // =========================================================
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuka link: $url'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
 
   // =========================================================
   // 🔥 FUNGSI: Memeriksa status pendaftaran
@@ -62,29 +86,48 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
     final kegiatanId = widget.kegiatan?.id;
     final user = await _authService.getCurrentUser();
 
+    // Reset status menjadi memuat sebentar jika dipanggil ulang
+    if (mounted) {
+      setState(() {
+        _registrationStatus = 'Memuat';
+      });
+    }
+
     if (kegiatanId != null && user != null) {
       try {
-        final isRegistered = await _pendaftaranService.isUserRegistered(
+        final status = await _pendaftaranService.getRegistrationStatus(
           kegiatanId as int,
         );
 
+        // 🔥 LOGIC TAMBAHAN UNTUK PENERIMAAN OTOMATIS:
+        // Jika status yang dikembalikan adalah 'Mengajukan' DAN metode penerimaan otomatis,
+        // kita paksa status di UI menjadi 'Diterima' untuk segera menampilkan link grup.
+        if (status == 'Mengajukan' && _metodePenerimaan == 'otomatis') {
+            if (mounted) {
+                setState(() {
+                    _registrationStatus = 'Diterima';
+                });
+            }
+            return;
+        }
+
         if (mounted) {
           setState(() {
-            _isRegistered = isRegistered;
+            _registrationStatus = status; // Set status dari service
           });
         }
       } catch (e) {
         print('Error checking registration status: $e');
         if (mounted) {
           setState(() {
-            _isRegistered = false;
+            _registrationStatus = 'Kesalahan Jaringan'; // Fallback error
           });
         }
       }
     } else {
       if (mounted) {
         setState(() {
-          _isRegistered = false;
+          _registrationStatus = 'Belum Mendaftar';
         });
       }
     }
@@ -104,7 +147,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
 
   void _shareActivity() async {
     final kegiatan = widget.kegiatan;
-
+    // ... (kode _shareActivity tetap sama)
     String shareText = "Yuk, gabung di kegiatan relawan ini!";
 
     if (kegiatan != null) {
@@ -113,12 +156,7 @@ class _DetailActivitiesPageState extends State<DetailActivitiesPage> {
       final date = widget.date;
       final time = widget.time;
 
-      // final kegiatanId = kegiatan.id;
-
-      // final String baseUrl = "http://volunite.app/activities/";
       final activityLink = "Cek detail kegiatan di aplikasi Volunite sekarang !";
-      // final activityLink = "$baseUrl$kegiatanId";
-      // final activityLink = "Cek detail kegiatan di aplikasi Volunite sekarang!";
 
       shareText = """
 📢 **Kesempatan Relawan: ${title}**
@@ -150,6 +188,7 @@ ${activityLink}
     }
   }
 
+
   // =========================================================
   // FUNGSI: Menampilkan form pendaftaran
   // =========================================================
@@ -159,6 +198,7 @@ ${activityLink}
     final noHpController = TextEditingController();
     final komitmenController = TextEditingController();
     final keterampilanController = TextEditingController();
+    final isOtomatis = _metodePenerimaan == 'otomatis'; // 🔥 Cek apakah otomatis
 
     showModalBottomSheet(
       context: context,
@@ -173,7 +213,7 @@ ${activityLink}
             // LOGIKA SUBMIT FORM
             void _submitForm() async {
               if (formKey.currentState!.validate()) {
-                setModalState(() => _isRegistrationLoading = true); // 🔥 Gunakan state loading modal
+                setModalState(() => _isRegistrationLoading = true); 
 
                 final user = await _authService.getCurrentUser();
 
@@ -203,14 +243,19 @@ ${activityLink}
                 Navigator.pop(context);
 
                 if (success) {
-                  setState(() { // Perbarui state _isRegistered di halaman utama
-                    _isRegistered = true;
+                  setState(() { 
+                    // 🔥 SET STATUS BERDASARKAN METODE PENERIMAAN
+                    if (isOtomatis) {
+                        _registrationStatus = 'Diterima'; // Langsung Diterima jika Otomatis
+                    } else {
+                        _registrationStatus = 'Mengajukan'; // Status standar jika Manual
+                    }
                   });
 
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('✅ Pendaftaran kegiatan berhasil dikirim!'),
-                      backgroundColor: Colors.green,
+                    SnackBar(
+                      content: Text('✅ Pendaftaran kegiatan berhasil dikirim! Status: ${isOtomatis ? 'Diterima' : 'Menunggu Persetujuan'}'),
+                      backgroundColor: isOtomatis ? Colors.green : Colors.orange,
                     ),
                   );
                 } else {
@@ -223,110 +268,122 @@ ${activityLink}
                 }
               }
             }
-
-            return Padding(
-              padding: EdgeInsets.only(
-                top: 24,
-                left: 24,
-                right: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header (tetap)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Form Pendaftaran Kegiatan',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: kDarkBlueGray,
+            // ... (kode form input tetap sama)
+            return SingleChildScrollView( 
+              child: Padding(
+                // 🔥 Memastikan padding bawah mengakomodasi keyboard insets
+                padding: EdgeInsets.only(
+                  top: 24,
+                  left: 24,
+                  right: 24,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                ),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header (tetap)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Form Pendaftaran Kegiatan',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: kDarkBlueGray,
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close, color: kBlueGray),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Input Domisili
-                    _buildFormLabel("Domisili"),
-                    _buildTextFormField(
-                      controller: domisiliController,
-                      hintText: 'Masukkan domisili Anda',
-                      validatorText: 'Domisili harus diisi',
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Input No HP
-                    _buildFormLabel("Nomor HP Aktif"),
-                    _buildTextFormField(
-                      controller: noHpController,
-                      hintText: 'Masukkan nomor HP Anda (e.g. 0812...)',
-                      validatorText: 'Nomor HP harus diisi',
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Input Komitmen
-                    _buildFormLabel("Komitmen (Tuliskan janji komitmen Anda)"),
-                    _buildTextFormField(
-                      controller: komitmenController,
-                      hintText: 'Tulis komitmen Anda untuk kegiatan ini',
-                      validatorText: 'Komitmen harus diisi',
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Input Keterampilan
-                    _buildFormLabel("Keterampilan yang Dimiliki"),
-                    _buildTextFormField(
-                      controller: keterampilanController,
-                      hintText: 'Contoh: Desain Grafis, Komunikasi, Editing',
-                      validatorText: 'Keterampilan harus diisi',
-                    ),
-                    const SizedBox(height: 24),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isRegistrationLoading ? null : _submitForm, // Gunakan state loading
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kSkyBlue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close, color: kBlueGray),
                           ),
-                        ),
-                        child: _isRegistrationLoading
-                            ? const SizedBox( // Tampilkan loading
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 3,
-                                ),
-                              )
-                            : const Text(
-                                'Kirim Pendaftaran',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      // 🔥 MODAL STATUS DISPLAY BARU UNTUK MENGATASI OVERFLOW
+                      if (isOtomatis)
+                          Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _buildModalStatusDisplay(
+                                  'Pendaftaran akan langsung Diterima (Otomatis)', 
+                                  Icons.info_outline, 
+                                  kSkyBlue)
+                          ),
+                      
+                      // Input Domisili
+                      _buildFormLabel("Domisili"),
+                      _buildTextFormField(
+                        controller: domisiliController,
+                        hintText: 'Masukkan domisili Anda',
+                        validatorText: 'Domisili harus diisi',
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Input No HP
+                      _buildFormLabel("Nomor HP Aktif"),
+                      _buildTextFormField(
+                        controller: noHpController,
+                        hintText: 'Masukkan nomor HP Anda (e.g. 0812...)',
+                        validatorText: 'Nomor HP harus diisi',
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Input Komitmen
+                      _buildFormLabel("Komitmen (Tuliskan janji komitmen Anda)"),
+                      _buildTextFormField(
+                        controller: komitmenController,
+                        hintText: 'Tulis komitmen Anda untuk kegiatan ini',
+                        validatorText: 'Komitmen harus diisi',
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Input Keterampilan
+                      _buildFormLabel("Keterampilan yang Dimiliki"),
+                      _buildTextFormField(
+                        controller: keterampilanController,
+                        hintText: 'Contoh: Desain Grafis, Komunikasi, Editing',
+                        validatorText: 'Keterampilan harus diisi',
+                      ),
+                      const SizedBox(height: 24),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isRegistrationLoading ? null : _submitForm, 
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: kSkyBlue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _isRegistrationLoading
+                              ? const SizedBox( 
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 3,
+                                  ),
+                                )
+                              : const Text(
+                                  'Kirim Pendaftaran',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -336,8 +393,40 @@ ${activityLink}
     );
   }
 
+  Widget _buildModalStatusDisplay(String text, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 12,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1), 
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.max, // Agar Row mengisi lebar penuh container
+        children: [
+          Icon(icon, color: color.darker, size: 20),
+          const SizedBox(width: 10),
+          // 🔥 Gunakan Flexible/Expanded untuk mencegah horizontal overflow
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: color.darker,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // =========================================================
-  // FUNGSI: Menampilkan form laporan
+  // FUNGSI: Menampilkan form laporan (Tidak Berubah)
   // =========================================================
   void _showReportForm(BuildContext context) {
     final formKey = GlobalKey<FormState>();
@@ -381,10 +470,9 @@ ${activityLink}
                   return;
                 }
 
-                setModalState(() => _isReportLoading = true); // Tampilkan loading
+                setModalState(() => _isReportLoading = true); 
 
                 try {
-                  // NOTE: submitReport sekarang mengembalikan http.Response
                   final response = await _reportService.submitReport(
                     kegiatanId: kegiatanId,
                     keluhan: selectedComplaintType ?? '',
@@ -392,8 +480,8 @@ ${activityLink}
                     status: 'Diproses',
                   );
 
-                  setModalState(() => _isReportLoading = false); // Sembunyikan loading
-                  Navigator.pop(context); // Tutup modal
+                  setModalState(() => _isReportLoading = false); 
+                  Navigator.pop(context); 
 
                   if (response.statusCode >= 200 && response.statusCode < 300) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -403,7 +491,6 @@ ${activityLink}
                       ),
                     );
                   } else {
-                    // Coba parsing body untuk mendapatkan pesan error jika backend mengirim JSON
                     String serverMessage = '';
                     try {
                       final body = response.body;
@@ -433,9 +520,8 @@ ${activityLink}
                     );
                   }
                 } catch (e) {
-                  // Network error / exception dari ApiClient
-                  setModalState(() => _isReportLoading = false); // Sembunyikan loading
-                  Navigator.pop(context); // Tutup modal
+                  setModalState(() => _isReportLoading = false); 
+                  Navigator.pop(context); 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('❌ Terjadi kesalahan jaringan: $e'),
@@ -589,7 +675,7 @@ ${activityLink}
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isReportLoading ? null : _submitReportForm, // Gunakan state loading dan fungsi baru
+                        onPressed: _isReportLoading ? null : _submitReportForm, 
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kDarkBlueGray,
                           foregroundColor: Colors.white,
@@ -599,7 +685,7 @@ ${activityLink}
                           ),
                         ),
                         child: _isReportLoading
-                            ? const SizedBox( // Tampilkan loading
+                            ? const SizedBox( 
                                 width: 24,
                                 height: 24,
                                 child: CircularProgressIndicator(
@@ -627,7 +713,7 @@ ${activityLink}
   }
 
   // =========================================================
-  // WIDGET BUILDER UTAMA & WIDGET PEMBANTU (Diubah)
+  // WIDGET BUILDER UTAMA & WIDGET PEMBANTU
   // =========================================================
 
   @override
@@ -635,8 +721,7 @@ ${activityLink}
     final screenHeight = MediaQuery.of(context).size.height;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    // Ambil data kategori untuk dikirim ke header
-    final List<Kategori> categories = widget.kegiatan?.kategori ?? []; // Mengambil List<Kategori>
+    final List<Kategori> categories = widget.kegiatan?.kategori ?? []; 
 
     return Scaffold(
       backgroundColor: kBackground,
@@ -656,7 +741,8 @@ ${activityLink}
                     backgroundColor: Colors.black.withOpacity(0.35),
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
+                      // Mengembalikan true untuk memicu refresh di halaman sebelumnya
+                      onPressed: () => Navigator.of(context).pop(true), 
                     ),
                   ),
                 ),
@@ -727,7 +813,7 @@ ${activityLink}
                   title: widget.title,
                   date: widget.date,
                   time: widget.time,
-                  categories: categories, // ✨ Meneruskan List<Kategori>
+                  categories: categories, 
                 ),
               ),
 
@@ -763,7 +849,7 @@ ${activityLink}
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _dynamicDescription, // MENGAMBIL DARI GETTER
+                          _dynamicDescription, 
                           maxLines: _isDescriptionExpanded ? null : 4,
                           overflow: _isDescriptionExpanded
                               ? TextOverflow.visible
@@ -814,7 +900,6 @@ ${activityLink}
                               bottom: 16,
                             ),
                             children: [
-                              // MENGGUNAKAN DATA DINAMIS DARI _dynamicRequirements
                               for (var requirement in _dynamicRequirements)
                                 _buildRequirementItem(requirement),
                             ],
@@ -892,7 +977,7 @@ ${activityLink}
     final locationText = widget.kegiatan?.lokasi ?? 'Lokasi tidak diketahui';
     final locationTitle =
         widget.kegiatan?.organizer?.nama ??
-        'Lokasi Kegiatan'; // Judul Lokasi bisa dari nama Organizer atau statis
+        'Lokasi Kegiatan'; 
 
     return Card(
       elevation: 0,
@@ -905,9 +990,7 @@ ${activityLink}
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              // Peta Hardcoded (Sulit Diganti tanpa API Key/Widget Peta)
               child: Image.network(
-                // Gunakan placeholder peta statis jika URL peta dinamis tidak tersedia
                 'https://media.wired.com/photos/59269cd37034dc5f91bec0f1/master/w_2560%2Cc_limit/GoogleMapTA.jpg',
                 width: 80,
                 height: 80,
@@ -920,7 +1003,7 @@ ${activityLink}
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    locationTitle, // MENGAMBIL JUDUL DARI BACKEND
+                    locationTitle, 
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -929,7 +1012,7 @@ ${activityLink}
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    locationText, // MENGAMBIL LOKASI DARI BACKEND
+                    locationText, 
                     style: const TextStyle(
                       fontSize: 12,
                       color: kBlueGray,
@@ -972,7 +1055,7 @@ ${activityLink}
     // Kuota dinamis
     final kuotaText = widget.kegiatan?.kuota != null
         ? '${widget.kegiatan!.kuota}+ Bergabung'
-        : '43+ Bergabung'; // Fallback kuota hardcoded
+        : '43+ Bergabung'; 
 
     return Row(
       children: [
@@ -999,15 +1082,78 @@ ${activityLink}
         ),
         const SizedBox(width: 8),
         Text(
-          kuotaText, // MENGGUNAKAN KUOTA DINAMIS
+          kuotaText, 
           style: const TextStyle(fontWeight: FontWeight.bold, color: kDarkBlueGray),
         ),
       ],
     );
   }
 
-  // FUNGSI _buildBottomBar (Tombol Daftar dibuat full width)
+  // FUNGSI _buildBottomBar
   Widget _buildBottomBar() {
+    Widget content;
+    
+    final bool isAcceptedOrAutoAccepted = _registrationStatus == 'Diterima';
+    final bool shouldShowGroupLink = isAcceptedOrAutoAccepted && _linkGrup != null && _linkGrup!.isNotEmpty;
+
+    if (shouldShowGroupLink) {
+        // 🔥 KONDISI 1: Sudah Diterima (Manual) ATAU Status Diterima (Otomatis)
+        content = _buildGroupLinkButton(
+            onPressed: () => _launchUrl(_linkGrup!),
+            label: 'Gabung Grup Relawan',
+        );
+    } else {
+        // 🔥 KONDISI LAINNYA: Tampilkan Status atau Tombol Daftar
+        switch (_registrationStatus) {
+            case 'Diterima':
+                // Ini terjadi jika Diterima TAPI link grup null/kosong
+                content = _buildStatusDisplay(
+                    'Pendaftaran Diterima',
+                    Icons.verified_user,
+                    Colors.green,
+                );
+                break;
+            case 'Mengajukan':
+                content = _buildStatusDisplay(
+                    'Menunggu Persetujuan',
+                    Icons.pending_actions,
+                    Colors.orange,
+                );
+                break;
+            case 'Ditolak':
+                content = _buildStatusDisplay(
+                    'Pendaftaran Ditolak',
+                    Icons.cancel,
+                    Colors.red,
+                );
+                break;
+                case 'Kuota Penuh':
+                 content = _buildStatusDisplay(
+                    'Kuota Penuh',
+                    Icons.warning_amber,
+                    Colors.red.shade900, // Warna merah tua untuk bahaya/penuh
+                );
+                break;
+            case 'Memuat':
+            case 'Kesalahan Jaringan':
+            case 'Kesalahan Server':
+                content = _buildRegisterButton(
+                    onPressed: null,
+                    label: _registrationStatus == 'Memuat' ? 'Memuat Status...' : 'Coba Lagi',
+                    backgroundColor: kBlueGray,
+                );
+                break;
+            case 'Belum Mendaftar':
+            default:
+                content = _buildRegisterButton(
+                    onPressed: () => _showRegistrationForm(context),
+                    label: 'Daftar Kegiatan',
+                    backgroundColor: kSkyBlue,
+                );
+                break;
+        }
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 24,
@@ -1028,60 +1174,88 @@ ${activityLink}
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center, // Pusatkan jika hanya ada satu elemen
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded( // ✨ MEMBUAT TOMBOL MEMENUHI LEBAR
-            child: _isRegistered
-                ? Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50], // Warna latar belakang ringan
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: Colors.green, width: 1.5),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center, // Pusatkan teks di dalam container
-                      children: [
-                        const Icon(
-                          Icons.check_circle_outline,
-                          color: Colors.green,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Sudah Mendaftar',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.green[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ElevatedButton(
-                    // Tombol daftar ditampilkan jika _isRegistered == false
-                    onPressed: () => _showRegistrationForm(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kSkyBlue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                      ),
-                    ),
-                    child: const Text(
-                      'Daftar Kegiatan',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                  ),
+          Expanded(child: content), 
+        ],
+      ),
+    );
+  }
+
+  // 🔥 WIDGET PEMBANTU BARU: Tombol Link Grup
+  Widget _buildGroupLinkButton({
+    required VoidCallback onPressed,
+    required String label,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: const Icon(Icons.group_add_outlined, color: Colors.white),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+        padding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 20,
+        ),
+      ),
+    );
+  }
+
+  // WIDGET PEMBANTU: Menampilkan status pendaftaran
+  Widget _buildStatusDisplay(String text, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 16,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05), 
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: color, width: 1.5),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: color.darker,
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  // WIDGET PEMBANTU: Menampilkan tombol daftar
+  Widget _buildRegisterButton({
+    required VoidCallback? onPressed,
+    required String label,
+    required Color backgroundColor,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: backgroundColor,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+        padding: const EdgeInsets.symmetric(
+          vertical: 16,
+        ),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       ),
     );
   }
@@ -1097,7 +1271,7 @@ ${activityLink}
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              text, // MENGGUNAKAN TEXT DINAMIS
+              text, 
               style: const TextStyle(
                 fontSize: 14,
                 color: kDarkBlueGray,
@@ -1111,12 +1285,12 @@ ${activityLink}
   }
 }
 
-// --- DELEGATE UNTUK HEADER YANG PINNED ---
+// --- DELEGATE UNTUK HEADER YANG PINNED (Tidak Berubah) ---
 class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
   final String date;
   final String time;
-  final List<Kategori> categories; // ✨ BARU: Menerima List<Kategori>
+  final List<Kategori> categories; 
 
   final double _minHeight = 170;
   final double _maxHeight = 170;
@@ -1125,7 +1299,7 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.title,
     required this.date,
     required this.time,
-    this.categories = const [], // Default kosong jika null
+    this.categories = const [], 
   });
 
   // Helper untuk menentukan ikon berdasarkan nama kategori
@@ -1140,7 +1314,7 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
       case 'sosial':
         return Icons.people_outline;
       default:
-        return Icons.star_border; 
+        return Icons.star_border;
     }
   }
 
@@ -1178,19 +1352,17 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
             const SizedBox(height: 8),
             
-            // ✨ MENAMPILKAN SEMUA KATEGORI DENGAN WRAP/ROW
             Wrap(
-              spacing: 8.0, // jarak horizontal antar chip
-              runSpacing: 4.0, // jarak vertikal antar baris chip
+              spacing: 8.0, 
+              runSpacing: 4.0, 
               children: categories.isNotEmpty
                   ? categories.map((kategori) {
                       return _buildTag(
-                        kategori.namaKategori, 
+                        kategori.namaKategori,
                         _getCategoryIcon(kategori.namaKategori),
                       );
                     }).toList()
                   : [
-                      // Fallback jika tidak ada kategori
                       _buildTag('Kategori Umum', Icons.star_border),
                     ],
             ),
@@ -1245,8 +1417,6 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _MyPinnedHeaderDelegate oldDelegate) {
-    // Membandingkan categories secara sederhana (cukup membandingkan judul dan tanggal)
-    // Untuk performa, biasanya tidak perlu membandingkan seluruh list, tapi kita tambahkan agar aman.
     final oldCategoryNames = oldDelegate.categories.map((k) => k.namaKategori).toList();
     final newCategoryNames = categories.map((k) => k.namaKategori).toList();
     
@@ -1255,4 +1425,14 @@ class _MyPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
         time != oldDelegate.time ||
         !listEquals(oldCategoryNames, newCategoryNames);
   }
+}
+
+// 🔥 Helper untuk mengambil warna yang lebih gelap (Diperlukan untuk _buildStatusDisplay)
+extension on Color {
+    Color get darker {
+        int r = (red * 0.9).round();
+        int g = (green * 0.9).round();
+        int b = (blue * 0.9).round();
+        return Color.fromARGB(alpha, r, g, b);
+    }
 }

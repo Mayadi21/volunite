@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:volunite/color_pallete.dart';
+import 'package:volunite/models/pencapaian_model.dart';
+import 'package:volunite/models/volunteer_pencapaian_model.dart';
+import 'package:volunite/services/pencapaian_service.dart';
 import 'package:volunite/pages/Authentication/login.dart';
-import 'edit_profile.dart';
-import 'package:volunite/color_pallete.dart'; 
-import 'certificate_detail_page.dart'; 
+import 'package:volunite/pages/Volunteer/Profile/achievement_dialog.dart'; // Import Halaman Lihat Semua
+import 'package:volunite/pages/Volunteer/Profile/achievement_page.dart'; // Import Dialog
+import 'edit_profile.dart'; 
+// Asumsi import ini ada dan benar sesuai path project Anda
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -15,79 +20,58 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final primaryDark = kDarkBlueGray;
-  File? _imageFile;
+  late Future<VolunteerProfileData> _futureProfile;
+  File? _imageFile; // Digunakan untuk preview gambar lokal saat pick, jika fitur upload masih diinginkan
 
-  // --- FUNGSI HELPER (TIDAK BERUBAH) ---
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  // Fungsi untuk memuat ulang data profil dari server
+  void _refresh() {
+    setState(() {
+      _futureProfile = VolunteerService.fetchProfile();
+    });
+  }
+
+  // Fungsi navigasi ke EditProfilePage dan memanggil _refresh() setelah kembali
+  void _navigateToEditProfile() async {
+    // Menunggu hingga halaman EditProfilePage di-pop (ditutup)
+    await Navigator.push(
+      context, 
+      MaterialPageRoute(builder: (_) => const EditProfilePage())
+    );
+    
+    // Setelah kembali, muat ulang data untuk menampilkan perubahan nama/foto terbaru
+    _refresh(); 
+  }
+
+  // --- FUNGSI HELPER ---
   void _showImageSourceDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_camera),
-                title: const Text('Kamera'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pickImage(ImageSource.camera);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Galeri'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pickImage(ImageSource.gallery);
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(leading: const Icon(Icons.photo_camera), title: const Text('Kamera'), onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); }),
+            ListTile(leading: const Icon(Icons.photo_library), title: const Text('Galeri'), onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); }),
+          ],
+        ),
+      ),
     );
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    PermissionStatus status;
-
-    if (source == ImageSource.camera) {
-      status = await Permission.camera.request();
-    } else {
-      status = await Permission.photos.request();
-      if (status.isDenied && Platform.isAndroid) {
-        status = await Permission.storage.request();
-      }
-    }
-
+    var status = source == ImageSource.camera ? await Permission.camera.request() : await Permission.photos.request();
     if (status.isGranted) {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: source);
-
-      if (pickedFile != null) {
-        setState(() {
-          _imageFile = File(pickedFile.path);
-        });
-      }
-    } else if (status.isPermanentlyDenied) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Izin diperlukan untuk mengakses fitur ini.'),
-            action: SnackBarAction(
-              label: 'Buka Pengaturan',
-              onPressed: openAppSettings,
-            ),
-          ),
-        );
-      }
-    } else if (status.isDenied) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Izin ditolak oleh pengguna.')),
-        );
+      final picked = await ImagePicker().pickImage(source: source);
+      if (picked != null) {
+        setState(() => _imageFile = File(picked.path));
+        // Catatan: Di sini harus ada logika untuk mengunggah foto ke server 
+        // dan kemudian memanggil _refresh() jika berhasil.
       }
     }
   }
@@ -95,597 +79,286 @@ class _ProfilePageState extends State<ProfilePage> {
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          contentPadding: EdgeInsets.zero,
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.only(top: 25, bottom: 15),
-                child: const Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 60,
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'Apakah kamu yakin ingin keluar dari akun?',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-              const SizedBox(height: 25),
-              Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // --- TOMBOL TIDAK ---
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: kBlueGray,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: const BorderSide(color: kBlueGray, width: 1.5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text(
-                          'Tidak',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (context) => const LoginPage(),
-                            ),
-                            (Route<dynamic> route) => false,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[700],
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text(
-                          'Keluar',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (ctx) => AlertDialog(
+        title: const Text("Konfirmasi Keluar"),
+        content: const Text("Apakah Anda yakin ingin keluar?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal")),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginPage()), (r) => false);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Keluar", style: TextStyle(color: Colors.white)),
+          )
+        ],
+      ),
     );
   }
-  // --- AKHIR DARI FUNGSI HELPER ---
+  // ---------------------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
+        title: const Text('Profil Saya', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [kBlueGray, kSkyBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: const Text(
-          'Profil Saya',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-        ),
         centerTitle: true,
+        flexibleSpace: Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [kBlueGray, kSkyBlue]))),
         actions: [
-          // Tombol Edit Profile
-          _buildActionButton(
-            icon: Icons.edit,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const EditProfilePage(),
-                ),
-              );
-            },
-          ),
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white),
+            // Memicu navigasi dan refresh data
+            onPressed: _navigateToEditProfile,
+          )
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Column(
-            children: [
-              // Area Profil Gambar & Nama
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: kLightGray,
-                    backgroundImage: _imageFile != null
-                        ? FileImage(_imageFile!)
-                        : null,
-                    child: _imageFile == null
-                        ? const Icon(
-                              Icons.person,
-                              size: 70,
-                              color: Colors.white,
-                            )
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: kSkyBlue,
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: InkWell(
-                        onTap: () => _showImageSourceDialog(context),
-                        child: const Padding(
-                          padding: EdgeInsets.all(6.0),
-                          child: Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'MAS GIB RAN',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: kDarkBlueGray,
-                ),
-              ),
-              const SizedBox(height: 20),
+      body: FutureBuilder<VolunteerProfileData>(
+        future: _futureProfile,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: kSkyBlue));
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text("Gagal memuat profil: ${snapshot.error}", textAlign: TextAlign.center));
+          }
 
-              // Kartu Pengalaman
-              _buildExperienceCardModern(),
+          final data = snapshot.data!;
 
-              const SizedBox(height: 16),
-
-              // Row Statistik
-              _buildStatsRowModern(),
-
-              const SizedBox(height: 24),
-
-              // Bagian Pencapaian Sertifikat (DENGAN DATA LENGKAP)
-              _buildAchievementSectionModern(
-                title: 'Pencapaian Sertifikat',
-                items: [
-                  _buildCertificateItem(
-                    '28 Okt 24',
-                    'Pandawara',
-                    kBlueGray,
-                    // Deskripsi untuk Pandawara (Sesuai gambar)
-                    'Kegiatan Relawan Lingkungan yang melibatkan 150 relawan untuk berpartisipasi dalam membersihkan sampah-sampah yang ada di titik-titik kritis di kota medan untuk mengatasi masalah banjir. Kegiatan ini meliputi pembersihan lingkungan serta sosialisasi kepada masyarakat sekitar akan pentingnya menjaga kebersihan dan kesadaran diri dalam membuang sampah pada tempatnya.',
-                  ),
-                  _buildCertificateItem(
-                    '30 Okt 24',
-                    'KMB-USU',
-                    kSkyBlue,
-                    // Deskripsi placeholder
-                    'Aksi donor darah dan penggalangan dana kemanusiaan untuk korban bencana alam di Sumatera Utara. Melibatkan 50 relawan dan berhasil mengumpulkan 100 kantong darah. Bertujuan menumbuhkan kepedulian sosial di kalangan mahasiswa.',
-                  ),
-                  _buildCertificateItem(
-                    '1 Nov 24',
-                    'Cisco',
-                    kDarkBlueGray,
-                    // Deskripsi placeholder
-                    'Pelatihan dasar Jaringan Komputer dengan fokus pada konfigurasi router dan switch. Diikuti 20 peserta dan merupakan bagian dari program pengembangan keahlian teknologi informasi bagi relawan. Diharapkan relawan mampu membantu infrastruktur teknologi di daerah terpencil.',
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Bagian Pencapaian Relawan
-              _buildAchievementSectionModern(
-                title: 'Pencapaian Relawan',
-                items: [
-                  _buildVolunteerItem(
-                    'Penjaga\nHijau',
-                    Icons.eco,
-                    Colors.green[700]!,
-                  ),
-                  _buildVolunteerItem(
-                    'Juara\nKomunitas',
-                    Icons.emoji_events,
-                    kSkyBlue,
-                  ),
-                  _buildVolunteerItem(
-                    'Perintis\nPerubahan',
-                    Icons.star,
-                    Colors.orange[700]!,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 30),
-
-              // Tombol Keluar
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _showLogoutDialog(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[700],
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        12,
-                      ),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Keluar',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // WIDGET BARU (Gaya Modern)
-  // ---------------------------------------------------------------------------
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: kBlueGray.withOpacity(0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: kDarkBlueGray, size: 20),
-        onPressed: onPressed,
-      ),
-    );
-  }
-
-  Widget _buildCardBase({required Widget child, required double widthFactor}) {
-    return Container(
-      width: widthFactor > 0 ? widthFactor : null,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: kLightGray,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          // Efek Neumorphic soft
-          BoxShadow(
-            color: kBlueGray.withOpacity(0.15),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-          // Bayangan yang lebih lembut (Neumorphic)
-          BoxShadow(
-             color: Colors.white.withOpacity(0.7),
-             blurRadius: 5,
-             offset: const Offset(-2, -2),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  Widget _buildExperienceCardModern() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [kSkyBlue, kBlueGray],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: kBlueGray.withOpacity(0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'Total Volunteer XP',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Icon(
-                Icons.trending_up,
-                color: Colors.white,
-                size: 18,
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '18,000 XP',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: 18000 / 54000,
-              backgroundColor: Colors.white24,
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-              minHeight: 8,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              '18,000/54,000 to Level Up',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatsRowModern() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildCardBase(
-            widthFactor: 0,
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  '72',
-                  style: TextStyle(
-                    color: kDarkBlueGray,
-                    fontSize: 36,
-                    fontWeight: FontWeight.w900,
+              children: [
+                // 1. Header Profil (Sudah direvisi)
+                _buildProfileHeader(data),
+                const SizedBox(height: 24),
+
+                // 2. XP Card (Tanpa Leveling)
+                _buildSimpleXPCard(data),
+                const SizedBox(height: 16),
+
+                // 3. Stats Row
+                _buildStatsRow(data),
+                const SizedBox(height: 24),
+
+                // 4. Achievement Section
+                _buildAchievementSection(context, data.achievements),
+
+                const SizedBox(height: 30),
+                
+                // 5. Logout
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _showLogoutDialog(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red[700],
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Keluar', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  'Kegiatan Sukarela',
-                  style: TextStyle(color: kBlueGray, fontSize: 13),
-                ),
+                const SizedBox(height: 20),
               ],
             ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildCardBase(
-            widthFactor: 0,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  '#3',
-                  style: TextStyle(
-                    color: kDarkBlueGray,
-                    fontSize: 36,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Peringkat Global',
-                  style: TextStyle(color: kBlueGray, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildAchievementSectionModern({
-    required String title,
-    required List<Widget> items,
-  }) {
+  Widget _buildProfileHeader(VolunteerProfileData data) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: kDarkBlueGray,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  // Tambahkan navigasi ke halaman Lihat Semua
-                },
-                child: const Text(
-                  'Lihat Semua',
-                  style: TextStyle(
-                    color: kSkyBlue,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        Stack(
+          children: [
+            CircleAvatar(
+              radius: 60,
+              backgroundColor: kLightGray,
+              // Tampilkan foto lokal jika ada, jika tidak, ambil dari network
+              backgroundImage: _imageFile != null 
+                  ? FileImage(_imageFile!) 
+                  : (data.pathProfil != null ? NetworkImage(data.pathProfil!) : null) as ImageProvider?,
+              child: (_imageFile == null && data.pathProfil == null) 
+                  ? const Icon(Icons.person, size: 70, color: Colors.white) 
+                  : null,
+            ),
+            // BLOK KODE LOGO KAMERA DIHAPUS DARI SINI
+          ],
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: 150,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: items.length,
-            itemBuilder: (context, index) => items[index],
-            separatorBuilder: (context, index) => const SizedBox(width: 16),
-          ),
+        // Nama diambil dari data.nama (yang sudah diperbarui via _refresh)
+        Text(
+          data.nama,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kDarkBlueGray),
         ),
       ],
     );
   }
 
-  // **[WIDGET INI DIREVISI]**
-  Widget _buildCertificateItem(
-      String date, 
-      String title, 
-      Color color,
-      String description, // Parameter baru
-      ) {
-    return InkWell(
-      onTap: () {
-        // Logika navigasi ke detail sertifikat
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CertificateDetailPage(
-              date: date,
-              title: title,
-              description: description,
-            ),
+  // XP CARD YANG DISEDERHANAKAN (HANYA TOTAL)
+  Widget _buildSimpleXPCard(VolunteerProfileData data) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(colors: [kSkyBlue, kBlueGray], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Total Volunteer XP',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${data.totalXp} XP',
+                style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
+              ),
+            ],
           ),
-        );
-      },
-      child: _buildCardBase(
-        widthFactor: 120,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.star_rounded, color: Colors.white, size: 32),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsRow(VolunteerProfileData data) {
+    return Row(
+      children: [
+        _buildStatCard('${data.activityCount}', 'Kegiatan Sukarela'),
+        const SizedBox(width: 16),
+        _buildStatCard('#-', 'Peringkat Global'),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String value, String label) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: kLightGray.withOpacity(0.5), blurRadius: 5, offset: const Offset(0, 2))],
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 80,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.file_copy, size: 40, color: color),
-            ),
-            const SizedBox(height: 8),
-            Text(date, style: const TextStyle(fontSize: 11, color: kBlueGray)),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: kDarkBlueGray,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            Text(value, style: const TextStyle(color: kDarkBlueGray, fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(label, style: const TextStyle(color: kBlueGray, fontSize: 12)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildVolunteerItem(String label, IconData icon, Color color) {
-    return SizedBox(
-      width: 100,
-      child: Column(
-        children: [
-          _buildCardBase(
-            widthFactor: 80,
-            child: Icon(icon, size: 40, color: color),
+  Widget _buildAchievementSection(BuildContext context, List<Pencapaian> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header Section
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Pencapaian Relawan", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kDarkBlueGray)),
+              TextButton(
+                onPressed: () {
+                  // Navigasi ke Halaman "Lihat Semua"
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => AllAchievementsPage(achievements: items)));
+                },
+                child: const Text("Lihat Semua", style: TextStyle(color: kSkyBlue, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: kDarkBlueGray,
-            ),
+        ),
+        const SizedBox(height: 12),
+        
+        // Horizontal List (Preview 5 item pertama saja)
+        SizedBox(
+          height: 140,
+          child: items.isEmpty 
+            ? const Center(child: Text("Belum ada pencapaian", style: TextStyle(color: Colors.grey)))
+            : ListView.separated(
+                scrollDirection: Axis.horizontal,
+                // Tampilkan maksimal 5 di preview
+                itemCount: items.length > 5 ? 5 : items.length, 
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  return _buildAchievementItem(context, items[index]);
+                },
+              ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAchievementItem(BuildContext context, Pencapaian item) {
+    final bool isUnlocked = item.isUnlocked;
+    final Color iconColor = isUnlocked ? Colors.orange : Colors.grey;
+    final double opacity = isUnlocked ? 1.0 : 0.5;
+    
+    return GestureDetector(
+      onTap: () {
+        // Tampilkan Pop-up Detail
+        showDialog(context: context, builder: (_) => AchievementDialog(item: item));
+      },
+      child: Opacity(
+        opacity: opacity,
+        child: Container(
+          width: 100,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isUnlocked 
+                ? [BoxShadow(color: kBlueGray.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 4))] 
+                : null,
+            border: Border.all(color: kLightGray),
           ),
-        ],
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              item.thumbnail != null 
+                  ? Image.network(item.thumbnail!, width: 40, height: 40, fit: BoxFit.cover)
+                  : Icon(Icons.emoji_events_rounded, size: 40, color: iconColor),
+              
+              const SizedBox(height: 8),
+              
+              Text(
+                item.nama,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: kDarkBlueGray),
+              ),
+
+              if (!isUnlocked) ...[
+                const SizedBox(height: 4),
+                const Icon(Icons.lock, size: 14, color: Colors.grey),
+              ]
+            ],
+          ),
+        ),
       ),
     );
   }

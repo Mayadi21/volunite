@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:volunite/color_pallete.dart'; // Impor color palette
+import 'package:volunite/color_pallete.dart'; 
+import 'package:volunite/models/user_model.dart'; 
+import 'package:volunite/services/profile_service.dart'; // Impor Service
+import 'package:intl/intl.dart'; 
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -14,57 +17,180 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
-  File? _imageFile;
-  // Gunakan kDarkBlueGray sebagai warna utama (primaryDark)
+  // File gambar yang baru dipilih (XFile untuk dikirim ke Service)
+  XFile? _newImageFile; 
   final primaryDark = kDarkBlueGray;
 
-  // Controllers untuk setiap field
+  // State Data
+  User? _user; 
+  DetailUser? _detailUser;
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  // Controllers untuk field
   late TextEditingController _namaController;
   late TextEditingController _jenisKelaminController;
   late TextEditingController _tglLahirController;
   late TextEditingController _emailController;
   late TextEditingController _teleponController;
   late TextEditingController _domisiliController;
-  late TextEditingController _pendidikanController;
-  late TextEditingController _keahlianController;
-  late TextEditingController _minatController;
-  late TextEditingController _ketersediaanController;
+  
 
   @override
   void initState() {
     super.initState();
-    // Inisialisasi controller dengan data dari gambar
-    _namaController = TextEditingController(text: 'Go Youn Jung');
-    _jenisKelaminController = TextEditingController(text: 'Perempuan');
-    _tglLahirController = TextEditingController(text: '22-04-1996');
-    _emailController = TextEditingController(text: 'goyounjung@naver.com');
-    _teleponController = TextEditingController(text: '081234567890');
-    _domisiliController = TextEditingController(text: 'Medan');
-    _pendidikanController = TextEditingController(text: 'Sarjana (S1)');
-    _keahlianController = TextEditingController(text: 'Desain Grafis');
-    _minatController = TextEditingController(text: 'Pendidikan');
-    _ketersediaanController = TextEditingController(text: 'Akhir Pekan');
-  }
+    
+    // Inisialisasi controller
+    _namaController = TextEditingController();
+    _emailController = TextEditingController();
+    _jenisKelaminController = TextEditingController();
+    _teleponController = TextEditingController();
+    _domisiliController = TextEditingController();
+    _tglLahirController = TextEditingController();
 
+    _fetchUserData(); 
+  }
+  
   @override
   void dispose() {
-    // Selalu dispose controller Anda
     _namaController.dispose();
     _jenisKelaminController.dispose();
     _tglLahirController.dispose();
     _emailController.dispose();
     _teleponController.dispose();
     _domisiliController.dispose();
-    _pendidikanController.dispose();
-    _keahlianController.dispose();
-    _minatController.dispose();
-    _ketersediaanController.dispose();
     super.dispose();
   }
 
-  // ------------------------------------------------------------------
+  // ==========================================================
+  // ⬇ FUNGSI PENGAMBILAN & PENGISIAN DATA DARI API ⬇
+  // ==========================================================
+
+  Future<void> _fetchUserData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+  
+    try {
+      final data = await ProfileService.fetchProfile();
+  
+      if (mounted) {
+        final user = data['user'] as User;
+        final detail = data['detail'] as DetailUser;
+
+        setState(() {
+          _user = user;
+          _detailUser = detail;
+          _isLoading = false;
+        });
+        
+        _populateControllers(user, detail);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Gagal memuat data: ${e.toString()}';
+        });
+      }
+    }
+  }
+
+  void _populateControllers(User user, DetailUser detail) {
+    _namaController.text = user.nama;
+    _emailController.text = user.email;
+    
+    _jenisKelaminController.text = detail.jenisKelamin ?? '';
+    _teleponController.text = detail.noTelepon ?? '';
+    _domisiliController.text = detail.domisili ?? '';
+    
+    // Format Tanggal Lahir (API: YYYY-MM-DD -> Tampilan: dd-MM-yyyy)
+    if (detail.tanggalLahir != null && detail.tanggalLahir!.isNotEmpty) {
+      try {
+        final date = DateTime.parse(detail.tanggalLahir!);
+        _tglLahirController.text = DateFormat('dd-MM-yyyy').format(date);
+      } catch (_) {
+        _tglLahirController.text = detail.tanggalLahir!; 
+      }
+    }
+  }
+
+  // ==========================================================
+  // ⬇ FUNGSI INTERAKTIF (Date Picker & Jenis Kelamin) ⬇
+  // ==========================================================
+
+  Future<void> _selectDate(BuildContext context) async {
+    DateTime initialDate = DateTime(2000, 1, 1);
+    if (_tglLahirController.text.isNotEmpty) {
+      try {
+        initialDate = DateFormat('dd-MM-yyyy').parse(_tglLahirController.text);
+      } catch (_) {}
+    }
+    
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(primary: kSkyBlue, onPrimary: Colors.white, onSurface: kDarkBlueGray),
+            textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: kSkyBlue)),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _tglLahirController.text = DateFormat('dd-MM-yyyy').format(picked);
+      });
+    }
+  }
+
+  void _selectJenisKelamin(BuildContext context) {
+    final List<String> options = ['Laki-Laki', 'Perempuan', 'Tidak Ingin Memberi Tahu'];
+    
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Pilih Jenis Kelamin',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kDarkBlueGray),
+                ),
+              ),
+              ...options.map((option) {
+                return ListTile(
+                  title: Text(option),
+                  trailing: _jenisKelaminController.text == option ? Icon(Icons.check, color: kSkyBlue) : null,
+                  onTap: () {
+                    setState(() {
+                      _jenisKelaminController.text = option;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                );
+              }).toList(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  // ==========================================================
   // ⬇ FUNGSI IMAGE PICKER ⬇
-  // ------------------------------------------------------------------
+  // ==========================================================
 
   void _showImageSourceDialog(BuildContext context) {
     showModalBottomSheet(
@@ -108,94 +234,161 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     if (status.isGranted) {
       final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: source);
+      final XFile? pickedFile = await picker.pickImage(source: source, imageQuality: 70); 
 
       if (pickedFile != null) {
         setState(() {
-          _imageFile = File(pickedFile.path);
+          _newImageFile = pickedFile; 
         });
       }
-    } else if (status.isPermanentlyDenied) {
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Izin ${source == ImageSource.camera ? "Kamera" : "Galeri"} diperlukan.'),
+          action: status.isPermanentlyDenied 
+            ? SnackBarAction(label: 'Buka Pengaturan', onPressed: openAppSettings)
+            : null,
+        ),
+      );
+    }
+  }
+
+  // ==========================================================
+  // ⬇ FUNGSI SIMPAN DATA (Update) - DENGAN NOTIFIKASI BARU ⬇
+  // ==========================================================
+
+  void _saveData() async {
+    if (_user == null) return; 
+
+    // 1. Konversi Tanggal Lahir (dd-MM-yyyy -> YYYY-MM-DD)
+    String? tglLahirUntukBackend;
+    if (_tglLahirController.text.isNotEmpty) {
+      try {
+        final date = DateFormat('dd-MM-yyyy').parse(_tglLahirController.text);
+        tglLahirUntukBackend = DateFormat('yyyy-MM-dd').format(date);
+      } catch (_) {
+        tglLahirUntukBackend = _tglLahirController.text;
+      }
+    }
+  
+    // Tampilkan dialog loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await ProfileService.updateProfile(
+        nama: _namaController.text,
+        jenisKelamin: _jenisKelaminController.text.isEmpty ? null : _jenisKelaminController.text,
+        tanggalLahir: tglLahirUntukBackend,
+        noTelepon: _teleponController.text.isEmpty ? null : _teleponController.text,
+        domisili: _domisiliController.text.isEmpty ? null : _domisiliController.text,
+        fotoProfil: _newImageFile, 
+      );
+  
       if (mounted) {
+        // Tutup loading dialog
+        Navigator.of(context).pop(); 
+        
+        // === REVISI NOTIFIKASI SUKSES ===
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Izin diperlukan untuk mengakses fitur ini.'),
-            action: SnackBarAction(
-              label: 'Buka Pengaturan',
-              onPressed: openAppSettings,
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  ' Profil berhasil diperbarui!',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ],
             ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
+        
+        // Kembali ke halaman sebelumnya
+        Navigator.of(context).pop(); 
       }
-    } else if (status.isDenied) {
+    } catch (e) {
+      print('Update Error: $e');
       if (mounted) {
+        // Tutup loading dialog
+        Navigator.of(context).pop(); 
+
+        // === REVISI NOTIFIKASI GAGAL ===
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Izin ditolak oleh pengguna.')),
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Gagal memperbarui: ${e.toString()}',
+                    style: const TextStyle(color: Colors.white),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
         );
       }
     }
   }
 
-  // ------------------------------------------------------------------
-  // ⬆ BATAS AKHIR FUNGSI IMAGE PICKER ⬆
-  // ------------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
-    // Gunakan kBackground dari Color Palette
     const pageBackgroundColor = kBackground;
 
+    // State: Loading atau Error
+    if (_isLoading || _user == null) {
+      return Scaffold(
+        backgroundColor: pageBackgroundColor,
+        appBar: _buildAppBar(),
+        body: Center(
+          child: _errorMessage != null
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(_errorMessage!, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton(onPressed: _fetchUserData, child: const Text('Coba Lagi')),
+                ],
+              )
+            : const CircularProgressIndicator(color: kSkyBlue),
+        ),
+      );
+    }
+
+    // State: Data Loaded
     return Scaffold(
       backgroundColor: pageBackgroundColor,
+      appBar: _buildAppBar(),
 
-      // --- APPBAR ---
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [kBlueGray, kSkyBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Edit Data Diri',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        centerTitle: true,
-      ),
-
-      // --- BODY ---
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              // --- FOTO PROFIL ---
               Stack(
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    // Gunakan kLightGray untuk placeholder/background avatar
                     backgroundColor: kLightGray,
-                    // Tampilkan gambar yang ada atau gambar baru
-                    backgroundImage: _imageFile != null
-                        ? FileImage(_imageFile!)
-                        // TODO: Ganti ini dengan gambar profil user yang ada
-                        : const NetworkImage(
-                                'https://i.mydramalist.com/r6R0z_5f.jpg',
-                              )
-                              as ImageProvider,
+                    backgroundImage: _newImageFile != null
+                        ? FileImage(File(_newImageFile!.path)) 
+                        : NetworkImage(
+                            _user!.pathProfil ?? 'https://via.placeholder.com/150',
+                          ) as ImageProvider,
                   ),
                   Positioned(
                     bottom: 0,
@@ -203,18 +396,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: primaryDark, // kDarkBlueGray
+                        color: primaryDark,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
                       child: InkWell(
                         onTap: () => _showImageSourceDialog(context),
                         child: const Padding(
                           padding: EdgeInsets.all(6.0),
-                          child: Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 18,
-                          ),
+                          child: Icon(Icons.camera_alt, color: Colors.white, size: 18),
                         ),
                       ),
                     ),
@@ -223,43 +412,41 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               const SizedBox(height: 32),
 
-              // --- FORMULIR ---
               _buildSectionHeader('Informasi Pribadi'),
               const SizedBox(height: 16),
-              _buildTextField(
-                label: 'Nama Lengkap',
-                controller: _namaController,
-              ),
+              _buildTextField(label: 'Nama Lengkap', controller: _namaController),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    // TODO: Ganti ini dengan DropdownButton
                     child: _buildTextField(
                       label: 'Jenis Kelamin',
                       controller: _jenisKelaminController,
                       readOnly: true,
-                      onTap: () {
-                        /* Tampilkan dialog/dropdown jenis kelamin */
-                      },
+                      onTap: () => _selectJenisKelamin(context),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    // TODO: Ganti ini dengan Date Picker
                     child: _buildTextField(
                       label: 'Tanggal lahir',
                       controller: _tglLahirController,
                       readOnly: true,
-                      onTap: () {
-                        /* Tampilkan date picker */
-                      },
+                      onTap: () => _selectDate(context),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              _buildTextField(label: 'Email', controller: _emailController),
+              _buildTextField(
+                label: 'Email',
+                controller: _emailController,
+                readOnly: true,
+                keyboardType: TextInputType.emailAddress,
+                onTap: () {
+                  print('Arahkan ke halaman Ubah Email');
+                },
+              ),
               const SizedBox(height: 16),
               _buildTextField(
                 label: 'Nomor Telepon',
@@ -267,55 +454,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 16),
-              // TODO: Ganti ini dengan Dropdown/Pilihan Lokasi
               _buildTextField(
                 label: 'Domisili',
                 controller: _domisiliController,
-                readOnly: true,
-                onTap: () {
-                  /* Tampilkan pilihan domisili */
-                },
-              ),
-              const SizedBox(height: 32),
-
-              _buildSectionHeader('Pendidikan dan Pengalaman'),
-              const SizedBox(height: 16),
-              // TODO: Ganti ini dengan Dropdown
-              _buildTextField(
-                label: 'Pendidikan terakhir',
-                controller: _pendidikanController,
-                readOnly: true,
-                onTap: () {
-                  /* Tampilkan pilihan pendidikan */
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                label: 'Keahlian Khusus',
-                controller: _keahlianController,
-              ),
-              const SizedBox(height: 32),
-
-              _buildSectionHeader('Preferensi dan Ketersediaan'),
-              const SizedBox(height: 16),
-              // TODO: Ganti ini dengan Pilihan Chip/Dropdown
-              _buildTextField(
-                label: 'Minat/Kategori Volunteer',
-                controller: _minatController,
-                readOnly: true,
-                onTap: () {
-                  /* Tampilkan pilihan minat */
-                },
-              ),
-              const SizedBox(height: 16),
-              // TODO: Ganti ini dengan Pilihan Chip/Dropdown
-              _buildTextField(
-                label: 'Ketersediaan Waktu',
-                controller: _ketersediaanController,
-                readOnly: true,
-                onTap: () {
-                  /* Tampilkan pilihan waktu */
-                },
+                readOnly: false,
               ),
               const SizedBox(height: 24),
             ],
@@ -323,61 +465,66 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
       ),
 
-      // --- TOMBOL SIMPAN (Pinned di bawah) ---
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ElevatedButton(
-          onPressed: () {
-            // TODO: Tambahkan logika untuk menyimpan data
-            // (Contoh: kirim _namaController.text ke server)
-            Navigator.of(context).pop(); // Kembali setelah simpan
-          },
+          onPressed: _saveData,
           style: ElevatedButton.styleFrom(
-            backgroundColor: kSkyBlue, // kDarkBlueGray
+            backgroundColor: kSkyBlue,
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            minimumSize: const Size(double.infinity, 50), // Lebar penuh
-            elevation: 8, // Tambahkan sedikit bayangan
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            minimumSize: const Size(double.infinity, 50),
+            elevation: 8,
           ),
           child: const Text(
             'Simpan Perubahan',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
       ),
     );
   }
 
-  // --- HELPER WIDGET: Judul Section ---
+  AppBar _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [kBlueGray, kSkyBlue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      ),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      title: const Text(
+        'Edit Data Diri',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+      ),
+      centerTitle: true,
+    );
+  }
+
   Widget _buildSectionHeader(String title) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        // Gunakan kSoftBlue untuk background header (opsional)
         color: kSoftBlue.withOpacity(0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
         child: Text(
           title,
-          style: TextStyle(
-            // Gunakan kDarkBlueGray atau kBlueGray untuk warna teks
-            color: kDarkBlueGray,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: kDarkBlueGray, fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
     );
   }
 
-  // --- HELPER WIDGET: Card Input Field ---
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
@@ -385,51 +532,36 @@ class _EditProfilePageState extends State<EditProfilePage> {
     VoidCallback? onTap,
     TextInputType keyboardType = TextInputType.text,
   }) {
-    // Jika readOnly, gunakan InkWell agar bisa diklik. Jika tidak, fokuskan pada TextFormField.
     Widget field = TextFormField(
       controller: controller,
       readOnly: readOnly,
-      keyboardType: keyboardType, // Tambahkan keyboardType
-      style: TextStyle(
-        fontWeight: FontWeight.w600, // Sedikit kurang tebal dari sebelumnya
-        fontSize: 16,
-        color: kDarkBlueGray, // Warna teks input
-      ),
+      keyboardType: keyboardType,
+      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: kDarkBlueGray),
       decoration: InputDecoration(
         isDense: true,
         contentPadding: EdgeInsets.zero,
         border: InputBorder.none,
-        // Tambahkan ikon panah jika readOnly (untuk Dropdown/Picker)
-        suffixIcon: readOnly
-            ? Icon(Icons.arrow_forward_ios, size: 14, color: kBlueGray)
-            : null,
+        suffixIcon: readOnly ? Icon(Icons.arrow_forward_ios, size: 14, color: kBlueGray) : null,
       ),
-      onTap: readOnly ? onTap : null, // Hanya panggil onTap jika readOnly
+      onTap: readOnly ? onTap : null,
     );
 
-    // Jika readOnly, bungkus dengan InkWell untuk efek visual klik
     if (readOnly && onTap != null) {
       field = InkWell(
         onTap: onTap,
-        child: IgnorePointer(
-          // Abaikan pointer pada TextFormField di dalamnya
-          child: field,
-        ),
+        child: IgnorePointer(child: field),
       );
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white, // Background putih untuk field
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: kLightGray,
-          width: 1,
-        ), // Tambahkan border halus
+        border: Border.all(color: kLightGray, width: 1),
         boxShadow: [
           BoxShadow(
-            color: kBlueGray.withOpacity(0.1), // Bayangan dari kBlueGray
+            color: kBlueGray.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -438,14 +570,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: kBlueGray,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ), // Warna label dari palette
-          ),
+          Text(label, style: TextStyle(color: kBlueGray, fontSize: 12, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
           field,
         ],
