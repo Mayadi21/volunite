@@ -3,6 +3,7 @@ import 'package:volunite/color_pallete.dart';
 import 'package:volunite/models/pendaftaran_model.dart';
 import 'package:volunite/services/pendaftaran_service.dart';
 import 'package:volunite/pages/Organizer/Activity/Applicants/applicant_detail_dialog.dart';
+import 'package:volunite/services/kegiatan_service.dart';
 
 class ApplicantCard extends StatefulWidget {
   final Pendaftaran pendaftaran;
@@ -28,6 +29,7 @@ class _ApplicantCardState extends State<ApplicantCard> {
     setState(() => _isLoading = false);
     if (success && mounted) {
       widget.onUpdate();
+      KegiatanService.triggerRefresh();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Status: $newStatus"), backgroundColor: newStatus=='Diterima'?Colors.green:Colors.red));
     }
   }
