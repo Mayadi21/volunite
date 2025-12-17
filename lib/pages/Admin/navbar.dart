@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:volunite/color_pallete.dart';
 
-// Import semua halaman admin
+// Import halaman admin (Laporan dihapus)
 import 'package:volunite/pages/Admin/dashboard/dashboard_page.dart';
 import 'package:volunite/pages/Admin/users/user_management_page.dart';
 import 'package:volunite/pages/Admin/activities/activity_management_page.dart';
-import 'package:volunite/pages/Admin/reports/reports_page.dart';
+// import 'package:volunite/pages/Admin/reports/reports_page.dart'; // Dihapus
 import 'package:volunite/pages/Admin/more/more_page.dart';
 
 class AdminLandingPage extends StatefulWidget {
@@ -20,12 +20,12 @@ class AdminLandingPage extends StatefulWidget {
 class _AdminLandingPageState extends State<AdminLandingPage> {
   int _selectedIndex = 0;
 
+  // List halaman sekarang hanya berisi 4 item
   late final List<Widget> _pages = [
-    // DashboardPage sekarang tidak pakai callback. "Lihat Semua" akan push ke ActivityManagementPage.
     const DashboardPage(),
     const UserManagementPage(),
     const ActivityManagementPage(),
-    const ReportsPage(),
+    // const ReportsPage(), // Dihapus
     const MorePage(),
   ];
 
@@ -44,6 +44,7 @@ class _AdminLandingPageState extends State<AdminLandingPage> {
         backgroundColor: Colors.white,
         type: BottomNavigationBarType.fixed,
         onTap: (index) => setState(() => _selectedIndex = index),
+        // Item navbar sekarang hanya ada 4
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_rounded),
@@ -57,10 +58,7 @@ class _AdminLandingPageState extends State<AdminLandingPage> {
             icon: Icon(FontAwesomeIcons.clipboardList),
             label: "Kegiatan",
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assessment_rounded),
-            label: "Laporan",
-          ),
+          // Item Laporan dihapus dari sini
           BottomNavigationBarItem(
             icon: Icon(Icons.more_horiz_rounded),
             label: "Lainnya",
