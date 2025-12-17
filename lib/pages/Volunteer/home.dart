@@ -1,4 +1,3 @@
-// lib/pages/Volunteer/home.dart
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Volunteer/Activity/detail_activities_page.dart';
 import 'package:volunite/pages/shared/notification.dart';
@@ -6,17 +5,15 @@ import 'package:volunite/pages/Volunteer/Category/categories_page.dart';
 import 'package:volunite/pages/Volunteer/Category/category_activities_page.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/services/pendaftaran_service.dart';
-
-// Import model dan service yang diperlukan
 import 'package:volunite/models/kegiatan_model.dart'; 
 import 'package:volunite/services/kegiatan_service.dart'; 
 import 'package:volunite/services/auth/auth_service.dart';
 import 'package:volunite/models/user_model.dart';
 import 'package:volunite/services/notifikasi_service.dart'; 
-// 🔥 Import Model dan Service Profil Relawan
-import 'package:volunite/models/pencapaian_model.dart'; // Jika VolunteerProfileData ada di sini, jika tidak, pastikan import yang benar
-import 'package:volunite/models/volunteer_pencapaian_model.dart'; // Kemungkinan VolunteerProfileData ada di sini
-import 'package:volunite/services/pencapaian_service.dart'; // Kemungkinan VolunteerService ada di sini
+import 'package:volunite/models/pencapaian_model.dart'; 
+import 'package:volunite/models/volunteer_pencapaian_model.dart'; 
+import 'package:volunite/services/pencapaian_service.dart'; 
+import 'package:volunite/services/general_profile_service.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -29,274 +26,130 @@ class _HomeTabState extends State<HomeTab> {
   User? currentUser;
   bool isLoadingUser = true;
   late Future<List<Kegiatan>> _kegiatanFuture;
-  // 🔥 STATE BARU UNTUK PROFIL
-  late Future<VolunteerProfileData> _futureProfile; // State untuk data profil/XP
-
-  // 🔥 STATE BARU UNTUK DOT NOTIFIKASI
-  bool _hasNewNotification = false; // Ganti dengan logika sesungguhnya
-  // 🔥 STATE BARU UNTUK PENCARIAN
-  List<Kegiatan> _allKegiatan = []; // Menyimpan semua kegiatan yang dimuat
-  String _searchText = ''; // Teks yang dimasukkan pengguna
+  late Future<VolunteerProfileData> _futureProfile; 
+  bool _hasNewNotification = false; 
+  List<Kegiatan> _allKegiatan = []; 
+  String _searchText = ''; 
   final TextEditingController _searchController = TextEditingController();
+  
+  String _imgSignature = DateTime.now().toString();
 
   @override
   void initState() {
     super.initState();
-    loadUser();
-    // 🔥 Panggil fungsi untuk memuat profil
+    loadUser(); 
     _refreshProfile();
-    // Memuat kegiatan dan menyimpannya di _allKegiatan
     _kegiatanFuture = _fetchAndStoreKegiatan();
-    
-    // Mendaftarkan listener untuk Search Bar
     _searchController.addListener(_onSearchChanged);
-    
-    // 🔥 Panggil fungsi untuk memeriksa notifikasi saat init
     _checkNewNotifications();
+    
+    GeneralProfileService.shouldRefresh.addListener(_onGlobalRefresh);
   }
 
   @override
   void dispose() {
+    GeneralProfileService.shouldRefresh.removeListener(_onGlobalRefresh);
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
-  // 🔥 FUNGSI BARU: Memuat data profil
+  void _onGlobalRefresh() {
+    if (mounted) {
+      _updateUserData(); 
+      _refreshProfile(); 
+      setState(() {
+        _imgSignature = DateTime.now().millisecondsSinceEpoch.toString();
+      });
+    }
+  }
+
   void _refreshProfile() {
     setState(() {
-      // Asumsi VolunteerService.fetchProfile() tersedia
-      // Ganti VolunteerService.fetchProfile() jika namanya berbeda
       _futureProfile = VolunteerService.fetchProfile();
     });
   }
 
-  // FUNGSI UTILITY BARU
+  // Fungsi khusus untuk mengambil data user terbaru dari API (Bukan dari cache lokal Auth)
+  Future<void> _updateUserData() async {
+    try {
+      final freshData = await GeneralProfileService.fetchMyProfile();
+      if (mounted) {
+        setState(() {
+          currentUser = freshData['user'] as User; 
+        });
+      }
+    } catch(e) {
+      debugPrint("Gagal refresh user di home: $e");
+    }
+  }
 
   Future<void> loadUser() async {
+    // Load awal, bisa dari cache local dulu biar cepat
     final user = await AuthService().getCurrentUser();
-
     if (mounted) {
       setState(() {
         currentUser = user;
         isLoadingUser = false;
       });
+      // Panggil update juga untuk memastikan data sinkron dgn server
+      _updateUserData(); 
     }
   }
   
-  // 🔥 FUNGSI BARU UNTUK NOTIFIKASI
-  Future<void> _checkNewNotifications() async {
-  try {
-    final unreadCount = await NotifikasiService.countUnread();
-
-    if (mounted) {
-      setState(() {
-        _hasNewNotification = unreadCount > 0;
-      });
-    }
-  } catch (e) {
-    debugPrint('Error check notification: $e');
-  }
-}
-
-  Future<void> _markNotificationsAsRead() async {
-  try {
-    final notifications = await NotifikasiService.fetchNotifikasi();
-
-    for (final notif in notifications) {
-      if (!notif.isRead) {
-        await NotifikasiService.markAsRead(notif.id);
-        notif.isRead = true; // 🔥 update local state
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _hasNewNotification = false;
-      });
-    }
-  } catch (e) {
-    debugPrint('Error mark notifications read: $e');
-  }
-}
+  // --- Fungsi Utility Lainnya (Tidak Berubah) ---
+  Future<void> _checkNewNotifications() async { try { final unreadCount = await NotifikasiService.countUnread(); if (mounted) setState(() => _hasNewNotification = unreadCount > 0); } catch (e) { debugPrint('Error check notification: $e'); } }
+  Future<void> _markNotificationsAsRead() async { try { final notifications = await NotifikasiService.fetchNotifikasi(); for (final notif in notifications) { if (!notif.isRead) { await NotifikasiService.markAsRead(notif.id); notif.isRead = true; } } if (mounted) setState(() => _hasNewNotification = false); } catch (e) { debugPrint('Error mark notifications read: $e'); } }
+  Future<List<Kegiatan>> _fetchAndStoreKegiatan() async { final kegiatanList = await KegiatanService.fetchKegiatan(); if (mounted) setState(() => _allKegiatan = kegiatanList); return kegiatanList; }
+  void _onSearchChanged() { setState(() => _searchText = _searchController.text); }
+  List<Kegiatan> _getFilteredKegiatan(List<Kegiatan> allKegiatan) { final List<Kegiatan> scheduledKegiatan = allKegiatan.where((k) => k.status.toLowerCase() == 'scheduled').toList(); if (_searchText.isEmpty) return scheduledKegiatan; final query = _searchText.toLowerCase(); return scheduledKegiatan.where((k) { final titleMatch = k.judul.toLowerCase().contains(query); final descriptionMatch = (k.deskripsi ?? '').toLowerCase().contains(query); final categoryMatch = k.kategori.any((cat) => cat.namaKategori.toLowerCase().contains(query)); return titleMatch || descriptionMatch || categoryMatch; }).toList(); }
   
-  // 🔥 FUNGSI BARU: Memuat dan menyimpan semua data kegiatan
-  Future<List<Kegiatan>> _fetchAndStoreKegiatan() async {
-    final kegiatanList = await KegiatanService.fetchKegiatan();
-    if (mounted) {
-      setState(() {
-        _allKegiatan = kegiatanList;
-      });
-    }
-    return kegiatanList;
-  }
-  
-  // 🔥 FUNGSI BARU: Dipanggil setiap kali teks pencarian berubah
-  void _onSearchChanged() {
-    setState(() {
-      _searchText = _searchController.text;
-      // setState akan memicu FutureBuilder untuk melakukan filter ulang
-    });
-  }
-
-  // 🔥 FUNGSI BARU: Melakukan pemfilteran data kegiatan
-  List<Kegiatan> _getFilteredKegiatan(List<Kegiatan> allKegiatan) {
-    
-    // Tahap 1: Filter berdasarkan status 'scheduled'
-    final List<Kegiatan> scheduledKegiatan = allKegiatan
-        .where((k) => k.status.toLowerCase() == 'scheduled')
-        .toList();
-
-    if (_searchText.isEmpty) {
-      // Jika kolom search kosong, kembalikan hanya kegiatan yang dijadwalkan
-      return scheduledKegiatan;
-    }
-    
-    final query = _searchText.toLowerCase();
-    
-    // Tahap 2: Filter berdasarkan teks pencarian
-    return scheduledKegiatan.where((k) {
-      // Cek kecocokan di Judul
-      final titleMatch = k.judul.toLowerCase().contains(query);
-      
-      // Cek kecocokan di Deskripsi
-      final descriptionMatch = (k.deskripsi ?? '').toLowerCase().contains(query);
-      
-      // Cek kecocokan di Kategori (jika ada)
-      final categoryMatch = k.kategori.any((cat) => 
-          cat.namaKategori.toLowerCase().contains(query)
-      );
-
-      return titleMatch || descriptionMatch || categoryMatch;
-    }).toList();
-  }
-  
-
-  // 🔥 FUNGSI PEMBANTU UNTUK MENAMPILKAN GAMBAR PROFIL
+  // [LOGIC 4] Update _buildProfileImage untuk mendukung signature
   Widget _buildProfileImage(String path) {
     const double size = 48.0; 
     final bool isNetworkImage = path.startsWith("http") || path.startsWith("https");
     final String finalPath = path.startsWith('assets/') ? path : 'assets/$path';
     
+    // Tambahkan signature ke URL
+    final String urlWithSignature = isNetworkImage ? "$path?v=$_imgSignature" : path;
+    
     return ClipOval(
       child: isNetworkImage
           ? Image.network(
-              path,
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
+              urlWithSignature,
+              width: size, height: size, fit: BoxFit.cover,
               loadingBuilder: (context, child, progress) {
                 if (progress == null) return child;
-                return Container(
-                  width: size,
-                  height: size,
-                  color: Colors.grey.shade200,
-                  child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                );
+                return Container(width: size, height: size, color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator(strokeWidth: 2)));
               },
               errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: size,
-                  height: size,
-                  color: kSoftBlue,
-                  child: const Icon(Icons.person, size: 30, color: kDarkBlueGray),
-                );
+                return Container(width: size, height: size, color: kSoftBlue, child: const Icon(Icons.person, size: 30, color: kDarkBlueGray));
               },
             )
           : Image.asset(
               finalPath, 
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
+              width: size, height: size, fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: size,
-                  height: size,
-                  color: kSoftBlue,
-                  child: const Icon(Icons.person, size: 30, color: kDarkBlueGray),
-                );
+                return Container(width: size, height: size, color: kSoftBlue, child: const Icon(Icons.person, size: 30, color: kDarkBlueGray));
               },
             ),
     );
   }
 
-  // 🔥 FUNGSI BARU: Widget XP Card yang disalin dari profile.dart
+  // XP Card
   Widget _buildSimpleXPCard(VolunteerProfileData data) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(colors: [kSkyBlue, kBlueGray], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Total Volunteer XP',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                // Menggunakan totalXp dari data profil yang dimuat
-                '${data.totalXp} XP', 
-                style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
-              ),
-            ],
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.star_rounded, color: Colors.white, size: 32),
-          )
-        ],
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [kSkyBlue, kBlueGray], begin: Alignment.topLeft, end: Alignment.bottomRight), boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))]),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Total Volunteer XP', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)), const SizedBox(height: 8), Text('${data.totalXp} XP', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900))]), Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle), child: const Icon(Icons.star_rounded, color: Colors.white, size: 32))]),
     );
   }
 
-  // --- Utility Functions (format tanggal/waktu) ---
-
-  String _formatDate(DateTime? date) {
-    if (date == null) return 'Tanggal N/A';
-    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const monthNames = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    
-    final int weekdayIndex = date.weekday % 7; 
-    final dayName = dayNames[weekdayIndex];
-    final day = date.day;
-    final month = monthNames[date.month];
-    final year = date.year;
-
-    return '$dayName, $day $month $year';
-  }
-
-  String _formatTimeRange(DateTime? start, DateTime? end) {
-    if (start == null) return 'Waktu N/A';
-
-    final startTime = '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB';
-    
-    if (end != null) {
-      final endTime = '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB';
-      return '$startTime - $endTime';
-    }
-    
-    return startTime;
-  }
+  // Utility Date Formatter
+  String _formatDate(DateTime? date) { if (date == null) return 'Tanggal N/A'; const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']; const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']; final int weekdayIndex = date.weekday % 7; return '${dayNames[weekdayIndex]}, ${date.day} ${monthNames[date.month]} ${date.year}'; }
+  String _formatTimeRange(DateTime? start, DateTime? end) { if (start == null) return 'Waktu N/A'; final startTime = '${start.hour.toString().padLeft(2, '0')}.${start.minute.toString().padLeft(2, '0')} WIB'; if (end != null) { final endTime = '${end.hour.toString().padLeft(2, '0')}.${end.minute.toString().padLeft(2, '0')} WIB'; return '$startTime - $endTime'; } return startTime; }
   
-  // ------------------- WIDGET BUILD -------------------
-
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
@@ -309,524 +162,49 @@ class _HomeTabState extends State<HomeTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 👋 Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    // CIRCLE AVATAR DENGAN FOTO PROFIL DINAMIS
+            // Header
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Row(children: [
                     CircleAvatar(
                       radius: 24,
                       backgroundColor: kSoftBlue,
                       child: isLoadingUser
                           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                          : _buildProfileImage(profilePath),
+                          : _buildProfileImage(profilePath), // Panggil builder baru
                     ),
                     const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Hi, Selamat Datang 👋",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: kDarkBlueGray,
-                          ),
-                        ),
-                        Text(
-                          isLoadingUser 
-                              ? "Memuat..."
-                              : currentUser?.nama ?? 'User',
-                          style: const TextStyle(fontSize: 14, color: kBlueGray),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                // 🔥 IKON NOTIFIKASI DENGAN BADGE
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: kSoftBlue,
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.notifications_outlined,
-                          size: 20,
-                          color: kDarkBlueGray,
-                        ),
-                        onPressed: () {
-                          // 🔥 Set notifikasi sebagai sudah dibaca saat dinavigasi
-                          _markNotificationsAsRead();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NotifikasiPage(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    // 🔥 DOT MERAH
-                    if (_hasNewNotification)
-                      Positioned(
-                        right: 5,
-                        top: 5,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.white, width: 1),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 8,
-                            minHeight: 8,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Text("Hi, Selamat Datang 👋", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kDarkBlueGray)),
+                        // Nama akan berubah otomatis
+                        Text(isLoadingUser ? "Memuat..." : currentUser?.nama ?? 'User', style: const TextStyle(fontSize: 14, color: kBlueGray)),
+                      ]),
+                  ]),
+                Stack(children: [CircleAvatar(radius: 20, backgroundColor: kSoftBlue, child: IconButton(icon: const Icon(Icons.notifications_outlined, size: 20, color: kDarkBlueGray), onPressed: () { _markNotificationsAsRead(); Navigator.push(context, MaterialPageRoute(builder: (context) => const NotifikasiPage())); })), if (_hasNewNotification) Positioned(right: 5, top: 5, child: Container(padding: const EdgeInsets.all(2), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.white, width: 1)), constraints: const BoxConstraints(minWidth: 8, minHeight: 8)))]),
+              ]),
 
             const SizedBox(height: 25),
-
-            // 🔍 Search Bar (DENGAN CONTROLLER)
-            TextField(
-              controller: _searchController, // 🔥 Controller terpasang
-              decoration: InputDecoration(
-                hintText: "Cari kegiatan relawan...",
-                hintStyle: const TextStyle(color: kBlueGray),
-                prefixIcon: const Icon(Icons.search, color: kBlueGray),
-                filled: true,
-                fillColor: kSoftBlue.withOpacity(0.5),
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 5,
-                  horizontal: 15,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: kSkyBlue, width: 1.2),
-                ),
-              ),
-            ),
-
+            // Search Bar
+            TextField(controller: _searchController, decoration: InputDecoration(hintText: "Cari kegiatan relawan...", hintStyle: const TextStyle(color: kBlueGray), prefixIcon: const Icon(Icons.search, color: kBlueGray), filled: true, fillColor: kSoftBlue.withOpacity(0.5), contentPadding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: kSkyBlue, width: 1.2)))),
             const SizedBox(height: 25),
-
-            // 🧭 Kategori (Tidak Berubah)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Kategori Pilihan',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CategoriesPage(),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Lihat semua',
-                    style: TextStyle(
-                      color: kBlueGray,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // Kategori
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Kategori Pilihan', style: TextStyle(fontWeight: FontWeight.bold)), InkWell(onTap: () { Navigator.push(context, MaterialPageRoute(builder: (context) => const CategoriesPage())); }, child: const Text('Lihat semua', style: TextStyle(color: kBlueGray, fontWeight: FontWeight.w600)))]),
             const SizedBox(height: 15),
-
-            // LIST KATEGORI (Tidak Berubah)
-            SizedBox(
-              height: 95,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  categoryItem(context, Icons.nature, "Lingkungan", primary),
-                  categoryItem(context, Icons.school, "Pendidikan", primary),
-                  categoryItem(
-                    context,
-                    Icons.health_and_safety,
-                    "Kesehatan",
-                    primary,
-                  ),
-                  categoryItem(context, Icons.people, "Sosial", primary),
-                  categoryItem(context, Icons.palette, "Seni", primary),
-                ],
-              ),
-            ),
-
+            SizedBox(height: 95, child: ListView(scrollDirection: Axis.horizontal, children: [categoryItem(context, Icons.nature, "Lingkungan", primary), categoryItem(context, Icons.school, "Pendidikan", primary), categoryItem(context, Icons.health_and_safety, "Kesehatan", primary), categoryItem(context, Icons.people, "Sosial", primary), categoryItem(context, Icons.palette, "Seni", primary)])),
             const SizedBox(height: 25),
-
-            // 🔥💎 Exp Card BARU (Menggantikan yang lama dengan FutureBuilder)
-            FutureBuilder<VolunteerProfileData>(
-              future: _futureProfile,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  // Tampilkan card loading placeholder
-                  return Container(
-                    width: double.infinity,
-                    height: 90, // Sesuaikan tinggi dengan card aslinya
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      gradient: const LinearGradient(colors: [kSkyBlue, kBlueGray], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                      boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))],
-                    ),
-                    child: const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
-                  );
-                }
-                if (snapshot.hasError) {
-                  // Tampilkan card error atau default
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: Colors.red.shade400,
-                      boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))],
-                    ),
-                    child: const Text(
-                      'Gagal memuat XP. Silakan coba lagi.',
-                      style: TextStyle(color: Colors.white, fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }
-                // Tampilkan card XP dengan data yang dimuat
-                if (snapshot.hasData) {
-                  return _buildSimpleXPCard(snapshot.data!);
-                }
-                
-                // Fallback (jika tidak ada data tapi juga tidak error/loading)
-                return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: Colors.grey.shade400,
-                      boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))],
-                    ),
-                    child: const Text(
-                      'XP tidak tersedia.',
-                      style: TextStyle(color: Colors.white, fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-              },
-            ),
-
+            // XP Card
+            FutureBuilder<VolunteerProfileData>(future: _futureProfile, builder: (context, snapshot) { if (snapshot.connectionState == ConnectionState.waiting) return Container(width: double.infinity, height: 90, padding: const EdgeInsets.all(24), decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [kSkyBlue, kBlueGray], begin: Alignment.topLeft, end: Alignment.bottomRight), boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))]), child: const Center(child: CircularProgressIndicator(color: Colors.white))); if (snapshot.hasData) return _buildSimpleXPCard(snapshot.data!); return const SizedBox.shrink(); }),
             const SizedBox(height: 30),
-
-            // 📢 JUDUL KEGIATAN
-            const Text(
-              "Daftar Sekarang",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: kDarkBlueGray,
-              ),
-            ),
-
+            const Text("Daftar Sekarang", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kDarkBlueGray)),
             const SizedBox(height: 15),
-
-            // ✅ BAGIAN PENTING: FutureBuilder untuk memuat dan memfilter kegiatan
-            SizedBox(
-              height:245,
-              child: FutureBuilder<List<Kegiatan>>(
-                future: _kegiatanFuture,
-                builder: (context, snapshot) {
-                  // State Loading
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  // State Error
-                  if (snapshot.hasError) {
-                    return Center(
-                        child: Text(
-                            'Gagal memuat data. Error: ${snapshot.error}'));
-                  }
-
-                  // State Data Tersedia
-                  if (snapshot.hasData) {
-                    final allKegiatan = snapshot.data!;
-                    
-                    // 🔥 GUNAKAN FUNGSI FILTER BARU
-                    final List<Kegiatan> scheduledAndFilteredKegiatan = 
-                        _getFilteredKegiatan(allKegiatan); 
-
-                    // State Data Kosong Setelah Filter
-                    if (scheduledAndFilteredKegiatan.isEmpty) {
-                      return Center(
-                        child: Text(
-                          _searchText.isEmpty
-                            ? 'Tidak ada kegiatan yang dijadwalkan saat ini.'
-                            : 'Tidak ada kegiatan yang cocok dengan "${_searchText}"',
-                        ),
-                      );
-                    }
-
-                    // Tampilkan data yang sudah difilter
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: scheduledAndFilteredKegiatan.length,
-                      itemBuilder: (context, index) {
-                        final kegiatan = scheduledAndFilteredKegiatan[index];
-                        return eventCard(
-                          context,
-                          kegiatan.thumbnail ?? 'assets/images/event_placeholder.jpg', 
-                          kegiatan.judul,
-                          _formatDate(kegiatan.tanggalMulai), 
-                          _formatTimeRange(
-                            kegiatan.tanggalMulai, 
-                            kegiatan.tanggalBerakhir
-                          ),
-                          primary,
-                          kegiatan, // Kirim objek kegiatan untuk DetailPage
-                        );
-                      },
-                    );
-                  }
-
-                  // Fallback
-                  return const Center(child: Text('Tidak ada data kegiatan.'));
-                },
-              ),
-            ),
+            // List Kegiatan
+            SizedBox(height: 245, child: FutureBuilder<List<Kegiatan>>(future: _kegiatanFuture, builder: (context, snapshot) { if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator()); if (snapshot.hasData) { final all = snapshot.data!; final filtered = _getFilteredKegiatan(all); if (filtered.isEmpty) return const Center(child: Text('Tidak ada kegiatan.')); return ListView.builder(scrollDirection: Axis.horizontal, itemCount: filtered.length, itemBuilder: (context, index) { final k = filtered[index]; return eventCard(context, k.thumbnail ?? 'assets/images/event_placeholder.jpg', k.judul, _formatDate(k.tanggalMulai), _formatTimeRange(k.tanggalMulai, k.tanggalBerakhir), primary, k); }); } return const Center(child: Text('Tidak ada data kegiatan.')); })),
           ],
         ),
       ),
     );
   }
-
-  // --- Static Widgets (dipertahankan) ---
-
-  // 🔹 Kategori item (Tidak Berubah)
-  static Widget categoryItem(
-      BuildContext context, IconData icon, String title, Color primary) {
-    return GestureDetector(
-      onTap: () {
-        // Navigasi ke halaman list kegiatan berdasarkan kategori
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CategoryActivitiesPage(categoryName: title),
-          ),
-        );
-      },
-      child: Container(
-        width: 80,
-        margin: const EdgeInsets.only(
-          right: 15,
-          top: 5,
-          bottom: 5,
-        ),
-        child: Column(
-          children: [
-            Container(
-              height: 55,
-              width: 55,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [kSoftBlue, kSkyBlue],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: kBlueGray.withOpacity(0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Icon(icon, size: 26, color: kDarkBlueGray),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 12, color: kDarkBlueGray),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 🔸 Event card (Dipertahankan)
-  static Widget eventCard(
-    BuildContext context,
-    String image,
-    String title,
-    String date,
-    String time,
-    Color primary,
-    Kegiatan kegiatan,
-  ) {
-    final bool isUrl = image.startsWith("http");
-    const double imageHeight = 130.0;
-
-    String displayStatus = kegiatan.status.isNotEmpty
-    ? '${kegiatan.status[0].toUpperCase()}${kegiatan.status.substring(1).toLowerCase()}'
-        : 'Status N/A';
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailActivitiesPage(
-              kegiatan: kegiatan,
-              title: title,
-              date: date,
-              time: time,
-              imagePath: image,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        width: 280,
-        margin: const EdgeInsets.only(right: 15),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: kBlueGray.withOpacity(0.18),
-              blurRadius: 10,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              child: isUrl
-                  ? Image.network(
-                      image,
-                      height: imageHeight,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return Container(
-                          height: imageHeight,
-                          color: Colors.grey.shade200,
-                          child: const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: imageHeight,
-                          color: Colors.grey,
-                          child: const Icon(Icons.broken_image, size: 40),
-                        );
-                      },
-                    )
-                  : Image.asset(
-                      image,
-                      height: imageHeight,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: imageHeight,
-                          color: Colors.grey,
-                          child: const Icon(Icons.error, size: 40),
-                        );
-                      },
-                    ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15)
-                  .copyWith(top: 10, bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: primary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      displayStatus,
-                      style: TextStyle(
-                        color: primary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: kDarkBlueGray,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today,
-                          size: 14, color: kBlueGray),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          date,
-                          style: const TextStyle(
-                              color: kBlueGray, fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time,
-                          size: 14, color: kBlueGray),
-                      const SizedBox(width: 5),
-                      Text(
-                        time,
-                        style:
-                            const TextStyle(color: kBlueGray, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  
+  // (Static helper widgets categoryItem, eventCard tetap sama seperti file Anda sebelumnya)
+  static Widget categoryItem(BuildContext context, IconData icon, String title, Color primary) { return GestureDetector(onTap: () { Navigator.push(context, MaterialPageRoute(builder: (context) => CategoryActivitiesPage(categoryName: title))); }, child: Container(width: 80, margin: const EdgeInsets.only(right: 15, top: 5, bottom: 5), child: Column(children: [Container(height: 55, width: 55, decoration: BoxDecoration(gradient: const LinearGradient(colors: [kSoftBlue, kSkyBlue], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 4))]), child: Icon(icon, size: 26, color: kDarkBlueGray)), const SizedBox(height: 8), Text(title, style: const TextStyle(fontSize: 12, color: kDarkBlueGray), textAlign: TextAlign.center)]))); }
+  static Widget eventCard(BuildContext context, String image, String title, String date, String time, Color primary, Kegiatan kegiatan) { final bool isUrl = image.startsWith("http"); const double imageHeight = 130.0; String displayStatus = kegiatan.status.isNotEmpty ? '${kegiatan.status[0].toUpperCase()}${kegiatan.status.substring(1).toLowerCase()}' : 'Status N/A'; return GestureDetector(onTap: () { Navigator.push(context, MaterialPageRoute(builder: (context) => DetailActivitiesPage(kegiatan: kegiatan, title: title, date: date, time: time, imagePath: image))); }, child: Container(width: 280, margin: const EdgeInsets.only(right: 15), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.18), blurRadius: 10, offset: const Offset(0, 6))]), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(20)), child: isUrl ? Image.network(image, height: imageHeight, width: double.infinity, fit: BoxFit.cover, loadingBuilder: (context, child, progress) { if (progress == null) return child; return Container(height: imageHeight, color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator(strokeWidth: 2))); }, errorBuilder: (context, error, stackTrace) { return Container(height: imageHeight, color: Colors.grey, child: const Icon(Icons.broken_image, size: 40)); }) : Image.asset(image, height: imageHeight, width: double.infinity, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) { return Container(height: imageHeight, color: Colors.grey, child: const Icon(Icons.error, size: 40)); })), Padding(padding: const EdgeInsets.symmetric(horizontal: 15).copyWith(top: 10, bottom: 12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: primary.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), child: Text(displayStatus, style: TextStyle(color: primary, fontSize: 11, fontWeight: FontWeight.bold))), const SizedBox(height: 6), Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: kDarkBlueGray)), const SizedBox(height: 6), Row(children: [const Icon(Icons.calendar_today, size: 14, color: kBlueGray), const SizedBox(width: 5), Expanded(child: Text(date, style: const TextStyle(color: kBlueGray, fontSize: 12), overflow: TextOverflow.ellipsis))]), const SizedBox(height: 2), Row(children: [const Icon(Icons.access_time, size: 14, color: kBlueGray), const SizedBox(width: 5), Text(time, style: const TextStyle(color: kBlueGray, fontSize: 12))])]))]))); }
 }

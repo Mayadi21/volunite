@@ -2,20 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/models/pendaftaran_model.dart';
 import 'package:volunite/services/pendaftaran_service.dart';
-import 'package:volunite/pages/Organizer/Activity/Applicants/applicant_card.dart'; // Kita buat setelah ini
+import 'package:volunite/pages/Organizer/Activity/Applicants/applicant_card.dart';
 
 class ApplicantListPage extends StatefulWidget {
   final int kegiatanId;
-  const ApplicantListPage({super.key, required this.kegiatanId});
+  final String statusKegiatan; 
+
+  const ApplicantListPage({
+    super.key, 
+    required this.kegiatanId,
+    required this.statusKegiatan, 
+  });
 
   @override
   State<ApplicantListPage> createState() => _ApplicantListPageState();
 }
 
-class _ApplicantListPageState extends State<ApplicantListPage>
-    with SingleTickerProviderStateMixin {
+class _ApplicantListPageState extends State<ApplicantListPage> with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
-  late Future<List<Pendaftaran>> _futureData;
+  bool _isLoading = true;
+  List<Pendaftaran> _allApplicants = [];
 
   @override
   void initState() {
@@ -24,86 +30,51 @@ class _ApplicantListPageState extends State<ApplicantListPage>
     _refresh();
   }
 
-  void _refresh() {
-    setState(() {
-      _futureData = PendaftaranService.fetchPendaftarByKegiatan(
-        widget.kegiatanId,
-      );
-    });
+  Future<void> _refresh() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await PendaftaranService.fetchPendaftarByKegiatan(widget.kegiatanId);
+      if (mounted) {
+        setState(() {
+          _allApplicants = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final listPending = _allApplicants.where((e) => e.status == 'Mengajukan').toList();
+    final listAccepted = _allApplicants.where((e) => e.status == 'Diterima').toList();
+    final listRejected = _allApplicants.where((e) => e.status == 'Ditolak').toList();
+
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
-        title: const Text(
-          "Data Pelamar",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+        title: const Text("Daftar Pelamar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: kSkyBlue,
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
           controller: _tabCtrl,
           indicatorColor: Colors.white,
-          indicatorWeight: 3,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          tabs: const [
-            Tab(text: "Masuk"), // Mengajukan
-            Tab(text: "Diterima"),
-            Tab(text: "Ditolak"),
-          ],
+          tabs: const [Tab(text: "Menunggu"), Tab(text: "Diterima"), Tab(text: "Ditolak")],
         ),
       ),
-      body: FutureBuilder<List<Pendaftaran>>(
-        future: _futureData,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: kSkyBlue),
-            );
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-
-          final allData = snapshot.data ?? [];
-
-          // Filter data berdasarkan Enum Database
-          final listPending = allData
-              .where((e) => e.status == 'Mengajukan')
-              .toList();
-          final listAccepted = allData
-              .where((e) => e.status == 'Diterima')
-              .toList();
-          final listRejected = allData
-              .where((e) => e.status == 'Ditolak')
-              .toList();
-
-          return TabBarView(
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator(color: kSkyBlue))
+        : TabBarView(
             controller: _tabCtrl,
             children: [
-              _ApplicantList(
-                data: listPending,
-                onRefresh: _refresh,
-                type: 'pending',
-              ),
-              _ApplicantList(
-                data: listAccepted,
-                onRefresh: _refresh,
-                type: 'accepted',
-              ),
-              _ApplicantList(
-                data: listRejected,
-                onRefresh: _refresh,
-                type: 'rejected',
-              ),
+              _ApplicantList(data: listPending, onRefresh: _refresh, statusKegiatan: widget.statusKegiatan),
+              _ApplicantList(data: listAccepted, onRefresh: _refresh, statusKegiatan: widget.statusKegiatan),
+              _ApplicantList(data: listRejected, onRefresh: _refresh, statusKegiatan: widget.statusKegiatan),
             ],
-          );
-        },
-      ),
+          ),
     );
   }
 }
@@ -111,37 +82,23 @@ class _ApplicantListPageState extends State<ApplicantListPage>
 class _ApplicantList extends StatelessWidget {
   final List<Pendaftaran> data;
   final VoidCallback onRefresh;
-  final String type; // 'pending', 'accepted', 'rejected'
+  final String statusKegiatan;
 
-  const _ApplicantList({
-    required this.data,
-    required this.onRefresh,
-    required this.type,
-  });
+  const _ApplicantList({required this.data, required this.onRefresh, required this.statusKegiatan});
 
   @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person_off_outlined, size: 60, color: kLightGray),
-            const SizedBox(height: 10),
-            Text("Tidak ada data pelamar", style: TextStyle(color: kBlueGray)),
-          ],
-        ),
-      );
-    }
+    if (data.isEmpty) return const Center(child: Text("Tidak ada data", style: TextStyle(color: kBlueGray)));
 
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: data.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_,__) => const SizedBox(height: 12),
       itemBuilder: (ctx, i) {
         return ApplicantCard(
-          pendaftaran: data[i],
-          onUpdate: onRefresh, // Cukup ini saja
+          pendaftaran: data[i], 
+          onUpdate: onRefresh,
+          statusKegiatan: statusKegiatan, 
         );
       },
     );

@@ -4,13 +4,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/models/pencapaian_model.dart';
-import 'package:volunite/models/volunteer_pencapaian_model.dart';
-import 'package:volunite/services/pencapaian_service.dart';
+import 'package:volunite/models/volunteer_pencapaian_model.dart'; // Pastikan path model benar
+import 'package:volunite/services/pencapaian_service.dart'; // Pastikan path service benar
 import 'package:volunite/pages/Authentication/login.dart';
-import 'package:volunite/pages/Volunteer/Profile/achievement_dialog.dart'; // Import Halaman Lihat Semua
-import 'package:volunite/pages/Volunteer/Profile/achievement_page.dart'; // Import Dialog
-import 'edit_profile.dart'; 
-// Asumsi import ini ada dan benar sesuai path project Anda
+import 'package:volunite/pages/Volunteer/Profile/achievement_dialog.dart'; 
+import 'package:volunite/pages/Volunteer/Profile/achievement_page.dart'; 
+import 'package:volunite/pages/shared/edit_profile.dart';
+import 'package:volunite/pages/Volunteer/Profile/leaderboard_page.dart'; 
+import 'package:volunite/services/general_profile_service.dart'; 
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -21,58 +22,33 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late Future<VolunteerProfileData> _futureProfile;
-  File? _imageFile; // Digunakan untuk preview gambar lokal saat pick, jika fitur upload masih diinginkan
+  
+  // Signature untuk bypass cache gambar
+  String _imgSignature = DateTime.now().toString();
 
   @override
   void initState() {
     super.initState();
     _refresh();
-  }
-
-  // Fungsi untuk memuat ulang data profil dari server
-  void _refresh() {
-    setState(() {
-      _futureProfile = VolunteerService.fetchProfile();
-    });
-  }
-
-  // Fungsi navigasi ke EditProfilePage dan memanggil _refresh() setelah kembali
-  void _navigateToEditProfile() async {
-    // Menunggu hingga halaman EditProfilePage di-pop (ditutup)
-    await Navigator.push(
-      context, 
-      MaterialPageRoute(builder: (_) => const EditProfilePage())
-    );
     
-    // Setelah kembali, muat ulang data untuk menampilkan perubahan nama/foto terbaru
-    _refresh(); 
+    // [LISTENER] Dengarkan sinyal refresh dari GeneralProfileService
+    // Agar saat user edit nama/foto, halaman ini otomatis update
+    GeneralProfileService.shouldRefresh.addListener(_refresh);
   }
 
-  // --- FUNGSI HELPER ---
-  void _showImageSourceDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(leading: const Icon(Icons.photo_camera), title: const Text('Kamera'), onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); }),
-            ListTile(leading: const Icon(Icons.photo_library), title: const Text('Galeri'), onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); }),
-          ],
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    GeneralProfileService.shouldRefresh.removeListener(_refresh);
+    super.dispose();
   }
 
-  Future<void> _pickImage(ImageSource source) async {
-    var status = source == ImageSource.camera ? await Permission.camera.request() : await Permission.photos.request();
-    if (status.isGranted) {
-      final picked = await ImagePicker().pickImage(source: source);
-      if (picked != null) {
-        setState(() => _imageFile = File(picked.path));
-        // Catatan: Di sini harus ada logika untuk mengunggah foto ke server 
-        // dan kemudian memanggil _refresh() jika berhasil.
-      }
+  void _refresh() {
+    if (mounted) {
+      setState(() {
+        _futureProfile = VolunteerService.fetchProfile();
+        // Update signature gambar
+        _imgSignature = DateTime.now().millisecondsSinceEpoch.toString();
+      });
     }
   }
 
@@ -96,7 +72,6 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-  // ---------------------
 
   @override
   Widget build(BuildContext context) {
@@ -110,8 +85,11 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit, color: Colors.white),
-            // Memicu navigasi dan refresh data
-            onPressed: _navigateToEditProfile,
+            onPressed: () {
+              // Navigasi ke Edit Profile (Shared)
+              // Tidak perlu await karena sudah ada Listener
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage()));
+            },
           )
         ],
       ),
@@ -122,47 +100,67 @@ class _ProfilePageState extends State<ProfilePage> {
             return const Center(child: CircularProgressIndicator(color: kSkyBlue));
           }
           if (snapshot.hasError) {
-            return Center(child: Text("Gagal memuat profil: ${snapshot.error}", textAlign: TextAlign.center));
+            return Center(child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("Gagal memuat: ${snapshot.error}", textAlign: TextAlign.center),
+                const SizedBox(height: 10),
+                ElevatedButton(onPressed: _refresh, child: const Text("Coba Lagi"))
+              ],
+            ));
           }
 
           final data = snapshot.data!;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Column(
-              children: [
-                // 1. Header Profil (Sudah direvisi)
-                _buildProfileHeader(data),
-                const SizedBox(height: 24),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Column(
+                children: [
+                  // 1. HEADER PROFIL
+                  _buildProfileHeader(data),
+                  const SizedBox(height: 20),
 
-                // 2. XP Card (Tanpa Leveling)
-                _buildSimpleXPCard(data),
-                const SizedBox(height: 16),
+                  // 2. CARD XP
+                  _buildExperienceCardModern(data),
+                  const SizedBox(height: 16),
 
-                // 3. Stats Row
-                _buildStatsRow(data),
-                const SizedBox(height: 24),
+                  // 3. STATS ROW (Termasuk Link ke Leaderboard)
+                  _buildStatsRowModern(data),
+                  const SizedBox(height: 24),
 
-                // 4. Achievement Section
-                _buildAchievementSection(context, data.achievements),
-
-                const SizedBox(height: 30),
-                
-                // 5. Logout
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _showLogoutDialog(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[700],
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Keluar', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  // 4. ACHIEVEMENT SECTION
+                  _buildAchievementSectionModern(
+                    title: 'Pencapaian Relawan',
+                    items: data.achievements.map((ach) {
+                      return _buildVolunteerItemHelper(
+                        ach.nama, 
+                        Icons.emoji_events_rounded, 
+                        ach.isUnlocked ? Colors.orange : Colors.grey, 
+                        ach.isUnlocked, 
+                        ach
+                      );
+                    }).toList()
                   ),
-                ),
-                const SizedBox(height: 20),
-              ],
+
+                  const SizedBox(height: 30),
+                  
+                  // 5. LOGOUT BUTTON
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _showLogoutDialog(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[700],
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Keluar', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           );
         },
@@ -170,27 +168,21 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // --- WIDGET KOMPONEN ---
+
   Widget _buildProfileHeader(VolunteerProfileData data) {
     return Column(
       children: [
-        Stack(
-          children: [
-            CircleAvatar(
-              radius: 60,
-              backgroundColor: kLightGray,
-              // Tampilkan foto lokal jika ada, jika tidak, ambil dari network
-              backgroundImage: _imageFile != null 
-                  ? FileImage(_imageFile!) 
-                  : (data.pathProfil != null ? NetworkImage(data.pathProfil!) : null) as ImageProvider?,
-              child: (_imageFile == null && data.pathProfil == null) 
-                  ? const Icon(Icons.person, size: 70, color: Colors.white) 
-                  : null,
-            ),
-            // BLOK KODE LOGO KAMERA DIHAPUS DARI SINI
-          ],
+        CircleAvatar(
+          radius: 60,
+          backgroundColor: kLightGray,
+          // Pasang Signature agar gambar refresh otomatis
+          backgroundImage: data.pathProfil != null 
+              ? NetworkImage("${data.pathProfil!}?v=$_imgSignature") 
+              : null,
+          child: data.pathProfil == null ? const Icon(Icons.person, size: 70, color: Colors.white) : null,
         ),
         const SizedBox(height: 12),
-        // Nama diambil dari data.nama (yang sudah diperbarui via _refresh)
         Text(
           data.nama,
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kDarkBlueGray),
@@ -199,112 +191,134 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // XP CARD YANG DISEDERHANAKAN (HANYA TOTAL)
-  Widget _buildSimpleXPCard(VolunteerProfileData data) {
+  Widget _buildExperienceCardModern(VolunteerProfileData data) {
+    double progress = data.nextLevelTarget > 0 ? (data.currentLevelXp / data.nextLevelTarget) : 0.0;
+    if(progress > 1.0) progress = 1.0;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: const LinearGradient(colors: [kSkyBlue, kBlueGray], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))],
+        boxShadow: [BoxShadow(color: kBlueGray.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))]
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Total Volunteer XP',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${data.totalXp} XP',
-                style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
-              ),
-            ],
+              Text('Total Volunteer XP', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+              Icon(Icons.trending_up, color: Colors.white, size: 18)
+            ]
           ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.star_rounded, color: Colors.white, size: 32),
-          )
+          const SizedBox(height: 10),
+          Text('${data.totalXp} XP', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white24,
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+              minHeight: 8
+            )
+          ),
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text('${data.currentLevelXp}/${data.nextLevelTarget} to Next Level', style: const TextStyle(color: Colors.white, fontSize: 12))
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatsRow(VolunteerProfileData data) {
+  Widget _buildStatsRowModern(VolunteerProfileData data) {
     return Row(
       children: [
-        _buildStatCard('${data.activityCount}', 'Kegiatan Sukarela'),
+        // CARD 1: Kegiatan Diikuti
+        Expanded(
+          child: _buildCardBase(
+            widthFactor: 0, 
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, 
+              children: [
+                Text('${data.activityCount}', style: const TextStyle(color: kDarkBlueGray, fontSize: 36, fontWeight: FontWeight.w900)), 
+                const SizedBox(height: 4), 
+                const Text('Kegiatan Diikuti', style: TextStyle(color: kBlueGray, fontSize: 13))
+              ]
+            )
+          )
+        ),
+        
         const SizedBox(width: 16),
-        _buildStatCard('#-', 'Peringkat Global'),
+        
+        // CARD 2: Peringkat Global (KLIK -> LEADERBOARD)
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaderboardPage()));
+            },
+            child: _buildCardBase(
+              widthFactor: 0, 
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start, 
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Tampilkan Ranking Asli dari Backend
+                      Text(
+                        '#${data.globalRank}', 
+                        style: const TextStyle(color: kSkyBlue, fontSize: 36, fontWeight: FontWeight.w900)
+                      ),
+                      const Icon(Icons.arrow_forward_ios, size: 14, color: kBlueGray)
+                    ],
+                  ),
+                  const SizedBox(height: 4), 
+                  const Text('Peringkat Global', style: TextStyle(color: kBlueGray, fontSize: 13))
+                ]
+              )
+            ),
+          )
+        ),
       ],
     );
   }
 
-  Widget _buildStatCard(String value, String label) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: kLightGray.withOpacity(0.5), blurRadius: 5, offset: const Offset(0, 2))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(value, style: const TextStyle(color: kDarkBlueGray, fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: kBlueGray, fontSize: 12)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAchievementSection(BuildContext context, List<Pencapaian> items) {
+  Widget _buildAchievementSectionModern({required String title, required List<Widget> items}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header Section
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Pencapaian Relawan", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kDarkBlueGray)),
+              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kDarkBlueGray)),
               TextButton(
                 onPressed: () {
-                  // Navigasi ke Halaman "Lihat Semua"
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => AllAchievementsPage(achievements: items)));
+                  // Navigasi ke Halaman Semua Achievement (Jika ada)
+                  // Navigator.push(context, MaterialPageRoute(builder: (_) => AllAchievementsPage(achievements: ...)));
                 },
-                child: const Text("Lihat Semua", style: TextStyle(color: kSkyBlue, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
+                child: const Text("Lihat Semua", style: TextStyle(color: kSkyBlue, fontWeight: FontWeight.bold))
+              )
+            ]
+          )
         ),
         const SizedBox(height: 12),
-        
-        // Horizontal List (Preview 5 item pertama saja)
         SizedBox(
           height: 140,
           child: items.isEmpty 
             ? const Center(child: Text("Belum ada pencapaian", style: TextStyle(color: Colors.grey)))
             : ListView.separated(
                 scrollDirection: Axis.horizontal,
-                // Tampilkan maksimal 5 di preview
-                itemCount: items.length > 5 ? 5 : items.length, 
+                itemCount: items.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
-                  return _buildAchievementItem(context, items[index]);
+                  return items[index];
                 },
               ),
         ),
@@ -312,54 +326,50 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildAchievementItem(BuildContext context, Pencapaian item) {
-    final bool isUnlocked = item.isUnlocked;
-    final Color iconColor = isUnlocked ? Colors.orange : Colors.grey;
-    final double opacity = isUnlocked ? 1.0 : 0.5;
-    
+  Widget _buildVolunteerItemHelper(String label, IconData icon, Color color, bool isUnlocked, Pencapaian item) {
     return GestureDetector(
       onTap: () {
-        // Tampilkan Pop-up Detail
         showDialog(context: context, builder: (_) => AchievementDialog(item: item));
       },
       child: Opacity(
-        opacity: opacity,
-        child: Container(
+        opacity: isUnlocked ? 1.0 : 0.5,
+        child: SizedBox(
           width: 100,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: isUnlocked 
-                ? [BoxShadow(color: kBlueGray.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 4))] 
-                : null,
-            border: Border.all(color: kLightGray),
-          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              item.thumbnail != null 
-                  ? Image.network(item.thumbnail!, width: 40, height: 40, fit: BoxFit.cover)
-                  : Icon(Icons.emoji_events_rounded, size: 40, color: iconColor),
-              
-              const SizedBox(height: 8),
-              
-              Text(
-                item.nama,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: kDarkBlueGray),
+              _buildCardBase(
+                widthFactor: 80, 
+                child: item.thumbnail != null 
+                    ? Image.network(item.thumbnail!, width: 40, height: 40, fit: BoxFit.cover)
+                    : Icon(icon, size: 40, color: color)
               ),
-
-              if (!isUnlocked) ...[
-                const SizedBox(height: 4),
-                const Icon(Icons.lock, size: 14, color: Colors.grey),
-              ]
+              const SizedBox(height: 8),
+              Text(
+                label, 
+                textAlign: TextAlign.center, 
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isUnlocked ? kDarkBlueGray : Colors.grey), 
+                maxLines: 2, 
+                overflow: TextOverflow.ellipsis
+              ),
+              if(!isUnlocked) 
+                const Padding(padding: EdgeInsets.only(top: 4), child: Icon(Icons.lock, size: 14, color: Colors.grey))
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCardBase({required double widthFactor, required Widget child}) {
+    return Container(
+      width: widthFactor > 0 ? widthFactor : null,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: kLightGray.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 4))]
+      ),
+      child: Center(child: child),
     );
   }
 }
