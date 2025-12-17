@@ -1,4 +1,4 @@
-import 'package:volunite/models/pencapaian_model.dart';
+import 'package:volunite/models/pencapaian_model.dart'; 
 
 class VolunteerProfileData {
   final String nama;
@@ -7,7 +7,7 @@ class VolunteerProfileData {
   final int currentLevelXp;
   final int nextLevelTarget;
   final int activityCount;
-  
+  final int globalRank;
   final List<Pencapaian> achievements;
 
   VolunteerProfileData({
@@ -17,18 +17,24 @@ class VolunteerProfileData {
     required this.currentLevelXp,
     required this.nextLevelTarget,
     required this.activityCount,
+    required this.globalRank,
     required this.achievements,
   });
 
   factory VolunteerProfileData.fromJson(Map<String, dynamic> json) {
+
+    
     return VolunteerProfileData(
-      nama: json['user']['nama'],
-      pathProfil: json['user']['path_profil'],
-      totalXp: json['xp_info']['total_xp'],
-      currentLevelXp: json['xp_info']['current_level_xp'],
-      nextLevelTarget: json['xp_info']['next_level_target'],
-      activityCount: json['xp_info']['activity_count'],
-      achievements: (json['achievements'] as List)
+      nama: json['nama'] ?? 'User',
+      pathProfil: json['path_profil'], 
+      
+      totalXp: int.tryParse(json['total_xp'].toString()) ?? 0,
+      currentLevelXp: int.tryParse(json['current_level_xp'].toString()) ?? 0,
+      nextLevelTarget: int.tryParse(json['next_level_target'].toString()) ?? 1000,
+      activityCount: int.tryParse(json['activity_count'].toString()) ?? 0,
+      globalRank: int.tryParse(json['global_rank'].toString()) ?? 0,
+      
+      achievements: (json['achievements'] as List? ?? [])
           .map((e) => Pencapaian.fromJson(e))
           .toList(),
     );

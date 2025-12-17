@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart'; // Untuk ValueNotifier
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:volunite/models/kegiatan_model.dart';
 import 'package:volunite/services/core/api_client.dart';
@@ -7,15 +7,11 @@ import 'package:volunite/services/core/api_client.dart';
 class KegiatanService {
   
   // --- [1] FITUR AUTO REFRESH (ALARM GLOBAL) ---
-  // Variabel ini akan didengarkan oleh halaman Activities & Home
   static final ValueNotifier<bool> shouldRefresh = ValueNotifier(false);
 
-  // Fungsi untuk membunyikan alarm
   static void triggerRefresh() {
     shouldRefresh.value = !shouldRefresh.value;
   }
-  // ---------------------------------------------
-
   static Future<Map<String, dynamic>> fetchDashboard() async {
     final response = await ApiClient.get('/organizer/dashboard');
 
@@ -153,6 +149,14 @@ class KegiatanService {
     final response = await ApiClient.postMultipart(
       '/organizer/kegiatan/$id',
       fields: {'_method': 'PUT', 'status': 'cancelled'},
+    );
+    return response.statusCode == 200;
+  }
+  // 7. FINISH KEGIATAN
+  static Future<bool> finishKegiatan(int id) async {
+    final response = await ApiClient.postMultipart(
+      '/organizer/kegiatan/$id',
+      fields: {'_method': 'PUT', 'status': 'finished'},
     );
     return response.statusCode == 200;
   }
