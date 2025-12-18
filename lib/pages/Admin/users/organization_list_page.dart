@@ -3,7 +3,6 @@ import 'package:volunite/pages/Admin/users/edit_user_page.dart';
 import 'package:volunite/pages/Admin/data/admin_models.dart';
 import 'user_service.dart';
 import 'add_new_user_page.dart';
-import 'package:volunite/color_pallete.dart';
 
 class OrganizationListPage extends StatefulWidget {
   const OrganizationListPage({super.key});
@@ -130,7 +129,7 @@ class _OrganizationListPageState extends State<OrganizationListPage> {
               ),
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: kPrimaryColor,
+        backgroundColor: primaryColor,
         child: const Icon(Icons.add),
         onPressed: () async {
           final result = await Navigator.push(
