@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Admin/data/admin_models.dart';
+import 'package:volunite/color_pallete.dart';
 
 class ReportsPage extends StatelessWidget {
   const ReportsPage({super.key});
@@ -69,7 +70,7 @@ class ReportsPage extends StatelessWidget {
             label: const Text('Generate & Download'),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: primaryColor,
+              backgroundColor: kPrimaryColor,
               foregroundColor: Colors.white,
             ),
           ),
