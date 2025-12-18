@@ -87,7 +87,7 @@ class _ActivitiesPageState extends State<ActivitiesPage>
     historyActivities = kegiatan
         .where((k) =>
             k.status.toLowerCase() == 'finished' ||
-            k.status.toLowerCase() == 'completed')
+            k.status.toLowerCase() == 'cancelled')
         .toList();
 
     if (mounted) {

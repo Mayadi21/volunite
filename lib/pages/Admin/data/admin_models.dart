@@ -12,12 +12,13 @@ class Volunteer {
   String email;
   int events;
   String status;
-  Volunteer(
-      {required this.id,
-      required this.name,
-      required this.email,
-      this.events = 0,
-      this.status = 'Aktif'});
+  Volunteer({
+    required this.id,
+    required this.name,
+    required this.email,
+    this.events = 0,
+    this.status = 'Aktif',
+  });
 }
 
 class Organization {
@@ -26,17 +27,22 @@ class Organization {
   String email;
   int eventsPosted;
   String status;
-  Organization(
-      {required this.id,
-      required this.name,
-      required this.email,
-      this.eventsPosted = 0,
-      this.status = 'Pending'});
+  Organization({
+    required this.id,
+    required this.name,
+    required this.email,
+    this.eventsPosted = 0,
+    this.status = 'Pending',
+  });
 }
 
 class PencapaianModel {
   final int id;
   final String nama;
+  final int? requiredExp;
+  final int? requiredCountKategori;
+  final int? requiredKategori;
+
   final String description;
   final String? thumbnailUrl; // URL lengkap dari Laravel
 
@@ -45,6 +51,9 @@ class PencapaianModel {
     required this.nama,
     required this.description,
     this.thumbnailUrl,
+    this.requiredExp,
+    this.requiredCountKategori,
+    this.requiredKategori,
   });
 
   factory PencapaianModel.fromJson(Map<String, dynamic> json) {
@@ -52,8 +61,22 @@ class PencapaianModel {
       id: json['id'],
       nama: json['nama'],
       description: json['deskripsi'] ?? '',
-      thumbnailUrl: json['thumbnail_url'], // Ambil dari Accessor Laravel
+      thumbnailUrl: json['thumbnail_url'],
+      requiredExp: json['required_exp'],
+      requiredCountKategori: json['required_count_kategori'],
+      requiredKategori: json['required_kategori'],
     );
+  }
+}
+
+class KategoriSimple {
+  final int id;
+  final String namaKategori;
+
+  KategoriSimple({required this.id, required this.namaKategori});
+
+  factory KategoriSimple.fromJson(Map<String, dynamic> json) {
+    return KategoriSimple(id: json['id'], namaKategori: json['nama_kategori']);
   }
 }
 
@@ -154,7 +177,6 @@ class Activity {
     };
   }
 }
-
 
 class Kategori {
   final int id;
