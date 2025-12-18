@@ -75,7 +75,7 @@ class _AdminActivityDetailPageState extends State<AdminActivityDetailPage> {
           SliverAppBar(
             expandedHeight: 250,
             pinned: true,
-            backgroundColor: primaryColor,
+            backgroundColor: kPrimaryColor,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
                 _activity.judul,
@@ -126,12 +126,12 @@ class _AdminActivityDetailPageState extends State<AdminActivityDetailPage> {
                 subtitle: const Text('Penyelenggara'),
               ),
               ListTile(
-                leading: const Icon(Icons.calendar_today, color: primaryColor),
+                leading: const Icon(Icons.calendar_today, color: kPrimaryColor),
                 title: Text(_activity.tanggalMulai?.toString() ?? '-'),
                 subtitle: Text(_activity.tanggalBerakhir?.toString() ?? '-'),
               ),
               ListTile(
-                leading: const Icon(Icons.location_on, color: primaryColor),
+                leading: const Icon(Icons.location_on, color: kPrimaryColor),
                 title: Text(_activity.lokasi ?? '-'),
                 subtitle: const Text('Lokasi'),
               ),

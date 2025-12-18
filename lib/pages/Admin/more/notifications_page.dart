@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Admin/data/admin_models.dart';
+import 'package:volunite/color_pallete.dart';
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
@@ -10,7 +11,7 @@ class NotificationsPage extends StatelessWidget {
       appBar: AppBar(
         title:
             const Text('Kirim Notifikasi', style: TextStyle(color: Colors.white)),
-        backgroundColor: primaryColor,
+        backgroundColor: kPrimaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
@@ -23,7 +24,7 @@ class NotificationsPage extends StatelessWidget {
                 labelText: 'Tujuan Notifikasi',
                 border: OutlineInputBorder(),
               ),
-              value: 'Semua Volunteer',
+              initialValue: 'Semua Volunteer',
               items: ['Semua Volunteer', 'Semua Organisasi', 'Semua Pengguna']
                   .map((String type) =>
                       DropdownMenuItem<String>(value: type, child: Text(type)))
@@ -54,7 +55,7 @@ class NotificationsPage extends StatelessWidget {
               label: const Text('Kirim Sekarang'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: primaryColor,
+                backgroundColor: kPrimaryColor,
                 foregroundColor: Colors.white,
               ),
             ),
