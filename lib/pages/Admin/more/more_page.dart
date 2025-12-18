@@ -4,7 +4,7 @@ import 'package:volunite/pages/Admin/data/admin_models.dart';
 import 'package:volunite/pages/Authentication/login.dart';
 import 'package:volunite/services/auth/auth_service.dart';
 import 'package:volunite/models/user_model.dart';
-
+import 'package:volunite/color_pallete.dart';
 import 'activity_category_page.dart';
 import 'achievements_page.dart';
 
@@ -62,7 +62,7 @@ class MorePage extends StatelessWidget {
               // ===== HEADER ADMIN =====
               Container(
                 padding: const EdgeInsets.all(24),
-                color: primaryColor,
+                color: kPrimaryColor,
                 child: Column(
                   children: [
                     CircleAvatar(
@@ -71,7 +71,7 @@ class MorePage extends StatelessWidget {
                       child: const Icon(
                         Icons.admin_panel_settings_rounded,
                         size: 40,
-                        color: primaryColor,
+                        color: kPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: 12),
