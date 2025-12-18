@@ -41,4 +41,14 @@ class KategoriService {
   Future<void> deleteKategori(int id) async {
     await ApiClient.delete('/admin/kategori/$id', auth: true);
   }
+
+  Future<List<KategoriSimple>> getAllSimple() async {
+    final response = await ApiClient.get('/admin/kategori/simple');
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.map((e) => KategoriSimple.fromJson(e)).toList();
+    }
+    return [];
+  }
 }
