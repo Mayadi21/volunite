@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:volunite/pages/Admin/data/admin_models.dart';
 import 'activity_all_list.dart'; // File baru
 import 'activity_pending_list.dart'; // File baru
-import 'package:volunite/color_pallete.dart';
 
 class ActivityManagementPage extends StatelessWidget {
   const ActivityManagementPage({super.key});
@@ -17,9 +16,9 @@ class ActivityManagementPage extends StatelessWidget {
         appBar: AppBar(
           toolbarHeight: 0, // Sembunyikan AppBar utama, kita hanya butuh TabBar
           bottom: const TabBar(
-            labelColor: kPrimaryColor,
+            labelColor: primaryColor,
             unselectedLabelColor: Colors.grey,
-            indicatorColor: kPrimaryColor,
+            indicatorColor: primaryColor,
             tabs: [
               Tab(icon: Icon(Icons.hourglass_top_rounded), text: 'Pending'),
               Tab(icon: Icon(Icons.checklist_rounded), text: 'Semua Kegiatan'),

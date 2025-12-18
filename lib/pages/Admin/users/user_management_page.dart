@@ -1,7 +1,6 @@
 // lib/pages/Admin/users/user_management_page.dart
 
 import 'package:flutter/material.dart';
-import 'package:volunite/color_pallete.dart';
 import 'package:volunite/pages/Admin/data/admin_models.dart'; // Import models (untuk warna)
 import 'volunteer_list_page.dart';
 import 'organization_list_page.dart';
@@ -19,9 +18,9 @@ class UserManagementPage extends StatelessWidget {
         appBar: AppBar(
           toolbarHeight: 0,
           bottom: const TabBar(
-            labelColor: kPrimaryColor,
+            labelColor: primaryColor,
             unselectedLabelColor: Colors.grey,
-            indicatorColor: kPrimaryColor,
+            indicatorColor: primaryColor,
             // --- HAPUS TAB 'TAMBAH BARU' ---
             tabs: [
               Tab(icon: Icon(Icons.person), text: 'Volunteer'),

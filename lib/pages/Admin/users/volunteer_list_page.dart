@@ -3,8 +3,6 @@ import 'package:volunite/pages/Admin/users/edit_user_page.dart';
 import 'user_service.dart';
 import 'package:volunite/pages/Admin/data/admin_models.dart';
 import 'add_new_user_page.dart';
-import 'package:volunite/color_pallete.dart';
-
 
 class VolunteerListPage extends StatefulWidget {
   const VolunteerListPage({super.key});
@@ -106,10 +104,10 @@ class _VolunteerListPageState extends State<VolunteerListPage> {
                     ),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: kPrimaryColor.withOpacity(0.2),
+                        backgroundColor: primaryColor.withOpacity(0.2),
                         child: Text(
                           (v['nama'] ?? 'U')[0],
-                          style: TextStyle(color: kPrimaryColor),
+                          style: TextStyle(color: primaryColor),
                         ),
                       ),
                       title: Text(v['nama'] ?? ''),
@@ -135,7 +133,7 @@ class _VolunteerListPageState extends State<VolunteerListPage> {
               
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: kPrimaryColor,
+        backgroundColor: primaryColor,
         child: const Icon(Icons.add),
         onPressed: () async {
           final result = await Navigator.push(
