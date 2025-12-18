@@ -4,7 +4,7 @@ import 'package:volunite/pages/Admin/data/admin_models.dart';
 import 'package:volunite/pages/Authentication/login.dart';
 import 'package:volunite/services/auth/auth_service.dart';
 import 'package:volunite/models/user_model.dart';
-
+import 'package:volunite/color_pallete.dart';
 import 'activity_category_page.dart';
 import 'achievements_page.dart';
 
@@ -62,7 +62,7 @@ class MorePage extends StatelessWidget {
               // ===== HEADER ADMIN =====
               Container(
                 padding: const EdgeInsets.all(24),
-                color: primaryColor,
+                color: kPrimaryColor,
                 child: Column(
                   children: [
                     CircleAvatar(
@@ -71,7 +71,7 @@ class MorePage extends StatelessWidget {
                       child: const Icon(
                         Icons.admin_panel_settings_rounded,
                         size: 40,
-                        color: primaryColor,
+                        color: kPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -89,7 +89,7 @@ class MorePage extends StatelessWidget {
                     Text(
                       user?.email ?? '',
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: Colors.white,
                         fontSize: 16,
                       ),
                     ),
@@ -133,19 +133,19 @@ class MorePage extends StatelessWidget {
               ),
 
               // ===== AKUN =====
-              _buildMenuSection(
-                title: 'Akun',
-                children: [
-                  _buildMenuTile(
-                    icon: Icons.logout,
-                    title: 'Logout',
-                    color: Colors.red,
-                    onTap: () {
-                      _showLogoutConfirmation(context, authService);
-                    },
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                onPressed: () => _showLogoutDialog(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red[700],
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Keluar', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
                   ),
-                ],
-              ),
+                  const SizedBox(height: 20),
             ],
           );
         },

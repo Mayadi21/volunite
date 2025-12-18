@@ -1,6 +1,7 @@
 // lib/pages/Admin/users/add_user_page.dart
 import 'package:flutter/material.dart';
 import 'user_service.dart';
+import 'package:volunite/color_pallete.dart';
 
 class AddUserPage extends StatefulWidget {
   const AddUserPage({super.key});
@@ -149,6 +150,9 @@ class _AddUserPageState extends State<AddUserPage> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kPrimaryColor,
+                ),
                 onPressed: _submitting ? null : _submit,
                 child: _submitting
                     ? const CircularProgressIndicator()
