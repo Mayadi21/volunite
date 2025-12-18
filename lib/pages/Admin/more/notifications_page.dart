@@ -24,7 +24,7 @@ class NotificationsPage extends StatelessWidget {
                 labelText: 'Tujuan Notifikasi',
                 border: OutlineInputBorder(),
               ),
-              initialValue: 'Semua Volunteer',
+              value: 'Semua Volunteer',
               items: ['Semua Volunteer', 'Semua Organisasi', 'Semua Pengguna']
                   .map((String type) =>
                       DropdownMenuItem<String>(value: type, child: Text(type)))

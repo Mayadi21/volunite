@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:volunite/pages/Authentication/forgot_password.dart';
 import 'package:volunite/pages/Authentication/register.dart';
-import 'package:volunite/pages/Organizer/home.dart';
 import 'package:volunite/pages/Volunteer/navbar.dart';
 import 'package:volunite/pages/Organizer/navbar.dart';
 import 'package:volunite/pages/Admin/navbar.dart';
@@ -73,7 +72,7 @@ class _LoginPageState extends State<LoginPage> {
       } else if (role == 'Organizer') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const OrganizerHomeTab()),
+          MaterialPageRoute(builder: (_) => const OrganizerLandingPage()),
         );
       } else if (role == 'Admin') {
         Navigator.pushReplacement(

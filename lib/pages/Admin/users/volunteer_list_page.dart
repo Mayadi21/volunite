@@ -5,7 +5,6 @@ import 'package:volunite/pages/Admin/data/admin_models.dart';
 import 'add_new_user_page.dart';
 import 'package:volunite/color_pallete.dart';
 
-
 class VolunteerListPage extends StatefulWidget {
   const VolunteerListPage({super.key});
 

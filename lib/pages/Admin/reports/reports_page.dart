@@ -26,7 +26,7 @@ class ReportsPage extends StatelessWidget {
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.description_outlined),
             ),
-            initialValue: 'Aktivitas Volunteer',
+            value: 'Aktivitas Volunteer',
             items: [
               'Aktivitas Volunteer',
               'Pendaftaran Organisasi',

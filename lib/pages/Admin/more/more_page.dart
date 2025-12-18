@@ -89,7 +89,7 @@ class MorePage extends StatelessWidget {
                     Text(
                       user?.email ?? '',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Colors.white70,
                         fontSize: 16,
                       ),
                     ),
@@ -133,19 +133,19 @@ class MorePage extends StatelessWidget {
               ),
 
               // ===== AKUN =====
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                onPressed: () => _showLogoutDialog(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[700],
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Keluar', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                    ),
+              _buildMenuSection(
+                title: 'Akun',
+                children: [
+                  _buildMenuTile(
+                    icon: Icons.logout,
+                    title: 'Logout',
+                    color: Colors.red,
+                    onTap: () {
+                      _showLogoutConfirmation(context, authService);
+                    },
                   ),
-                  const SizedBox(height: 20),
+                ],
+              ),
             ],
           );
         },
