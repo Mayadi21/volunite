@@ -144,20 +144,19 @@ class KegiatanService {
     return response.statusCode == 200;
   }
 
-  // 6. CANCEL KEGIATAN
-  static Future<bool> cancelKegiatan(int id) async {
+  // 6. UPDATE STATUS KEGIATAN
+  static Future<bool> updateStatusKegiatan(int id, String newStatus) async {
     final response = await ApiClient.postMultipart(
-      '/organizer/kegiatan/$id',
-      fields: {'_method': 'PUT', 'status': 'cancelled'},
+      '/organizer/kegiatan/$id/status', 
+      fields: {
+        '_method': 'PUT', 
+        'status': newStatus
+      },
     );
-    return response.statusCode == 200;
-  }
-  // 7. FINISH KEGIATAN
-  static Future<bool> finishKegiatan(int id) async {
-    final response = await ApiClient.postMultipart(
-      '/organizer/kegiatan/$id',
-      fields: {'_method': 'PUT', 'status': 'finished'},
-    );
+
+    if (response.statusCode != 200) {
+      debugPrint("Gagal update status: ${response.body}");
+    }
     return response.statusCode == 200;
   }
 }

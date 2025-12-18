@@ -1,4 +1,3 @@
-// ... imports
 import 'package:flutter/material.dart';
 import 'package:volunite/color_pallete.dart';
 import 'package:volunite/models/kegiatan_model.dart';
@@ -11,6 +10,7 @@ import 'package:volunite/services/kegiatan_service.dart';
 
 class OrganizerActivitiesPage extends StatefulWidget {
   const OrganizerActivitiesPage({super.key});
+
   @override
   State<OrganizerActivitiesPage> createState() => _OrganizerActivitiesPageState();
 }
@@ -33,13 +33,63 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
   }
 
   Future<void> _handleDelete(int id) async {
-    final success = await KegiatanService.deleteKegiatan(id);
-    if(success) _refreshData();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Hapus Kegiatan?"),
+        content: const Text("Kegiatan ini belum dipublikasikan/dihadiri. Data akan dihapus permanen."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Batal")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Hapus"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final success = await KegiatanService.deleteKegiatan(id);
+      if (success) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Kegiatan dihapus permanen.")));
+        _refreshData();
+      }
+    }
   }
 
-  Future<void> _handleCancel(int id) async {
-    final success = await KegiatanService.cancelKegiatan(id);
-    if(success) _refreshData();
+  Future<void> _handleUpdateStatus(int id, String status, String title, String content) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Kembali")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: status == 'finished' ? Colors.green : Colors.orange
+            ),
+            child: Text(status == 'finished' ? "Ya, Selesai" : "Ya, Batalkan"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final success = await KegiatanService.updateStatusKegiatan(id, status);
+      
+      if (success) {
+        if (mounted) {
+          String msg = status == 'finished' ? "Kegiatan selesai!" : "Kegiatan dibatalkan.";
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
+        }
+        _refreshData(); 
+      } else {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal mengupdate status"), backgroundColor: Colors.red));
+      }
+    }
   }
 
   void _showManageOptions(BuildContext context, Kegiatan item) {
@@ -47,9 +97,11 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
-        String status = item.status.toLowerCase(); 
+        String status = item.status.toLowerCase();
+        
+        // Cek Status
         bool isWaiting = status == 'waiting';
-        bool isActive = ['scheduled', 'on progress'].contains(status);
+        bool isActive = ['scheduled', 'on progress'].contains(status); 
         bool isDone = ['finished', 'cancelled', 'rejected'].contains(status); 
 
         return Padding(
@@ -88,10 +140,14 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
                   leading: const Icon(Icons.check_circle_outline, color: Colors.green),
                   title: const Text("Selesaikan Kegiatan"),
                   subtitle: const Text("Tandai kegiatan telah berakhir"),
-                  onTap: () async {
+                  onTap: () {
                     Navigator.pop(ctx);
-                    bool success = await KegiatanService.finishKegiatan(item.id);
-                    if (success) _refreshData(); 
+                    _handleUpdateStatus(
+                      item.id, 
+                      'finished', 
+                      "Selesaikan Kegiatan?", 
+                      "Apakah acara ini sudah terlaksana dengan baik? Status akan berubah menjadi 'Finished'."
+                    );
                   },
                 ),
 
@@ -109,9 +165,15 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
                 ListTile(
                   leading: const Icon(Icons.cancel_presentation_rounded, color: Colors.orange),
                   title: const Text("Batalkan Kegiatan"),
+                  subtitle: const Text("Pindahkan ke riwayat (Cancelled)"),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _handleCancel(item.id);
+                    _handleUpdateStatus(
+                      item.id, 
+                      'cancelled', 
+                      "Batalkan Kegiatan?", 
+                      "Kegiatan akan dibatalkan dan tidak dapat dilanjutkan kembali."
+                    );
                   },
                 ),
             ],
@@ -147,14 +209,25 @@ class _OrganizerActivitiesPageState extends State<OrganizerActivitiesPage> with 
           if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text("Belum ada data", style: TextStyle(color: kBlueGray)));
 
           final all = snapshot.data!;
+          
           final active = all.where((e) => ['Waiting', 'scheduled', 'on progress'].contains(e.status)).toList();
           final history = all.where((e) => ['Rejected', 'finished', 'cancelled'].contains(e.status)).toList();
 
           return TabBarView(
             controller: _tabController,
             children: [
-              _ListContent(active, (i) => _showManageOptions(context, i), isHistory: false),
-              _ListContent(history, (i) => _showManageOptions(context, i), isHistory: true),
+              _ListContent(
+                items: active, 
+                onManage: (i) => _showManageOptions(context, i), 
+                isHistory: false, 
+                onRefresh: _refreshData
+              ),
+              _ListContent(
+                items: history, 
+                onManage: (i) => _showManageOptions(context, i), 
+                isHistory: true, 
+                onRefresh: _refreshData
+              ),
             ],
           );
         },
@@ -175,32 +248,53 @@ class _ListContent extends StatelessWidget {
   final List<Kegiatan> items;
   final Function(Kegiatan) onManage;
   final bool isHistory;
+  final VoidCallback onRefresh;
 
-  const _ListContent(this.items, this.onManage, {required this.isHistory});
+  const _ListContent({
+    required this.items, 
+    required this.onManage, 
+    required this.isHistory,
+    required this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
       return Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(isHistory ? Icons.history : Icons.event_note, size: 60, color: kLightGray), const SizedBox(height: 10), Text(isHistory ? "Belum ada riwayat" : "Tidak ada kegiatan aktif", style: const TextStyle(color: kBlueGray))]),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, 
+          children: [
+            Icon(isHistory ? Icons.history : Icons.event_note, size: 60, color: kLightGray), 
+            const SizedBox(height: 10), 
+            Text(isHistory ? "Belum ada riwayat" : "Tidak ada kegiatan aktif", style: const TextStyle(color: kBlueGray))
+          ]
+        ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (_, i) {
-        final item = items[i];
-        return OrganizerActivityCard(
-          item: item,
-          isHistory: isHistory,
-          onManage: () => onManage(item),
-          onApplicants: () {
-             Navigator.push(context, MaterialPageRoute(builder: (_) => ApplicantListPage(kegiatanId: item.id, statusKegiatan: item.status)));
-          },
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: () async => onRefresh(),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 16),
+        itemBuilder: (_, i) {
+          final item = items[i];
+          return OrganizerActivityCard(
+            item: item,
+            isHistory: isHistory,
+            onManage: () => onManage(item),
+            onApplicants: () {
+               Navigator.push(context, MaterialPageRoute(
+                 builder: (_) => ApplicantListPage(
+                   kegiatanId: item.id, 
+                   statusKegiatan: item.status 
+                 )
+               ));
+            },
+          );
+        },
+      ),
     );
   }
 }
