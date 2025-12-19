@@ -64,3 +64,10 @@ Untuk menjalankan dan mengembangkan aplikasi Volunite, pastikan sistem Anda meme
     ```bash
     flutter run
     ```
+4. **setup & Jalankan Backend Server:**
+    Aplikasi mobile ini memerlukan backend API agar dapat berfungsi sepenuhnya. Jalankan perintah berikut di terminal terpisah (pastikan Anda keluar dari folder volunite frontend terlebih dahulu):
+    
+    ```bash
+    cd ..
+    git clone https://github.com/Mayadi21/volunite_backend.git
+    ```
